@@ -1450,6 +1450,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_empresa_geral: {
+        Row: {
+          created_at: string | null
+          empresa_id: number
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          empresa_id: number
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          empresa_id?: number
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_empresa_geral_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           created_at: string | null
@@ -1582,6 +1611,8 @@ export type Database = {
           nome_etiqueta: string
         }[]
       }
+      get_user_empresa_id: { Args: { user_uuid: string }; Returns: number }
+      is_admin: { Args: { user_uuid: string }; Returns: boolean }
       match_documents: {
         Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
