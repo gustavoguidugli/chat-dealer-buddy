@@ -585,6 +585,59 @@ export type Database = {
           },
         ]
       }
+      convites: {
+        Row: {
+          ativo: boolean | null
+          codigo: string | null
+          created_at: string | null
+          criado_por: string | null
+          empresa_id: number
+          expira_em: string | null
+          id: string
+          max_usos: number | null
+          tipo: string
+          token: string
+          updated_at: string | null
+          usos_atuais: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          codigo?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          empresa_id: number
+          expira_em?: string | null
+          id?: string
+          max_usos?: number | null
+          tipo: string
+          token?: string
+          updated_at?: string | null
+          usos_atuais?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          codigo?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          empresa_id?: number
+          expira_em?: string | null
+          id?: string
+          max_usos?: number | null
+          tipo?: string
+          token?: string
+          updated_at?: string | null
+          usos_atuais?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convites_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           content: string | null
@@ -1450,6 +1503,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_empresa: {
+        Row: {
+          convite_id: string | null
+          created_at: string | null
+          empresa_id: number
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          convite_id?: string | null
+          created_at?: string | null
+          empresa_id: number
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          convite_id?: string | null
+          created_at?: string | null
+          empresa_id?: number
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_empresa_convite_id_fkey"
+            columns: ["convite_id"]
+            isOneToOne: false
+            referencedRelation: "convites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_empresa_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_empresa_geral: {
         Row: {
           created_at: string | null
@@ -1620,6 +1712,19 @@ export type Database = {
           id: number
           metadata: Json
           similarity: number
+        }[]
+      }
+      usar_convite: {
+        Args: { p_convite_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      validar_convite: {
+        Args: { p_token: string }
+        Returns: {
+          convite_id: string
+          empresa_id: number
+          erro: string
+          valido: boolean
         }[]
       }
     }
