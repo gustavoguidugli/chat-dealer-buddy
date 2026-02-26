@@ -117,6 +117,7 @@ export default function Login() {
               {resetMode ? 'Voltar ao login' : 'Esqueci minha senha'}
             </button>
           </form>
+          <p className="text-xs text-muted-foreground text-center mt-4">Acesso apenas por convite</p>
         </CardContent>
       </Card>
     </div>
