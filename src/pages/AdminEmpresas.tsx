@@ -158,7 +158,7 @@ export default function AdminEmpresas() {
                       <Power className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
                       onClick={() => setDeleteEmpresa(empresa)}
                     >
