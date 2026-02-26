@@ -11,6 +11,7 @@ import SelectCompany from "./pages/SelectCompany";
 import Home from "./pages/Home";
 import Triagem from "./pages/Triagem";
 import BaseConhecimento from "./pages/BaseConhecimento";
+import GerenciarFaqs from "./pages/GerenciarFaqs";
 import AdminEmpresas from "./pages/AdminEmpresas";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +40,9 @@ const App = () => (
             } />
             <Route path="/base-conhecimento" element={
               <ProtectedRoute><BaseConhecimento /></ProtectedRoute>
+            } />
+            <Route path="/base-conhecimento/faqs" element={
+              <ProtectedRoute><GerenciarFaqs /></ProtectedRoute>
             } />
             <Route path="/admin/empresas" element={
               <ProtectedRoute><AdminEmpresas /></ProtectedRoute>

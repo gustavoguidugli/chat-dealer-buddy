@@ -997,6 +997,59 @@ export type Database = {
           },
         ]
       }
+      faq_empresa: {
+        Row: {
+          ativo: boolean | null
+          contexto: string
+          created_at: string | null
+          embedding: string | null
+          empresa_id: number
+          id: string
+          ordem: number | null
+          pergunta: string
+          resposta: string
+          tags: string[] | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          contexto: string
+          created_at?: string | null
+          embedding?: string | null
+          empresa_id: number
+          id?: string
+          ordem?: number | null
+          pergunta: string
+          resposta: string
+          tags?: string[] | null
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          contexto?: string
+          created_at?: string | null
+          embedding?: string | null
+          empresa_id?: number
+          id?: string
+          ordem?: number | null
+          pergunta?: string
+          resposta?: string
+          tags?: string[] | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faq_empresa_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fluxos: {
         Row: {
           created_at: string
@@ -1696,6 +1749,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buscar_faq_similar: {
+        Args: {
+          p_empresa_id: number
+          p_limit?: number
+          p_query_embedding: string
+          p_similarity_threshold?: number
+          p_tipo_faq?: string
+        }
+        Returns: {
+          content: string
+          id: number
+          metadata: Json
+          similarity: number
+        }[]
+      }
       get_etiquetas_by_empresa: {
         Args: { empresa_id: number }
         Returns: {
@@ -1730,6 +1798,10 @@ export type Database = {
           erro: string
           valido: boolean
         }[]
+      }
+      vetorizar_faq_texto: {
+        Args: { p_empresa_id: number; p_texto_faq: string; p_tipo: string }
+        Returns: Json
       }
     }
     Enums: {
