@@ -1,0 +1,102 @@
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: () => void;
+}
+
+export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
+  const [nome, setNome] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim()) return;
+
+    setSubmitting(true);
+    try {
+      // 1. Create company
+      const { data: empresa, error } = await supabase
+        .from('empresas_geral')
+        .insert({ nome: nome.trim(), numero_automacao: whatsapp.trim() || null })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 2. Trigger creates default interests + link invite automatically
+      // 3. Create additional code-type invite
+      const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + '2024';
+      await supabase.from('convites').insert({
+        empresa_id: empresa.id,
+        tipo: 'codigo',
+        codigo,
+        max_usos: 5,
+      });
+
+      toast({ title: 'Empresa criada com sucesso!' });
+      setNome('');
+      setWhatsapp('');
+      onOpenChange(false);
+      onCreated();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nova Empresa</DialogTitle>
+          <DialogDescription>Preencha os dados para criar uma nova empresa.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="company-name">Nome da empresa</Label>
+            <Input
+              id="company-name"
+              placeholder="Ex: Termall Refrigeração"
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+              required
+              disabled={submitting}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-whatsapp">WhatsApp</Label>
+            <Input
+              id="company-whatsapp"
+              type="tel"
+              placeholder="+55 (11) 99999-9999"
+              value={whatsapp}
+              onChange={e => setWhatsapp(e.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={submitting || !nome.trim()}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Criar Empresa
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

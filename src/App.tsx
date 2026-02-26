@@ -6,10 +6,12 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import SelectCompany from "./pages/SelectCompany";
 import Home from "./pages/Home";
 import Triagem from "./pages/Triagem";
 import BaseConhecimento from "./pages/BaseConhecimento";
+import AdminEmpresas from "./pages/AdminEmpresas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/selecionar-empresa" element={
               <ProtectedRoute><SelectCompany /></ProtectedRoute>
             } />
@@ -34,6 +37,9 @@ const App = () => (
             } />
             <Route path="/base-conhecimento" element={
               <ProtectedRoute><BaseConhecimento /></ProtectedRoute>
+            } />
+            <Route path="/admin/empresas" element={
+              <ProtectedRoute><AdminEmpresas /></ProtectedRoute>
             } />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
