@@ -1722,6 +1722,7 @@ export type Database = {
         Args: { p_token: string }
         Returns: {
           convite_id: string
+          email_destino: string
           empresa_id: number
           erro: string
           valido: boolean
