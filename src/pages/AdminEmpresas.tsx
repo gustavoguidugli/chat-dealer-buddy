@@ -7,9 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Link2, Pencil, Power, Building2, Users } from 'lucide-react';
+import { Plus, Link2, Pencil, Power, Building2, Users, Trash } from 'lucide-react';
 import { CreateCompanyModal } from '@/components/CreateCompanyModal';
 import { InviteModal } from '@/components/InviteModal';
+import { DeleteEmpresaModal } from '@/components/DeleteEmpresaModal';
 import { Navigate } from 'react-router-dom';
 
 interface Empresa {
@@ -27,6 +28,7 @@ export default function AdminEmpresas() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [inviteEmpresa, setInviteEmpresa] = useState<Empresa | null>(null);
+  const [deleteEmpresa, setDeleteEmpresa] = useState<Empresa | null>(null);
 
   const fetchEmpresas = useCallback(async () => {
     setLoading(true);
@@ -155,6 +157,13 @@ export default function AdminEmpresas() {
                     >
                       <Power className="h-4 w-4" />
                     </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteEmpresa(empresa)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -176,6 +185,13 @@ export default function AdminEmpresas() {
           empresa={inviteEmpresa}
         />
       )}
+
+      <DeleteEmpresaModal
+        empresa={deleteEmpresa}
+        open={!!deleteEmpresa}
+        onOpenChange={open => { if (!open) setDeleteEmpresa(null); }}
+        onDeleted={fetchEmpresas}
+      />
     </AppLayout>
   );
 }
