@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import Invite from "./pages/Invite";
 import SelectCompany from "./pages/SelectCompany";
 import Home from "./pages/Home";
 import Triagem from "./pages/Triagem";
@@ -25,7 +25,9 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/invite" element={<Invite />} />
+            {/* Legacy route redirect */}
+            <Route path="/signup" element={<Navigate to="/invite" replace />} />
             <Route path="/selecionar-empresa" element={
               <ProtectedRoute><SelectCompany /></ProtectedRoute>
             } />

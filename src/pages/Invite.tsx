@@ -8,35 +8,23 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Snowflake, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { z } from 'zod';
-
-const signupSchema = z.object({
-  nome: z.string().trim().min(1, 'Nome é obrigatório').max(100),
-  email: z.string().trim().email('Email inválido').max(255),
-  password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres'),
-  confirmPassword: z.string(),
-}).refine(d => d.password === d.confirmPassword, {
-  message: 'As senhas não coincidem',
-  path: ['confirmPassword'],
-});
 
 interface InviteValidation {
   valido: boolean;
   empresa_id: number;
   convite_id: string;
   erro: string;
+  email_destino: string;
 }
 
-export default function Signup() {
+export default function Invite() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('invite') || '';
+  const token = searchParams.get('token') || '';
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [validating, setValidating] = useState(true);
   const [validation, setValidation] = useState<InviteValidation | null>(null);
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -45,7 +33,7 @@ export default function Signup() {
   useEffect(() => {
     if (!token) {
       setValidating(false);
-      setValidation({ valido: false, empresa_id: 0, convite_id: '', erro: 'Nenhum token de convite fornecido.' });
+      setValidation({ valido: false, empresa_id: 0, convite_id: '', erro: 'Nenhum token de convite fornecido.', email_destino: '' });
       return;
     }
 
@@ -53,12 +41,12 @@ export default function Signup() {
       try {
         const { data, error } = await supabase.rpc('validar_convite', { p_token: token });
         if (error || !data || data.length === 0) {
-          setValidation({ valido: false, empresa_id: 0, convite_id: '', erro: 'Não foi possível validar o convite.' });
+          setValidation({ valido: false, empresa_id: 0, convite_id: '', erro: 'Não foi possível validar o convite.', email_destino: '' });
         } else {
           setValidation(data[0] as unknown as InviteValidation);
         }
       } catch {
-        setValidation({ valido: false, empresa_id: 0, convite_id: '', erro: 'Erro ao validar convite.' });
+        setValidation({ valido: false, empresa_id: 0, convite_id: '', erro: 'Erro ao validar convite.', email_destino: '' });
       } finally {
         setValidating(false);
       }
@@ -71,26 +59,26 @@ export default function Signup() {
     e.preventDefault();
     setErrors({});
 
-    const result = signupSchema.safeParse({ nome, email, password, confirmPassword });
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach(err => {
-        if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
-      });
-      setErrors(fieldErrors);
+    if (password.length < 8) {
+      setErrors({ password: 'Senha deve ter no mínimo 8 caracteres' });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrors({ confirmPassword: 'As senhas não coincidem' });
       return;
     }
 
-    if (!validation?.valido || !validation.empresa_id || !validation.convite_id) return;
+    if (!validation?.valido || !validation.empresa_id || !validation.convite_id || !validation.email_destino) return;
 
     setSubmitting(true);
     try {
-      // 1. Create user in Supabase Auth
+      // 1. Create user with email from invite (no email confirmation needed)
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: result.data.email,
-        password: result.data.password,
+        email: validation.email_destino,
+        password,
         options: {
-          data: { full_name: result.data.nome },
+          data: { full_name: validation.email_destino.split('@')[0] },
+          emailRedirectTo: undefined,
         },
       });
 
@@ -105,7 +93,7 @@ export default function Signup() {
 
       const userId = authData.user?.id;
       if (!userId) {
-        toast({ title: 'Erro', description: 'Não foi possível criar sua conta. Tente novamente.', variant: 'destructive' });
+        toast({ title: 'Erro', description: 'Não foi possível criar sua conta.', variant: 'destructive' });
         return;
       }
 
@@ -119,11 +107,9 @@ export default function Signup() {
           role: 'member',
         });
 
-      if (linkError) {
-        console.error('Error linking user to empresa:', linkError);
-      }
+      if (linkError) console.error('Error linking user_empresa:', linkError);
 
-      // 3. Also insert into user_empresa_geral for auth flow
+      // 3. Link user_empresa_geral
       const { error: linkGeralError } = await supabase
         .from('user_empresa_geral')
         .insert({
@@ -131,9 +117,7 @@ export default function Signup() {
           empresa_id: validation.empresa_id,
         });
 
-      if (linkGeralError) {
-        console.error('Error linking user to empresa_geral:', linkGeralError);
-      }
+      if (linkGeralError) console.error('Error linking user_empresa_geral:', linkGeralError);
 
       // 4. Increment invite usage
       await supabase.rpc('usar_convite', {
@@ -141,13 +125,13 @@ export default function Signup() {
         p_user_id: userId,
       });
 
-      // 5. Sign out (signUp auto-logs in) and redirect to login
+      // 5. Sign out and redirect to login
       await supabase.auth.signOut();
 
       toast({ title: 'Conta criada!', description: 'Faça login para continuar.' });
       navigate('/login', { replace: true });
     } catch {
-      toast({ title: 'Erro', description: 'Não foi possível criar sua conta. Tente novamente.', variant: 'destructive' });
+      toast({ title: 'Erro', description: 'Não foi possível criar sua conta.', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -163,8 +147,6 @@ export default function Signup() {
             <Skeleton className="h-4 w-48" />
           </CardHeader>
           <CardContent className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </CardContent>
@@ -209,30 +191,16 @@ export default function Signup() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="nome">Nome completo</Label>
-              <Input
-                id="nome"
-                placeholder="Seu nome"
-                value={nome}
-                onChange={e => setNome(e.target.value)}
-                required
-                disabled={submitting}
-              />
-              {errors.nome && <p className="text-xs text-destructive">{errors.nome}</p>}
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
+                value={validation.email_destino}
+                readOnly
+                className="bg-muted"
                 disabled={submitting}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              <p className="text-xs text-muted-foreground">Email vinculado ao convite (não editável)</p>
             </div>
 
             <div className="space-y-2">
@@ -261,11 +229,6 @@ export default function Signup() {
                 disabled={submitting}
               />
               {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="token">Token de convite</Label>
-              <Input id="token" value={token} readOnly className="bg-muted" />
             </div>
 
             <Button type="submit" className="w-full" disabled={submitting}>
