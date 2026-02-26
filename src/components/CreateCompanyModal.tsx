@@ -16,6 +16,7 @@ interface Props {
 export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
   const [nome, setNome] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [emailConvite, setEmailConvite] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -34,7 +35,16 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
 
       if (error) throw error;
 
-      // 2. Trigger creates default interests + link invite automatically
+      // 2. Create invite with email if provided
+      if (emailConvite.trim()) {
+        await supabase.from('convites').insert({
+          empresa_id: empresa.id,
+          tipo: 'link',
+          max_usos: 1,
+          email_destino: emailConvite.trim().toLowerCase(),
+        });
+      }
+
       // 3. Create additional code-type invite
       const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + '2024';
       await supabase.from('convites').insert({
@@ -47,6 +57,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       toast({ title: 'Empresa criada com sucesso!' });
       setNome('');
       setWhatsapp('');
+      setEmailConvite('');
       onOpenChange(false);
       onCreated();
     } catch (err: any) {
@@ -83,6 +94,17 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
               placeholder="+55 (11) 99999-9999"
               value={whatsapp}
               onChange={e => setWhatsapp(e.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-email">Email do primeiro usuário (convite)</Label>
+            <Input
+              id="company-email"
+              type="email"
+              placeholder="usuario@email.com"
+              value={emailConvite}
+              onChange={e => setEmailConvite(e.target.value)}
               disabled={submitting}
             />
           </div>
