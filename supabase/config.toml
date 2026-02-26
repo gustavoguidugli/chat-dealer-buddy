@@ -1,1 +1,4 @@
 project_id = "foiraptipbrobehmqppy"
+
+[functions.gerar-embedding]
+verify_jwt = false

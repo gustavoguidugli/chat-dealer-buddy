@@ -97,9 +97,17 @@ export default function GerenciarFaqs() {
       const { data: embData, error: embError } = await supabase.functions.invoke('gerar-embedding', {
         body: { texto: content },
       });
-      if (embError) throw embError;
+      if (embError) {
+        console.error('Erro ao gerar embedding:', embError);
+        throw embError;
+      }
+      if (embData?.error) {
+        console.error('Erro retornado pela edge function:', embData.error);
+        throw new Error(embData.error);
+      }
       embedding = embData?.embedding ?? null;
-    } catch {
+    } catch (err) {
+      console.error('Falha ao gerar embedding:', err);
       toast({ title: 'Erro ao gerar embedding. FAQ será salvo sem embedding.', variant: 'destructive' });
     }
 
@@ -146,11 +154,13 @@ export default function GerenciarFaqs() {
       const { data: embData, error } = await supabase.functions.invoke('gerar-embedding', {
         body: { texto: content },
       });
-      if (error) throw error;
+      if (error) { console.error('Erro ao regerar embedding:', error); throw error; }
+      if (embData?.error) { console.error('Erro da edge function:', embData.error); throw new Error(embData.error); }
       await supabase.from('documents').update({ embedding: embData.embedding }).eq('id', faq.id);
       toast({ title: 'Embedding gerado com sucesso!' });
       fetchFaqs();
-    } catch {
+    } catch (err) {
+      console.error('Falha ao regerar embedding:', err);
       toast({ title: 'Erro ao gerar embedding', variant: 'destructive' });
     } finally {
       setRegeneratingId(null);
