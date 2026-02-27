@@ -64,6 +64,7 @@ export type Database = {
       config_empresas_geral: {
         Row: {
           created_at: string
+          faq_geral_maquina: string | null
           faq_pos_qualificacao_maquina: string
           faq_purificador: string
           faq_qualificacao_maquina: string
@@ -74,6 +75,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          faq_geral_maquina?: string | null
           faq_pos_qualificacao_maquina?: string
           faq_purificador?: string
           faq_qualificacao_maquina?: string
@@ -84,6 +86,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          faq_geral_maquina?: string | null
           faq_pos_qualificacao_maquina?: string
           faq_purificador?: string
           faq_qualificacao_maquina?: string
@@ -1755,7 +1758,7 @@ export type Database = {
           p_limit?: number
           p_query_embedding: string
           p_similarity_threshold?: number
-          p_tipo_faq?: string
+          p_tipos_faq?: string[]
         }
         Returns: {
           content: string
@@ -1785,6 +1788,29 @@ export type Database = {
           similarity: number
         }[]
       }
+      match_documents_by_empresa:
+        | {
+            Args: { filter: Json; match_count: number; query_embedding: string }
+            Returns: {
+              content: string
+              id: number
+              metadata: Json
+              similarity: number
+            }[]
+          }
+        | {
+            Args: {
+              match_count: number
+              p_id_empresa: number
+              query_embedding: string
+            }
+            Returns: {
+              content: string
+              id: number
+              metadata: Json
+              similarity: number
+            }[]
+          }
       usar_convite: {
         Args: { p_convite_id: string; p_user_id: string }
         Returns: boolean

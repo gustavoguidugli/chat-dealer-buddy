@@ -28,6 +28,7 @@ interface FaqItem {
 }
 
 const TABS = [
+  { value: 'geral_maquina', label: 'Máquina - Geral' },
   { value: 'qualificacao_maquina', label: 'Máquina - Qualificação' },
   { value: 'pos_qualificacao_maquina', label: 'Máquina - Pós-qualificação' },
   { value: 'purificador', label: 'Purificador' },
