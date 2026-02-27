@@ -103,8 +103,7 @@ export function ManageLabelsModal({ isOpen, onClose, empresaId, onLabelsChanged 
 
   const handleDelete = async () => {
     if (!deletingLabel) return;
-    // Soft delete
-    const { error } = await supabase.from('labels').update({ ativo: false }).eq('id', deletingLabel.id);
+    const { error } = await supabase.from('labels').delete().eq('id', deletingLabel.id);
     if (error) { toast({ title: 'Erro ao deletar etiqueta', variant: 'destructive' }); return; }
     toast({ title: 'Etiqueta removida!' });
     setDeletingLabel(null);
