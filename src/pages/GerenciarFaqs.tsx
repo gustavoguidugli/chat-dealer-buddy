@@ -497,96 +497,96 @@ export default function GerenciarFaqs() {
                                 </Badge>
                               )}
                             </div>
-                            <div className="mt-2">
-                              <LabelSelector
-                                documentId={faq.id}
-                                labels={companyLabels}
-                                selectedLabelIds={faq.labelIds}
-                                onToggle={(labelId, isAdding) => handleLabelToggle(faq.id, labelId, isAdding)}
-                              />
-                            </div>
                           </div>
-                          <div className="flex gap-1 shrink-0">
-                            {!faq.hasEmbedding && (
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <div className="flex gap-1">
+                              {!faq.hasEmbedding && (
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  disabled={regeneratingId === faq.id}
+                                  onClick={() => handleRegenerate(faq)}
+                                  title="Gerar embedding"
+                                >
+                                  {regeneratingId === faq.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
                               <Button
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8"
-                                disabled={regeneratingId === faq.id}
-                                onClick={() => handleRegenerate(faq)}
-                                title="Gerar embedding"
+                                onClick={() => handleDuplicate([faq])}
+                                title="Duplicar"
                               >
-                                {regeneratingId === faq.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="h-4 w-4" />
-                                )}
+                                <Copy className="h-4 w-4" />
                               </Button>
-                            )}
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleDuplicate([faq])}
-                              title="Duplicar"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                            {isAdmin && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    title="Mover para outra tab"
-                                  >
-                                    <ArrowRightLeft className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-                                  {TABS.filter(t => t.value !== activeTab).map(t => (
-                                    <DropdownMenuItem
-                                      key={t.value}
-                                      onClick={() => handleMoveToTab(faq, t.value)}
+                              {isAdmin && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      title="Mover para outra tab"
                                     >
-                                      {t.label}
-                                    </DropdownMenuItem>
-                                  ))}
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel>Duplicar para</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-                                  {TABS.filter(t => t.value !== activeTab).map(t => (
-                                    <DropdownMenuItem
-                                      key={`dup-${t.value}`}
-                                      onClick={() => handleDuplicate([faq], t.value)}
-                                    >
-                                      {t.label}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => { setEditingFaq(faq); setModalOpen(true); }}
-                              title="Editar"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setDeletingFaq(faq)}
-                              title="Deletar"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                                      <ArrowRightLeft className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    {TABS.filter(t => t.value !== activeTab).map(t => (
+                                      <DropdownMenuItem
+                                        key={t.value}
+                                        onClick={() => handleMoveToTab(faq, t.value)}
+                                      >
+                                        {t.label}
+                                      </DropdownMenuItem>
+                                    ))}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuLabel>Duplicar para</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    {TABS.filter(t => t.value !== activeTab).map(t => (
+                                      <DropdownMenuItem
+                                        key={`dup-${t.value}`}
+                                        onClick={() => handleDuplicate([faq], t.value)}
+                                      >
+                                        {t.label}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => { setEditingFaq(faq); setModalOpen(true); }}
+                                title="Editar"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setDeletingFaq(faq)}
+                                title="Deletar"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <LabelSelector
+                              documentId={faq.id}
+                              labels={companyLabels}
+                              selectedLabelIds={faq.labelIds}
+                              onToggle={(labelId, isAdding) => handleLabelToggle(faq.id, labelId, isAdding)}
+                            />
                           </div>
                         </div>
                       </CardContent>
