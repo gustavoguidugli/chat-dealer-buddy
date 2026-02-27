@@ -268,10 +268,11 @@ export default function GerenciarFaqs() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filtered.map((faq) => (
+                  {filtered.map((faq, idx) => (
                     <Card key={faq.id}>
                       <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                          <span className="flex items-center justify-center h-7 w-7 rounded-full bg-muted text-muted-foreground text-sm font-semibold shrink-0">{idx + 1}</span>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-foreground">{faq.pergunta}</p>
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{faq.contexto}</p>
