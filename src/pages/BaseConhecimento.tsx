@@ -52,16 +52,20 @@ export default function BaseConhecimento() {
           </Card>
 
           {/* Horário Card */}
-          <Card className="opacity-60">
+          <Card className="flex flex-col">
             <CardHeader>
-              <Badge variant="outline" className="w-fit text-xs mb-3">🚧 Em breve</Badge>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted mb-2">
-                <Clock className="h-5 w-5 text-muted-foreground" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 mb-2">
+                <Clock className="h-5 w-5 text-primary" />
               </div>
               <CardTitle className="text-base">Horário de Atendimento</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Configure quando o chatbot deve responder automaticamente</p>
+            <CardContent className="flex flex-col flex-1 justify-between gap-4">
+              <p className="text-sm text-muted-foreground">Configure quando a IA deve responder automaticamente</p>
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => navigate('/base-conhecimento/horarios')}>
+                  Configurar <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
