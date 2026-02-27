@@ -12,7 +12,10 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Edit, Trash2, RefreshCw, Search, MessageSquare, ChevronRight, Loader2 } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, Edit, Trash2, RefreshCw, Search, MessageSquare, ChevronRight, Loader2, ArrowRightLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +39,7 @@ const TABS = [
 
 export default function GerenciarFaqs() {
   const navigate = useNavigate();
-  const { empresaId } = useAuth();
+  const { empresaId, isAdmin } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(TABS[0].value);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
@@ -168,6 +171,33 @@ export default function GerenciarFaqs() {
     }
   };
 
+  const handleMoveToTab = async (faq: FaqItem, newTipoFaq: string) => {
+    if (!empresaId) return;
+    try {
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('metadata')
+        .eq('id', faq.id)
+        .single();
+      
+      const updatedMetadata = { ...(doc?.metadata as any), tipo_faq: newTipoFaq };
+      
+      const { error } = await supabase
+        .from('documents')
+        .update({ metadata: updatedMetadata })
+        .eq('id', faq.id);
+      
+      if (error) throw error;
+      
+      const targetLabel = TABS.find(t => t.value === newTipoFaq)?.label ?? newTipoFaq;
+      toast({ title: `FAQ movido para "${targetLabel}"` });
+      fetchFaqs();
+    } catch (err) {
+      console.error('Erro ao mover FAQ:', err);
+      toast({ title: 'Erro ao mover FAQ', variant: 'destructive' });
+    }
+  };
+
   const filtered = faqs.filter((f) => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -275,6 +305,30 @@ export default function GerenciarFaqs() {
                                   <RefreshCw className="h-4 w-4" />
                                 )}
                               </Button>
+                            )}
+                            {isAdmin && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Mover para outra tab"
+                                  >
+                                    <ArrowRightLeft className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {TABS.filter(t => t.value !== activeTab).map(t => (
+                                    <DropdownMenuItem
+                                      key={t.value}
+                                      onClick={() => handleMoveToTab(faq, t.value)}
+                                    >
+                                      Mover para "{t.label}"
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
                             <Button
                               variant="outline"
