@@ -1086,6 +1086,39 @@ export type Database = {
           },
         ]
       }
+      faq_labels: {
+        Row: {
+          created_at: string | null
+          faq_id: number
+          label_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          faq_id: number
+          label_id: string
+        }
+        Update: {
+          created_at?: string | null
+          faq_id?: number
+          label_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faq_labels_faq_id_fkey"
+            columns: ["faq_id"]
+            isOneToOne: false
+            referencedRelation: "faqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faq_labels_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faqs: {
         Row: {
           ativo: boolean | null

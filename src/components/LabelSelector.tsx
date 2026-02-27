@@ -13,7 +13,7 @@ export interface LabelItem {
 }
 
 interface LabelSelectorProps {
-  documentId: number;
+  faqId: number;
   labels: LabelItem[];
   selectedLabelIds: string[];
   onToggle: (labelId: string, isAdding: boolean) => void;
@@ -37,7 +37,7 @@ export function LabelIcon({ name, className }: { name: string | null; className?
   return <Icon className={className} />;
 }
 
-export function LabelSelector({ documentId, labels, selectedLabelIds, onToggle }: LabelSelectorProps) {
+export function LabelSelector({ faqId, labels, selectedLabelIds, onToggle }: LabelSelectorProps) {
   const selectedLabels = labels.filter(l => selectedLabelIds.includes(l.id));
 
   const handleToggle = async (labelId: string) => {
@@ -45,15 +45,15 @@ export function LabelSelector({ documentId, labels, selectedLabelIds, onToggle }
 
     if (isSelected) {
       await supabase
-        .from('document_labels')
+        .from('faq_labels')
         .delete()
-        .eq('document_id', documentId)
+        .eq('faq_id', faqId)
         .eq('label_id', labelId);
       onToggle(labelId, false);
     } else {
       await supabase
-        .from('document_labels')
-        .insert({ document_id: documentId, label_id: labelId });
+        .from('faq_labels')
+        .insert({ faq_id: faqId, label_id: labelId });
       onToggle(labelId, true);
     }
   };
