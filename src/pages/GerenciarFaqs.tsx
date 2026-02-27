@@ -17,11 +17,13 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   DropdownMenuSeparator, DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Edit, Trash2, RefreshCw, Search, MessageSquare, ChevronRight, Loader2, ArrowRightLeft, Copy, CheckSquare } from 'lucide-react';
+import { Plus, Edit, Trash2, RefreshCw, Search, MessageSquare, ChevronRight, Loader2, ArrowRightLeft, Copy, CheckSquare, Tags } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { FaqModal, FaqFormData } from '@/components/FaqModal';
+import { LabelSelector, type LabelItem } from '@/components/LabelSelector';
+import { ManageLabelsModal } from '@/components/ManageLabelsModal';
 
 interface FaqItem {
   id: number;
@@ -30,6 +32,7 @@ interface FaqItem {
   resposta: string;
   tags: string[];
   hasEmbedding: boolean;
+  labelIds: string[];
 }
 
 const TABS = [
@@ -53,6 +56,20 @@ export default function GerenciarFaqs() {
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [labelsModalOpen, setLabelsModalOpen] = useState(false);
+  const [companyLabels, setCompanyLabels] = useState<LabelItem[]>([]);
+  const [filterLabelId, setFilterLabelId] = useState<string | null>(null);
+
+  const fetchCompanyLabels = useCallback(async () => {
+    if (!empresaId) return;
+    const { data } = await supabase
+      .from('labels')
+      .select('id, nome, cor, icone')
+      .eq('empresa_id', empresaId)
+      .eq('ativo', true)
+      .order('ordem', { ascending: true });
+    setCompanyLabels((data as LabelItem[]) || []);
+  }, [empresaId]);
 
   const fetchFaqs = useCallback(async () => {
     if (!empresaId) return;
@@ -60,7 +77,7 @@ export default function GerenciarFaqs() {
     try {
       const { data, error } = await supabase
         .from('documents')
-        .select('id, content, metadata, embedding')
+        .select('id, content, metadata, embedding, document_labels(label_id)')
         .eq('id_empresa', empresaId)
         .filter('metadata->>tipo_faq', 'eq', activeTab)
         .order('id', { ascending: true });
@@ -75,6 +92,7 @@ export default function GerenciarFaqs() {
           resposta: doc.metadata?.resposta ?? '',
           tags: doc.metadata?.tags ?? [],
           hasEmbedding: doc.embedding !== null,
+          labelIds: doc.document_labels?.map((dl: any) => dl.label_id) ?? [],
         }))
       );
     } catch {
@@ -84,6 +102,7 @@ export default function GerenciarFaqs() {
     }
   }, [empresaId, activeTab, toast]);
 
+  useEffect(() => { fetchCompanyLabels(); }, [fetchCompanyLabels]);
   useEffect(() => { fetchFaqs(); }, [fetchFaqs]);
 
   // Clear selection when tab changes
@@ -284,6 +303,8 @@ export default function GerenciarFaqs() {
   const selectedFaqs = faqs.filter(f => selectedIds.has(f.id));
 
   const filtered = faqs.filter((f) => {
+    // Label filter
+    if (filterLabelId && !f.labelIds.includes(filterLabelId)) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return (
@@ -292,6 +313,18 @@ export default function GerenciarFaqs() {
       f.tags.some((t) => t.toLowerCase().includes(s))
     );
   });
+
+  const handleLabelToggle = (faqId: number, labelId: string, isAdding: boolean) => {
+    setFaqs(prev => prev.map(f => {
+      if (f.id !== faqId) return f;
+      return {
+        ...f,
+        labelIds: isAdding
+          ? [...f.labelIds, labelId]
+          : f.labelIds.filter(id => id !== labelId),
+      };
+    }));
+  };
 
   return (
     <AppLayout>
@@ -305,7 +338,12 @@ export default function GerenciarFaqs() {
           <span className="text-foreground">FAQs</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-foreground mb-6">Gerenciar FAQs</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-foreground">Gerenciar FAQs</h1>
+          <Button variant="outline" onClick={() => setLabelsModalOpen(true)}>
+            <Tags className="h-4 w-4 mr-2" /> Gerenciar Etiquetas
+          </Button>
+        </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
@@ -327,6 +365,18 @@ export default function GerenciarFaqs() {
                     className="pl-9"
                   />
                 </div>
+                {companyLabels.length > 0 && (
+                  <select
+                    value={filterLabelId || ''}
+                    onChange={e => setFilterLabelId(e.target.value || null)}
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">Todas etiquetas</option>
+                    {companyLabels.map(l => (
+                      <option key={l.id} value={l.id}>{l.nome}</option>
+                    ))}
+                  </select>
+                )}
                 <Button onClick={() => { setEditingFaq(null); setModalOpen(true); }}>
                   <Plus className="h-4 w-4 mr-2" /> Adicionar FAQ
                 </Button>
@@ -447,6 +497,14 @@ export default function GerenciarFaqs() {
                                 </Badge>
                               )}
                             </div>
+                            <div className="mt-2">
+                              <LabelSelector
+                                documentId={faq.id}
+                                labels={companyLabels}
+                                selectedLabelIds={faq.labelIds}
+                                onToggle={(labelId, isAdding) => handleLabelToggle(faq.id, labelId, isAdding)}
+                              />
+                            </div>
                           </div>
                           <div className="flex gap-1 shrink-0">
                             {!faq.hasEmbedding && (
@@ -566,6 +624,14 @@ export default function GerenciarFaqs() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Manage Labels Modal */}
+      <ManageLabelsModal
+        isOpen={labelsModalOpen}
+        onClose={() => setLabelsModalOpen(false)}
+        empresaId={empresaId!}
+        onLabelsChanged={fetchCompanyLabels}
+      />
     </AppLayout>
   );
 }
