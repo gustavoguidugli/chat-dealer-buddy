@@ -12,6 +12,7 @@ import Home from "./pages/Home";
 import Triagem from "./pages/Triagem";
 import BaseConhecimento from "./pages/BaseConhecimento";
 import GerenciarFaqs from "./pages/GerenciarFaqs";
+import HorarioAtendimento from "./pages/HorarioAtendimento";
 import AdminEmpresas from "./pages/AdminEmpresas";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,9 @@ const App = () => (
             } />
             <Route path="/base-conhecimento/faqs" element={
               <ProtectedRoute><GerenciarFaqs /></ProtectedRoute>
+            } />
+            <Route path="/base-conhecimento/horarios" element={
+              <ProtectedRoute><HorarioAtendimento /></ProtectedRoute>
             } />
             <Route path="/admin/empresas" element={
               <ProtectedRoute><AdminEmpresas /></ProtectedRoute>

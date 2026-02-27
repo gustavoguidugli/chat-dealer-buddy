@@ -1086,6 +1086,62 @@ export type Database = {
           },
         ]
       }
+      faqs: {
+        Row: {
+          ativo: boolean | null
+          contexto: string
+          created_at: string | null
+          created_by: string | null
+          id: number
+          id_empresa: number
+          observacoes: string | null
+          pergunta: string
+          prioridade: number | null
+          resposta: string
+          tags: string[] | null
+          tipo_faq: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          contexto: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: number
+          id_empresa: number
+          observacoes?: string | null
+          pergunta: string
+          prioridade?: number | null
+          resposta: string
+          tags?: string[] | null
+          tipo_faq: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          contexto?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: number
+          id_empresa?: number
+          observacoes?: string | null
+          pergunta?: string
+          prioridade?: number | null
+          resposta?: string
+          tags?: string[] | null
+          tipo_faq?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faqs_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fluxos: {
         Row: {
           created_at: string
@@ -1888,6 +1944,33 @@ export type Database = {
               similarity: number
             }[]
           }
+      match_documents_pos_qualificacao: {
+        Args: { filter?: Json; match_count?: number; query_embedding: string }
+        Returns: {
+          content: string
+          id: number
+          metadata: Json
+          similarity: number
+        }[]
+      }
+      match_documents_purificador: {
+        Args: { filter?: Json; match_count?: number; query_embedding: string }
+        Returns: {
+          content: string
+          id: number
+          metadata: Json
+          similarity: number
+        }[]
+      }
+      match_documents_qualificacao: {
+        Args: { filter?: Json; match_count?: number; query_embedding: string }
+        Returns: {
+          content: string
+          id: number
+          metadata: Json
+          similarity: number
+        }[]
+      }
       usar_convite: {
         Args: { p_convite_id: string; p_user_id: string }
         Returns: boolean
