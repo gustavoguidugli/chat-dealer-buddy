@@ -74,7 +74,7 @@ export function LabelSelector({ documentId, labels, selectedLabelIds, onToggle }
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="h-6 w-6" title="Gerenciar etiquetas">
-            <Plus className="h-3.5 w-3.5" />
+            <Tag className="h-3.5 w-3.5" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-48 p-1" align="start">
