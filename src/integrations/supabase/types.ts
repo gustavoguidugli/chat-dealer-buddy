@@ -1096,7 +1096,6 @@ export type Database = {
           id_empresa: number
           observacoes: string | null
           pergunta: string
-          prioridade: number | null
           resposta: string
           tags: string[] | null
           tipo_faq: string
@@ -1111,7 +1110,6 @@ export type Database = {
           id_empresa: number
           observacoes?: string | null
           pergunta: string
-          prioridade?: number | null
           resposta: string
           tags?: string[] | null
           tipo_faq: string
@@ -1126,7 +1124,6 @@ export type Database = {
           id_empresa?: number
           observacoes?: string | null
           pergunta?: string
-          prioridade?: number | null
           resposta?: string
           tags?: string[] | null
           tipo_faq?: string

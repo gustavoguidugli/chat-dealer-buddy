@@ -17,22 +17,20 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   DropdownMenuSeparator, DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Edit, Trash2, RefreshCw, Search, MessageSquare, ChevronRight, Loader2, ArrowRightLeft, Copy, CheckSquare, Tags } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, MessageSquare, ChevronRight, ArrowRightLeft, Copy, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { FaqModal, FaqFormData } from '@/components/FaqModal';
-import { LabelSelector, type LabelItem } from '@/components/LabelSelector';
-import { ManageLabelsModal } from '@/components/ManageLabelsModal';
 
 interface FaqItem {
   id: number;
   contexto: string;
   pergunta: string;
   resposta: string;
+  observacoes: string | null;
   tags: string[];
-  hasEmbedding: boolean;
-  labelIds: string[];
+  tipo_faq: string;
 }
 
 const TABS = [
@@ -53,46 +51,32 @@ export default function GerenciarFaqs() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFaq, setEditingFaq] = useState<FaqItem | null>(null);
   const [deletingFaq, setDeletingFaq] = useState<FaqItem | null>(null);
-  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
-  const [labelsModalOpen, setLabelsModalOpen] = useState(false);
-  const [companyLabels, setCompanyLabels] = useState<LabelItem[]>([]);
-  const [filterLabelId, setFilterLabelId] = useState<string | null>(null);
-
-  const fetchCompanyLabels = useCallback(async () => {
-    if (!empresaId) return;
-    const { data } = await supabase
-      .from('labels')
-      .select('id, nome, cor, icone')
-      .eq('empresa_id', empresaId)
-      .eq('ativo', true)
-      .order('ordem', { ascending: true });
-    setCompanyLabels((data as LabelItem[]) || []);
-  }, [empresaId]);
 
   const fetchFaqs = useCallback(async () => {
     if (!empresaId) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('documents')
-        .select('id, content, metadata, embedding, document_labels(label_id)')
+        .from('faqs')
+        .select('id, contexto, pergunta, resposta, observacoes, tipo_faq, tags, ativo')
         .eq('id_empresa', empresaId)
-        .filter('metadata->>tipo_faq', 'eq', activeTab)
+        .eq('tipo_faq', activeTab)
+        .eq('ativo', true)
         .order('id', { ascending: true });
 
       if (error) throw error;
 
       setFaqs(
-        (data || []).map((doc: any) => ({
-          id: doc.id,
-          contexto: doc.metadata?.contexto ?? '',
-          pergunta: doc.metadata?.pergunta ?? '',
-          resposta: doc.metadata?.resposta ?? '',
-          tags: doc.metadata?.tags ?? [],
-          hasEmbedding: doc.embedding !== null,
-          labelIds: doc.document_labels?.map((dl: any) => dl.label_id) ?? [],
+        (data || []).map((faq) => ({
+          id: faq.id,
+          contexto: faq.contexto ?? '',
+          pergunta: faq.pergunta ?? '',
+          resposta: faq.resposta ?? '',
+          observacoes: faq.observacoes,
+          tags: faq.tags ?? [],
+          tipo_faq: faq.tipo_faq,
         }))
       );
     } catch {
@@ -102,7 +86,6 @@ export default function GerenciarFaqs() {
     }
   }, [empresaId, activeTab, toast]);
 
-  useEffect(() => { fetchCompanyLabels(); }, [fetchCompanyLabels]);
   useEffect(() => { fetchFaqs(); }, [fetchFaqs]);
 
   // Clear selection when tab changes
@@ -111,40 +94,32 @@ export default function GerenciarFaqs() {
   const handleSave = async (data: FaqFormData) => {
     if (!empresaId) return;
 
-    const content = `Contexto: ${data.contexto}\nPergunta: ${data.pergunta}\nResposta: ${data.resposta}`;
-    const metadata = {
-      tipo_faq: activeTab,
-      contexto: data.contexto,
-      pergunta: data.pergunta,
-      resposta: data.resposta,
-      tags: data.tags,
-    };
-
-    let embedding: any = null;
-    try {
-      toast({ title: 'Gerando embedding...' });
-      const { data: embData, error: embError } = await supabase.functions.invoke('gerar-embedding', {
-        body: { texto: content },
-      });
-      if (embError) throw embError;
-      if (embData?.error) throw new Error(embData.error);
-      embedding = embData?.embedding ?? null;
-    } catch (err) {
-      console.error('Falha ao gerar embedding:', err);
-      toast({ title: 'Erro ao gerar embedding. FAQ será salvo sem embedding.', variant: 'destructive' });
-    }
-
     if (editingFaq) {
       const { error } = await supabase
-        .from('documents')
-        .update({ content, metadata, embedding })
+        .from('faqs')
+        .update({
+          contexto: data.contexto,
+          pergunta: data.pergunta,
+          resposta: data.resposta,
+          observacoes: data.observacoes || null,
+          tags: data.tags,
+        })
         .eq('id', editingFaq.id);
       if (error) { toast({ title: 'Erro ao atualizar FAQ', variant: 'destructive' }); throw error; }
       toast({ title: 'FAQ atualizado!' });
     } else {
       const { error } = await supabase
-        .from('documents')
-        .insert({ id_empresa: empresaId, content, metadata, embedding });
+        .from('faqs')
+        .insert({
+          id_empresa: empresaId,
+          contexto: data.contexto,
+          pergunta: data.pergunta,
+          resposta: data.resposta,
+          observacoes: data.observacoes || null,
+          tipo_faq: activeTab,
+          tags: data.tags,
+          ativo: true,
+        });
       if (error) { toast({ title: 'Erro ao criar FAQ', variant: 'destructive' }); throw error; }
       toast({ title: 'FAQ criado com sucesso!' });
     }
@@ -156,7 +131,7 @@ export default function GerenciarFaqs() {
   const handleDelete = async () => {
     if (!deletingFaq || !empresaId) return;
     const { error } = await supabase
-      .from('documents')
+      .from('faqs')
       .delete()
       .eq('id', deletingFaq.id)
       .eq('id_empresa', empresaId);
@@ -170,45 +145,16 @@ export default function GerenciarFaqs() {
     setDeletingFaq(null);
   };
 
-  const handleRegenerate = async (faq: FaqItem) => {
-    if (!empresaId) return;
-    setRegeneratingId(faq.id);
-    try {
-      const content = `Contexto: ${faq.contexto}\nPergunta: ${faq.pergunta}\nResposta: ${faq.resposta}`;
-      const { data: embData, error } = await supabase.functions.invoke('gerar-embedding', {
-        body: { texto: content },
-      });
-      if (error) throw error;
-      if (embData?.error) throw new Error(embData.error);
-      await supabase.from('documents').update({ embedding: embData.embedding }).eq('id', faq.id);
-      toast({ title: 'Embedding gerado com sucesso!' });
-      fetchFaqs();
-    } catch (err) {
-      console.error('Falha ao regerar embedding:', err);
-      toast({ title: 'Erro ao gerar embedding', variant: 'destructive' });
-    } finally {
-      setRegeneratingId(null);
-    }
-  };
-
   const handleMoveToTab = async (faq: FaqItem, newTipoFaq: string) => {
     if (!empresaId) return;
     try {
-      const { data: doc } = await supabase
-        .from('documents')
-        .select('metadata')
-        .eq('id', faq.id)
-        .single();
-      
-      const updatedMetadata = { ...(doc?.metadata as any), tipo_faq: newTipoFaq };
-      
       const { error } = await supabase
-        .from('documents')
-        .update({ metadata: updatedMetadata })
+        .from('faqs')
+        .update({ tipo_faq: newTipoFaq })
         .eq('id', faq.id);
-      
+
       if (error) throw error;
-      
+
       const targetLabel = TABS.find(t => t.value === newTipoFaq)?.label ?? newTipoFaq;
       toast({ title: `FAQ movido para "${targetLabel}"` });
       fetchFaqs();
@@ -222,20 +168,18 @@ export default function GerenciarFaqs() {
     if (!empresaId) return;
     setBulkActionLoading(true);
     try {
-      const inserts = faqsToDuplicate.map(faq => {
-        const tipoFaq = targetTab ?? activeTab;
-        const content = `Contexto: ${faq.contexto}\nPergunta: ${faq.pergunta}\nResposta: ${faq.resposta}`;
-        const metadata = {
-          tipo_faq: tipoFaq,
-          contexto: faq.contexto,
-          pergunta: faq.pergunta,
-          resposta: faq.resposta,
-          tags: faq.tags,
-        };
-        return { id_empresa: empresaId, content, metadata };
-      });
+      const inserts = faqsToDuplicate.map(faq => ({
+        id_empresa: empresaId,
+        contexto: faq.contexto,
+        pergunta: faq.pergunta,
+        resposta: faq.resposta,
+        observacoes: faq.observacoes,
+        tipo_faq: targetTab ?? activeTab,
+        tags: faq.tags,
+        ativo: true,
+      }));
 
-      const { error } = await supabase.from('documents').insert(inserts);
+      const { error } = await supabase.from('faqs').insert(inserts);
       if (error) throw error;
 
       const targetLabel = targetTab ? TABS.find(t => t.value === targetTab)?.label : null;
@@ -258,19 +202,12 @@ export default function GerenciarFaqs() {
     setBulkActionLoading(true);
     try {
       const ids = Array.from(selectedIds);
-      for (const id of ids) {
-        const { data: doc } = await supabase
-          .from('documents')
-          .select('metadata')
-          .eq('id', id)
-          .single();
-        const updatedMetadata = { ...(doc?.metadata as any), tipo_faq: newTipoFaq };
-        const { error } = await supabase
-          .from('documents')
-          .update({ metadata: updatedMetadata })
-          .eq('id', id);
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from('faqs')
+        .update({ tipo_faq: newTipoFaq })
+        .in('id', ids);
+
+      if (error) throw error;
 
       const targetLabel = TABS.find(t => t.value === newTipoFaq)?.label ?? newTipoFaq;
       toast({ title: `${ids.length} FAQ(s) movido(s) para "${targetLabel}"` });
@@ -303,28 +240,15 @@ export default function GerenciarFaqs() {
   const selectedFaqs = faqs.filter(f => selectedIds.has(f.id));
 
   const filtered = faqs.filter((f) => {
-    // Label filter
-    if (filterLabelId && !f.labelIds.includes(filterLabelId)) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return (
       f.pergunta.toLowerCase().includes(s) ||
       f.resposta.toLowerCase().includes(s) ||
-      f.tags.some((t) => t.toLowerCase().includes(s))
+      f.contexto.toLowerCase().includes(s) ||
+      f.tags?.some((t) => t.toLowerCase().includes(s))
     );
   });
-
-  const handleLabelToggle = (faqId: number, labelId: string, isAdding: boolean) => {
-    setFaqs(prev => prev.map(f => {
-      if (f.id !== faqId) return f;
-      return {
-        ...f,
-        labelIds: isAdding
-          ? [...f.labelIds, labelId]
-          : f.labelIds.filter(id => id !== labelId),
-      };
-    }));
-  };
 
   return (
     <AppLayout>
@@ -340,9 +264,6 @@ export default function GerenciarFaqs() {
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">Gerenciar FAQs</h1>
-          <Button variant="outline" onClick={() => setLabelsModalOpen(true)}>
-            <Tags className="h-4 w-4 mr-2" /> Gerenciar Etiquetas
-          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -365,18 +286,6 @@ export default function GerenciarFaqs() {
                     className="pl-9"
                   />
                 </div>
-                {companyLabels.length > 0 && (
-                  <select
-                    value={filterLabelId || ''}
-                    onChange={e => setFilterLabelId(e.target.value || null)}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">Todas etiquetas</option>
-                    {companyLabels.map(l => (
-                      <option key={l.id} value={l.id}>{l.nome}</option>
-                    ))}
-                  </select>
-                )}
                 <Button onClick={() => { setEditingFaq(null); setModalOpen(true); }}>
                   <Plus className="h-4 w-4 mr-2" /> Adicionar FAQ
                 </Button>
@@ -484,6 +393,11 @@ export default function GerenciarFaqs() {
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-foreground">{faq.pergunta}</p>
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{faq.contexto}</p>
+                            {faq.observacoes && (
+                              <p className="text-xs text-muted-foreground/70 italic mt-1 line-clamp-1">
+                                Obs: {faq.observacoes}
+                              </p>
+                            )}
                             <div className="flex flex-wrap gap-1.5 mt-2">
                               {faq.tags.slice(0, 3).map((tag) => (
                                 <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
@@ -491,102 +405,73 @@ export default function GerenciarFaqs() {
                               {faq.tags.length > 3 && (
                                 <Badge variant="outline" className="text-xs">+{faq.tags.length - 3}</Badge>
                               )}
-                              {!faq.hasEmbedding && (
-                                <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">
-                                  ⚠️ Sem embedding
-                                </Badge>
-                              )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            <div className="flex gap-1">
-                              {!faq.hasEmbedding && (
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  disabled={regeneratingId === faq.id}
-                                  onClick={() => handleRegenerate(faq)}
-                                  title="Gerar embedding"
-                                >
-                                  {regeneratingId === faq.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <RefreshCw className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handleDuplicate([faq])}
-                                title="Duplicar"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                              {isAdmin && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      title="Mover para outra tab"
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleDuplicate([faq])}
+                              title="Duplicar"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            {isAdmin && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Mover para outra tab"
+                                  >
+                                    <ArrowRightLeft className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {TABS.filter(t => t.value !== activeTab).map(t => (
+                                    <DropdownMenuItem
+                                      key={t.value}
+                                      onClick={() => handleMoveToTab(faq, t.value)}
                                     >
-                                      <ArrowRightLeft className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    {TABS.filter(t => t.value !== activeTab).map(t => (
-                                      <DropdownMenuItem
-                                        key={t.value}
-                                        onClick={() => handleMoveToTab(faq, t.value)}
-                                      >
-                                        {t.label}
-                                      </DropdownMenuItem>
-                                    ))}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuLabel>Duplicar para</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    {TABS.filter(t => t.value !== activeTab).map(t => (
-                                      <DropdownMenuItem
-                                        key={`dup-${t.value}`}
-                                        onClick={() => handleDuplicate([faq], t.value)}
-                                      >
-                                        {t.label}
-                                      </DropdownMenuItem>
-                                    ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => { setEditingFaq(faq); setModalOpen(true); }}
-                                title="Editar"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => setDeletingFaq(faq)}
-                                title="Deletar"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <LabelSelector
-                              documentId={faq.id}
-                              labels={companyLabels}
-                              selectedLabelIds={faq.labelIds}
-                              onToggle={(labelId, isAdding) => handleLabelToggle(faq.id, labelId, isAdding)}
-                            />
+                                      {t.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel>Duplicar para</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {TABS.filter(t => t.value !== activeTab).map(t => (
+                                    <DropdownMenuItem
+                                      key={`dup-${t.value}`}
+                                      onClick={() => handleDuplicate([faq], t.value)}
+                                    >
+                                      {t.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => { setEditingFaq(faq); setModalOpen(true); }}
+                              title="Editar"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setDeletingFaq(faq)}
+                              title="Deletar"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -624,14 +509,6 @@ export default function GerenciarFaqs() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Manage Labels Modal */}
-      <ManageLabelsModal
-        isOpen={labelsModalOpen}
-        onClose={() => setLabelsModalOpen(false)}
-        empresaId={empresaId!}
-        onLabelsChanged={fetchCompanyLabels}
-      />
     </AppLayout>
   );
 }
