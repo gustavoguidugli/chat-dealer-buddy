@@ -644,6 +644,39 @@ export type Database = {
           },
         ]
       }
+      document_labels: {
+        Row: {
+          created_at: string | null
+          document_id: number
+          label_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_id: number
+          label_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: number
+          label_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_labels_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_labels_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           content: string | null
@@ -1106,6 +1139,50 @@ export type Database = {
             columns: ["fluxo_id"]
             isOneToOne: false
             referencedRelation: "fluxos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labels: {
+        Row: {
+          ativo: boolean | null
+          cor: string
+          created_at: string | null
+          empresa_id: number
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string
+          created_at?: string | null
+          empresa_id: number
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string
+          created_at?: string | null
+          empresa_id?: number
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labels_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
         ]
