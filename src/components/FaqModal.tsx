@@ -11,6 +11,7 @@ export interface FaqFormData {
   contexto: string;
   pergunta: string;
   resposta: string;
+  observacoes: string;
   tags: string[];
 }
 
@@ -18,13 +19,14 @@ interface FaqModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: FaqFormData) => Promise<void>;
-  initialData?: FaqFormData | null;
+  initialData?: { contexto: string; pergunta: string; resposta: string; observacoes?: string | null; tags: string[] } | null;
 }
 
 export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps) {
   const [contexto, setContexto] = useState('');
   const [pergunta, setPergunta] = useState('');
   const [resposta, setResposta] = useState('');
+  const [observacoes, setObservacoes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -33,6 +35,7 @@ export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps
       setContexto(initialData?.contexto ?? '');
       setPergunta(initialData?.pergunta ?? '');
       setResposta(initialData?.resposta ?? '');
+      setObservacoes(initialData?.observacoes ?? '');
       setTags(initialData?.tags ?? []);
     }
   }, [isOpen, initialData]);
@@ -43,7 +46,13 @@ export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps
     if (!isValid) return;
     setSaving(true);
     try {
-      await onSave({ contexto: contexto.trim(), pergunta: pergunta.trim(), resposta: resposta.trim(), tags });
+      await onSave({
+        contexto: contexto.trim(),
+        pergunta: pergunta.trim(),
+        resposta: resposta.trim(),
+        observacoes: observacoes.trim(),
+        tags,
+      });
       onClose();
     } catch {
       // error handled by parent
@@ -95,6 +104,19 @@ export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps
               disabled={saving}
             />
             <p className="text-xs text-muted-foreground">Você pode usar variáveis: {'{{ variavel }}'}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="observacoes">Observações (opcional)</Label>
+            <Textarea
+              id="observacoes"
+              rows={3}
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Instruções internas para o agente sobre quando/como usar este FAQ"
+              disabled={saving}
+            />
+            <p className="text-xs text-muted-foreground">Instruções internas para o agente sobre quando/como usar este FAQ</p>
           </div>
 
           <div className="space-y-2">
