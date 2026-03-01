@@ -123,6 +123,7 @@ export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps
           <div className="space-y-2">
             <Label>Tags</Label>
             <TagInput value={tags} onChange={setTags} placeholder="Digite uma tag e pressione Enter" />
+            <p className="text-xs text-muted-foreground">Adicione abaixo palavras ou frases curtas que a IA usará para identificar esse interesse</p>
           </div>
         </div>
 
