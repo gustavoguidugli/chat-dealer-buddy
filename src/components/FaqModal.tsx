@@ -114,7 +114,7 @@ export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps
               rows={3}
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
-              placeholder="Instruções internas para o agente sobre quando/como usar este FAQ"
+              placeholder="Ex: Se o lead quiser saber sobre preço de locação de máquina, não responda esse preço de venda"
               disabled={saving}
             />
             <p className="text-xs text-muted-foreground">Instruções internas para o agente sobre quando/como usar este FAQ</p>
