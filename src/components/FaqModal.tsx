@@ -91,6 +91,7 @@ export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps
               placeholder="Ex: Qual o preço da máquina?"
               disabled={saving}
             />
+            <p className="text-xs text-muted-foreground">Pergunta que pode ser feita pelo Lead / Cliente</p>
           </div>
 
           <div className="space-y-2">
