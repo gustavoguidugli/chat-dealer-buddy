@@ -31,23 +31,23 @@ export function TagInput({ value, onChange, placeholder = 'Digite e pressione En
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5 min-h-[2rem]">
-        {value.map((tag) => (
-          <Badge key={tag} variant="secondary" className="gap-1 text-xs">
-            {tag}
-            <button type="button" onClick={() => onChange(value.filter(t => t !== tag))} className="hover:text-destructive">
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-      </div>
+      
+
+
+
+
+
+
+
+
+
       <Input
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={addTag}
-        placeholder={placeholder}
-      />
-    </div>
-  );
+        placeholder={placeholder} />
+
+    </div>);
+
 }
