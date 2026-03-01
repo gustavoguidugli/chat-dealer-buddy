@@ -403,7 +403,7 @@ export default function GerenciarFaqs() {
                   {filtered.map((faq, idx) => (
                     <Card key={faq.id} className={selectedIds.has(faq.id) ? 'ring-2 ring-primary' : ''}>
                       <CardContent className="p-4">
-                        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           <div className="flex items-center gap-2 shrink-0">
                             <Checkbox
                               checked={selectedIds.has(faq.id)}
