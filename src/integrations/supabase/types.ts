@@ -46,6 +46,21 @@ export type Database = {
           },
         ]
       }
+      celulares_termall: {
+        Row: {
+          id: number
+          whatsapp: string
+        }
+        Insert: {
+          id?: number
+          whatsapp?: string
+        }
+        Update: {
+          id?: number
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       config_empresas_geral: {
         Row: {
           created_at: string
@@ -55,8 +70,6 @@ export type Database = {
           faq_qualificacao_maquina: string
           horarios_funcionamento: Json
           id_empresa: number
-          mensagem_triagem: string | null
-          triagem_is_ativo: boolean | null
           updated_at: string
           wait_segundos: number | null
         }
@@ -68,8 +81,6 @@ export type Database = {
           faq_qualificacao_maquina?: string
           horarios_funcionamento?: Json
           id_empresa: number
-          mensagem_triagem?: string | null
-          triagem_is_ativo?: boolean | null
           updated_at?: string
           wait_segundos?: number | null
         }
@@ -81,8 +92,6 @@ export type Database = {
           faq_qualificacao_maquina?: string
           horarios_funcionamento?: Json
           id_empresa?: number
-          mensagem_triagem?: string | null
-          triagem_is_ativo?: boolean | null
           updated_at?: string
           wait_segundos?: number | null
         }
@@ -1673,6 +1682,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      Teste_RAG: {
+        Row: {
+          contexto: string
+          id: number
+          pergunta: string
+          resposta: string
+        }
+        Insert: {
+          contexto?: string
+          id?: number
+          pergunta?: string
+          resposta?: string
+        }
+        Update: {
+          contexto?: string
+          id?: number
+          pergunta?: string
+          resposta?: string
+        }
+        Relationships: []
       }
       times: {
         Row: {
