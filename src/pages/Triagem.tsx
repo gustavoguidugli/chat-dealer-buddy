@@ -2,18 +2,24 @@ import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { InterestModal, InterestFormData } from '@/components/InterestModal';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { InterestModal, InterestFormData } from '@/components/InterestModal';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Lock } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, Pencil, Trash2, Plus, Save, Lock, CheckCheck } from 'lucide-react';
 
 interface Interesse {
   id: string;
@@ -28,208 +34,249 @@ interface Interesse {
 
 const DEFAULT_NAMES = ['maquina_gelo', 'purificador', 'outros'];
 
+function SortableInterestRow({
+  interesse, index, isDefault, onEdit, onDelete
+}: {
+  interesse: Interesse; index: number; isDefault: boolean;
+  onEdit: () => void; onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: interesse.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-3 bg-background border rounded-lg p-4">
+      <span className="text-muted-foreground font-medium w-6 text-right shrink-0">{index + 1}.</span>
+      <button {...attributes} {...listeners} className="cursor-grab text-muted-foreground hover:text-foreground touch-none">
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <span className="font-semibold text-foreground flex-1">{interesse.label}</span>
+      {isDefault && (
+        <Badge variant="outline" className="text-xs gap-1 shrink-0">
+          <Lock className="h-3 w-3" /> Padrão
+        </Badge>
+      )}
+      <Button variant="ghost" size="icon" onClick={onEdit} className="shrink-0">
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={onDelete} disabled={isDefault}
+        className={`shrink-0 ${isDefault ? 'opacity-30' : 'text-muted-foreground hover:text-destructive'}`}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
 export default function Triagem() {
   const { empresaId } = useAuth();
   const { toast } = useToast();
-  const [interesses, setInteresses] = useState<Interesse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mensagemTriagem, setMensagemTriagem] = useState('');
+  const [interesses, setInteresses] = useState<Interesse[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingInterest, setEditingInterest] = useState<Interesse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Interesse | null>(null);
+  const [savingMsg, setSavingMsg] = useState(false);
 
-  const fetchInteresses = async () => {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const fetchData = async () => {
     if (!empresaId) return;
-    const { data, error } = await supabase
-      .from('lista_interesses')
-      .select('*')
-      .eq('empresa_id', empresaId)
-      .order('ordem');
-    if (error) {
-      toast({ title: 'Erro', description: 'Não foi possível carregar interesses', variant: 'destructive' });
-    } else {
-      setInteresses(data || []);
-    }
+    setLoading(true);
+
+    const [configRes, interessesRes] = await Promise.all([
+      supabase.from('config_empresas_geral').select('mensagem_triagem').eq('id_empresa', empresaId).maybeSingle(),
+      supabase.from('lista_interesses').select('*').eq('empresa_id', empresaId).order('ordem'),
+    ]);
+
+    setMensagemTriagem(configRes.data?.mensagem_triagem || '');
+    setInteresses(interessesRes.data || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchInteresses(); }, [empresaId]);
+  useEffect(() => { fetchData(); }, [empresaId]);
 
-  const handleSave = async (formData: InterestFormData) => {
+  const handleSalvarMensagem = async () => {
+    setSavingMsg(true);
+    const { error } = await supabase
+      .from('config_empresas_geral')
+      .update({ mensagem_triagem: mensagemTriagem })
+      .eq('id_empresa', empresaId);
+    setSavingMsg(false);
+    if (!error) toast({ title: 'Mensagem atualizada com sucesso!' });
+    else toast({ title: 'Erro ao salvar mensagem', variant: 'destructive' });
+  };
+
+  const handleSaveInterest = async (formData: InterestFormData) => {
     if (editingInterest) {
-      const { error } = await supabase
-        .from('lista_interesses')
-        .update({
-          label: formData.label,
-          palavras_chave: formData.palavras_chave,
-          mensagem_resposta: formData.mensagem_resposta,
-          ordem: formData.ordem,
-        })
-        .eq('id', editingInterest.id);
+      const { error } = await supabase.from('lista_interesses').update({
+        nome: formData.nome, label: formData.label, palavras_chave: formData.palavras_chave,
+        mensagem_resposta: formData.mensagem_resposta, ordem: formData.ordem,
+      }).eq('id', editingInterest.id);
       if (error) throw new Error('Erro ao atualizar interesse');
-      toast({ title: 'Interesse atualizado com sucesso!' });
+      toast({ title: 'Interesse atualizado!' });
     } else {
-      const { error } = await supabase
-        .from('lista_interesses')
-        .insert({
-          empresa_id: empresaId!,
-          nome: formData.nome,
-          label: formData.label,
-          palavras_chave: formData.palavras_chave,
-          mensagem_resposta: formData.mensagem_resposta,
-          ordem: formData.ordem,
-          ativo: true,
-        });
+      const { error } = await supabase.from('lista_interesses').insert({
+        empresa_id: empresaId!, nome: formData.nome, label: formData.label,
+        palavras_chave: formData.palavras_chave, mensagem_resposta: formData.mensagem_resposta,
+        ordem: formData.ordem, ativo: true,
+      });
       if (error) {
-        if (error.message?.includes('unique') || error.message?.includes('duplicate')) {
+        if (error.message?.includes('unique') || error.message?.includes('duplicate'))
           throw new Error('Já existe um interesse com esse nome');
-        }
         throw new Error('Erro ao criar interesse');
       }
-      toast({ title: 'Interesse criado com sucesso!' });
+      toast({ title: 'Interesse adicionado!' });
     }
-    await fetchInteresses();
+    await fetchData();
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const { error } = await supabase.from('lista_interesses').delete().eq('id', deleteTarget.id);
-    if (error) {
-      toast({ title: 'Erro ao deletar', variant: 'destructive' });
-    } else {
-      toast({ title: 'Interesse removido' });
-      await fetchInteresses();
-    }
+    if (error) toast({ title: 'Erro ao deletar', variant: 'destructive' });
+    else { toast({ title: 'Interesse removido' }); await fetchData(); }
     setDeleteTarget(null);
   };
 
-  const handleToggle = async (interesse: Interesse) => {
-    const { error } = await supabase
-      .from('lista_interesses')
-      .update({ ativo: !interesse.ativo })
-      .eq('id', interesse.id);
-    if (error) {
-      toast({ title: 'Erro', variant: 'destructive' });
-    } else {
-      setInteresses(prev => prev.map(i => i.id === interesse.id ? { ...i, ativo: !i.ativo } : i));
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = interesses.findIndex(i => i.id === active.id);
+    const newIndex = interesses.findIndex(i => i.id === over.id);
+    const reordered = arrayMove(interesses, oldIndex, newIndex).map((int, idx) => ({ ...int, ordem: idx + 1 }));
+    setInteresses(reordered);
+    for (const item of reordered) {
+      await supabase.from('lista_interesses').update({ ordem: item.ordem }).eq('id', item.id);
     }
+    toast({ title: 'Ordem atualizada!' });
   };
 
-  const handleReorder = async (index: number, direction: 'up' | 'down') => {
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= interesses.length) return;
-    const newList = [...interesses];
-    const tempOrdem = newList[index].ordem;
-    newList[index] = { ...newList[index], ordem: newList[swapIndex].ordem };
-    newList[swapIndex] = { ...newList[swapIndex], ordem: tempOrdem };
-    [newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]];
-    setInteresses(newList);
-    await Promise.all([
-      supabase.from('lista_interesses').update({ ordem: newList[index].ordem }).eq('id', newList[index].id),
-      supabase.from('lista_interesses').update({ ordem: newList[swapIndex].ordem }).eq('id', newList[swapIndex].id),
-    ]);
-  };
-
-  const isDefault = (nome: string) => DEFAULT_NAMES.includes(nome);
+  const activeInteresses = interesses.filter(i => i.ativo !== false);
   const nextOrder = interesses.length > 0 ? Math.max(...interesses.map(i => i.ordem)) + 1 : 1;
+  const isDefault = (nome: string) => DEFAULT_NAMES.includes(nome);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="p-6 md:p-10 space-y-6">
+          <Skeleton className="h-8 w-80" />
+          <Skeleton className="h-48 w-full max-w-2xl mx-auto rounded-xl" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-10">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Gerenciar Interesses</h1>
-            <p className="text-muted-foreground text-sm mt-1">Configure os tópicos que o chatbot pode identificar</p>
-          </div>
-          <Button onClick={() => { setEditingInterest(null); setModalOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Adicionar
-          </Button>
+      <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Configuração da Mensagem Inicial</h1>
+          <p className="text-muted-foreground mt-1">
+            Essa é a primeira mensagem que seu cliente vai receber. Edite abaixo e visualize em tempo real.
+          </p>
         </div>
 
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+        {/* Preview WhatsApp */}
+        <div className="flex justify-center">
+          <div className="rounded-2xl p-5 max-w-lg w-full shadow-sm" style={{ backgroundColor: 'hsl(120 60% 95%)', borderColor: 'hsl(120 40% 80%)', borderWidth: '1px', borderStyle: 'solid' }}>
+            <p className="text-foreground whitespace-pre-line">{mensagemTriagem || 'Olá, tudo bem?\nSobre qual assunto você gostaria de falar? 🧊💧'}</p>
+            {activeInteresses.length > 0 && (
+              <div className="mt-3 space-y-0.5">
+                {activeInteresses.map((int, idx) => (
+                  <p key={int.id} className="text-foreground">{idx + 1}. {int.label}</p>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end mt-2">
+              <CheckCheck className="h-4 w-4 text-primary" />
+            </div>
           </div>
-        ) : interesses.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              Nenhum interesse cadastrado. Clique em "Adicionar" para criar o primeiro.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {interesses.map((interesse, index) => (
-              <Card key={interesse.id} className={`transition-opacity ${interesse.ativo === false ? 'opacity-50' : ''}`}>
-                <CardContent className="p-4 flex items-center gap-4">
-                  {/* Reorder */}
-                  <div className="flex flex-col items-center gap-1 shrink-0">
-                    <button onClick={() => handleReorder(index, 'up')} disabled={index === 0}
-                      className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-                      <ChevronUp className="h-4 w-4" />
-                    </button>
-                    <Badge variant="outline" className="text-xs font-bold w-7 justify-center">{interesse.ordem}</Badge>
-                    <button onClick={() => handleReorder(index, 'down')} disabled={index === interesses.length - 1}
-                      className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-                  </div>
+        </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h3 className="font-semibold text-foreground">{interesse.label}</h3>
-                      {isDefault(interesse.nome) && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                          <Lock className="h-3 w-3" /> Padrão
-                        </Badge>
-                      )}
-                      {interesse.ativo === false && <Badge variant="outline" className="text-xs">Inativo</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2">{interesse.nome}</p>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {interesse.palavras_chave?.map((kw) => (
-                        <Badge key={kw} className="text-xs bg-primary-muted text-primary border-0">{kw}</Badge>
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">{interesse.mensagem_resposta}</p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Switch checked={interesse.ativo !== false} onCheckedChange={() => handleToggle(interesse)} />
-                    <Button variant="ghost" size="icon" onClick={() => { setEditingInterest(interesse); setModalOpen(true); }}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {!isDefault(interesse.nome) ? (
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(interesse)} className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button variant="ghost" size="icon" disabled className="opacity-30" title="Interesses padrão não podem ser deletados">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {/* Boas-vindas */}
+        <div className="space-y-3">
+          <h2 className="text-xl font-bold text-foreground">Personalização da parte Boas-Vindas</h2>
+          <div className="flex gap-2 items-start">
+            <Textarea
+              value={mensagemTriagem}
+              onChange={(e) => setMensagemTriagem(e.target.value)}
+              rows={3}
+              placeholder="Olá, tudo bem?\nSobre qual assunto você gostaria de falar? 🧊💧"
+              className="flex-1"
+            />
+            <Button onClick={handleSalvarMensagem} disabled={savingMsg}>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar
+            </Button>
           </div>
-        )}
+          <p className="text-xs text-muted-foreground">
+            Digite acima o texto que antecede as opções de interesse na Mensagem Inicial.
+          </p>
+        </div>
 
+        {/* Interesses */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Personalizar Interesses</h2>
+            <p className="text-muted-foreground text-sm mt-1">
+              Abaixo você pode personalizar os <strong>Interesses</strong> que podem ser escolhidos pelo seu lead/cliente.
+              Edite no botão de personalizar, adicione ou exclua-os conforme a sua necessidade.
+            </p>
+          </div>
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={interesses.map(i => i.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {interesses.map((interesse, index) => (
+                  <SortableInterestRow
+                    key={interesse.id}
+                    interesse={interesse}
+                    index={index}
+                    isDefault={isDefault(interesse.nome)}
+                    onEdit={() => { setEditingInterest(interesse); setModalOpen(true); }}
+                    onDelete={() => setDeleteTarget(interesse)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          <div className="flex justify-center">
+            <Button onClick={() => { setEditingInterest(null); setModalOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> Adicionar Interesse
+            </Button>
+          </div>
+
+          {/* Placeholder example row */}
+          <div className="flex items-center gap-3 border border-dashed rounded-lg p-4 opacity-50">
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1 text-muted-foreground">Ex: Assistência Técnica</span>
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+            <Trash2 className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </div>
+
+        {/* Modal */}
         <InterestModal
           open={modalOpen}
           onOpenChange={(open) => { setModalOpen(open); if (!open) setEditingInterest(null); }}
-          onSave={handleSave}
+          onSave={handleSaveInterest}
           initialData={editingInterest ? {
-            nome: editingInterest.nome,
-            label: editingInterest.label,
+            nome: editingInterest.nome, label: editingInterest.label,
             palavras_chave: editingInterest.palavras_chave || [],
-            mensagem_resposta: editingInterest.mensagem_resposta,
-            ordem: editingInterest.ordem,
+            mensagem_resposta: editingInterest.mensagem_resposta, ordem: editingInterest.ordem,
           } : undefined}
           isDefault={editingInterest ? isDefault(editingInterest.nome) : false}
           nextOrder={nextOrder}
         />
 
+        {/* Delete dialog */}
         <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>

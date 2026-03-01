@@ -67,29 +67,31 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, isDefau
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Interesse' : 'Adicionar Interesse'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <div className="space-y-5 py-2">
           <div className="space-y-2">
-            <Label>Nome (snake_case)</Label>
+            <Label className="font-semibold">Nome (snake_case)</Label>
             <Input
               value={form.nome}
               onChange={(e) => setForm(f => ({ ...f, nome: e.target.value.toLowerCase().replace(/\s/g, '_') }))}
-              placeholder="assistencia_tecnica"
+              placeholder="maquina_de_gelo"
               disabled={isNameLocked}
             />
-            <p className="text-xs text-muted-foreground">Use formato snake_case (ex: assistencia_tecnica)</p>
+            <p className="text-xs text-muted-foreground">Use o formato snake_case (ex: assistencia_tecnica)</p>
           </div>
 
           <div className="space-y-2">
-            <Label>Label</Label>
+            <Label className="font-semibold">Nome da Etiqueta</Label>
             <Input
               value={form.label}
               onChange={(e) => setForm(f => ({ ...f, label: e.target.value }))}
-              placeholder="4. Assistência técnica"
+              placeholder="Máquina de Gelo"
             />
+            <p className="text-xs text-muted-foreground">Adicione o nome que aparecerá como opção para o lead/cliente.</p>
           </div>
 
           <div className="space-y-2">
-            <Label>Palavras-chave</Label>
+            <Label className="font-semibold">Palavras-chave</Label>
+            <p className="text-xs text-muted-foreground">Adicione abaixo palavras ou frases curtas que a IA usará para identificar esse interesse.</p>
             <TagInput
               value={form.palavras_chave}
               onChange={(tags) => setForm(f => ({ ...f, palavras_chave: tags }))}
@@ -98,23 +100,13 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, isDefau
           </div>
 
           <div className="space-y-2">
-            <Label>Mensagem de resposta</Label>
+            <Label className="font-semibold">Mensagem de Resposta</Label>
+            <p className="text-xs text-muted-foreground">Adicione abaixo o que deve ser respondido pela IA caso esse interesse seja escolhido pelo lead/cliente.</p>
             <Textarea
               value={form.mensagem_resposta}
-              onChange={(e) => setForm(f => ({ ...f, mensagem_resposta: e.target.value.slice(0, 500) }))}
-              placeholder="Entendi! Vou te conectar com nossa equipe..."
-              rows={3}
-            />
-            <p className="text-xs text-muted-foreground text-right">{form.mensagem_resposta.length}/500</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Ordem</Label>
-            <Input
-              type="number"
-              min={1}
-              value={form.ordem}
-              onChange={(e) => setForm(f => ({ ...f, ordem: parseInt(e.target.value) || 1 }))}
+              onChange={(e) => setForm(f => ({ ...f, mensagem_resposta: e.target.value }))}
+              placeholder="Ótimo! Vamos encontrar a máquina de gelo ideal para você. 🧊"
+              rows={4}
             />
           </div>
 
