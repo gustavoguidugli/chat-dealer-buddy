@@ -76,16 +76,19 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, isDefau
               placeholder="assistencia_tecnica"
               disabled={isNameLocked}
             />
-            <p className="text-xs text-muted-foreground">Use formato snake_case (ex: assistencia_tecnica)</p>
+            <p className="text-xs text-muted-foreground">Use o formato snake_case (ex: assistencia_tecnica)</p>
           </div>
 
           <div className="space-y-2">
-            <Label>Label</Label>
+            <Label>Nome da Etiqueta</Label>
             <Input
               value={form.label}
               onChange={(e) => setForm(f => ({ ...f, label: e.target.value }))}
-              placeholder="4. Assistência técnica"
+              placeholder="Máquina de Gelo"
             />
+            <p className="text-xs text-muted-foreground">
+              Adicione o nome que aparecerá como opção para o lead/cliente.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -95,27 +98,25 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, isDefau
               onChange={(tags) => setForm(f => ({ ...f, palavras_chave: tags }))}
               placeholder="Digite uma palavra e pressione Enter"
             />
+            <p className="text-xs text-muted-foreground">
+              Adicione palavras ou frases curtas que a IA usará para identificar esse interesse.
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label>Mensagem de resposta</Label>
+            <Label>Mensagem de Resposta</Label>
             <Textarea
               value={form.mensagem_resposta}
               onChange={(e) => setForm(f => ({ ...f, mensagem_resposta: e.target.value.slice(0, 500) }))}
-              placeholder="Entendi! Vou te conectar com nossa equipe..."
-              rows={3}
+              placeholder="Ótimo! Vamos encontrar a máquina de gelo ideal para você. 🧊"
+              rows={4}
             />
-            <p className="text-xs text-muted-foreground text-right">{form.mensagem_resposta.length}/500</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Ordem</Label>
-            <Input
-              type="number"
-              min={1}
-              value={form.ordem}
-              onChange={(e) => setForm(f => ({ ...f, ordem: parseInt(e.target.value) || 1 }))}
-            />
+            <div className="flex justify-between">
+              <p className="text-xs text-muted-foreground">
+                Adicione o que deve ser respondido pela IA caso esse interesse seja escolhido.
+              </p>
+              <p className="text-xs text-muted-foreground">{form.mensagem_resposta.length}/500</p>
+            </div>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
