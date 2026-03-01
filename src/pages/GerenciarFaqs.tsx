@@ -421,7 +421,13 @@ export default function GerenciarFaqs() {
                               </p>
                             )}
                           </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0">
+                            <LabelSelector
+                              faqId={faq.id}
+                              labels={companyLabels}
+                              selectedLabelIds={faq.labelIds}
+                              onToggle={(labelId, isAdding) => handleLabelToggle(faq.id, labelId, isAdding)}
+                            />
                             <div className="flex gap-1">
                               <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleDuplicate([faq])} title="Duplicar">
                                 <Copy className="h-4 w-4" />
@@ -459,12 +465,6 @@ export default function GerenciarFaqs() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                            <LabelSelector
-                              faqId={faq.id}
-                              labels={companyLabels}
-                              selectedLabelIds={faq.labelIds}
-                              onToggle={(labelId, isAdding) => handleLabelToggle(faq.id, labelId, isAdding)}
-                            />
                           </div>
                         </div>
                       </CardContent>
