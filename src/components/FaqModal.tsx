@@ -101,10 +101,10 @@ export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps
               rows={5}
               value={resposta}
               onChange={(e) => setResposta(e.target.value)}
-              placeholder="Digite a resposta que a IA deve dar"
+              placeholder="O preço é R$ 11.700 a parcelamos em 10x sem juros"
               disabled={saving}
             />
-            <p className="text-xs text-muted-foreground">Você pode usar variáveis: {'{{ variavel }}'}</p>
+            <p className="text-xs text-muted-foreground">Digite a resposta que a IA deve dar</p>
           </div>
 
           <div className="space-y-2">
