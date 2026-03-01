@@ -101,7 +101,7 @@ export function FaqModal({ isOpen, onClose, onSave, initialData }: FaqModalProps
               rows={5}
               value={resposta}
               onChange={(e) => setResposta(e.target.value)}
-              placeholder="O preço é R$ 11.700 a parcelamos em 10x sem juros"
+              placeholder="Ex: O preço é R$ 11.700 a parcelamos em 10x sem juros"
               disabled={saving}
             />
             <p className="text-xs text-muted-foreground">Digite a resposta que a IA deve dar</p>
