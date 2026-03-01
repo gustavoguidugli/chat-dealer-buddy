@@ -415,20 +415,11 @@ export default function GerenciarFaqs() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-foreground">{faq.pergunta}</p>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{faq.contexto}</p>
                             {faq.observacoes && (
                               <p className="text-xs text-muted-foreground/70 italic mt-1 line-clamp-1">
                                 Obs: {faq.observacoes}
                               </p>
                             )}
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                              {faq.tags.slice(0, 3).map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                              ))}
-                              {faq.tags.length > 3 && (
-                                <Badge variant="outline" className="text-xs">+{faq.tags.length - 3}</Badge>
-                              )}
-                            </div>
                           </div>
                           <div className="flex flex-col items-end gap-2 shrink-0">
                             <div className="flex gap-1">
