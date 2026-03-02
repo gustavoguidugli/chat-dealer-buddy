@@ -2,3 +2,6 @@ project_id = "foiraptipbrobehmqppy"
 
 [functions.gerar-embedding]
 verify_jwt = false
+
+[functions.copy-company-config]
+verify_jwt = false

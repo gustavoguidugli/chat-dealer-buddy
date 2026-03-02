@@ -815,7 +815,6 @@ export type Database = {
         Row: {
           ativo: boolean | null
           cnpj: string | null
-          colunas_qualificacao: string | null
           data_criacao: string | null
           email: string | null
           endereco: string | null
@@ -828,7 +827,6 @@ export type Database = {
           nome_automacao_sdr_maquinagelo: string | null
           nome_numero_manutencao: string | null
           nome_numero_purificador: string | null
-          perguntas_qualificacao: string | null
           site_url: string | null
           telefone: string | null
           whatsapp_automacao_sdr_maqgelo: string | null
@@ -838,7 +836,6 @@ export type Database = {
         Insert: {
           ativo?: boolean | null
           cnpj?: string | null
-          colunas_qualificacao?: string | null
           data_criacao?: string | null
           email?: string | null
           endereco?: string | null
@@ -851,7 +848,6 @@ export type Database = {
           nome_automacao_sdr_maquinagelo?: string | null
           nome_numero_manutencao?: string | null
           nome_numero_purificador?: string | null
-          perguntas_qualificacao?: string | null
           site_url?: string | null
           telefone?: string | null
           whatsapp_automacao_sdr_maqgelo?: string | null
@@ -861,7 +857,6 @@ export type Database = {
         Update: {
           ativo?: boolean | null
           cnpj?: string | null
-          colunas_qualificacao?: string | null
           data_criacao?: string | null
           email?: string | null
           endereco?: string | null
@@ -874,7 +869,6 @@ export type Database = {
           nome_automacao_sdr_maquinagelo?: string | null
           nome_numero_manutencao?: string | null
           nome_numero_purificador?: string | null
-          perguntas_qualificacao?: string | null
           site_url?: string | null
           telefone?: string | null
           whatsapp_automacao_sdr_maqgelo?: string | null
