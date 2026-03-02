@@ -80,30 +80,27 @@ export default function SelectCompany() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-2">
             {filtered.map((empresa) => (
-              <Card
+              <button
                 key={empresa.id}
-                className="hover:shadow-lg transition-all cursor-pointer group hover:-translate-y-1"
+                className="flex items-center gap-4 w-full rounded-lg border border-border bg-card px-5 py-4 text-left transition-colors hover:bg-muted/50 group"
                 onClick={() => handleSelect(empresa)}
               >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-muted">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <Badge className="bg-accent-muted text-accent border-0 text-xs">Ativo</Badge>
-                  </div>
-                  <h3 className="font-semibold text-foreground mb-1">{empresa.nome ?? 'Sem nome'}</h3>
-                  <p className="text-sm text-muted-foreground">{empresa.numero_automacao || 'Sem número'}</p>
-                  <Button variant="outline" size="sm" className="w-full mt-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    Acessar
-                  </Button>
-                </CardContent>
-              </Card>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-muted">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-foreground truncate">{empresa.nome ?? 'Sem nome'}</h3>
+                  <p className="text-xs text-muted-foreground">{empresa.numero_automacao || 'Sem número'}</p>
+                </div>
+                <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  Acessar →
+                </span>
+              </button>
             ))}
             {filtered.length === 0 && (
-              <p className="text-muted-foreground col-span-full text-center py-8">Nenhuma empresa encontrada</p>
+              <p className="text-muted-foreground text-center py-8">Nenhuma empresa encontrada</p>
             )}
           </div>
         )}
