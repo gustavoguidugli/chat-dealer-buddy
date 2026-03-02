@@ -37,10 +37,8 @@ interface FaqItem {
 }
 
 const TABS = [
-  { value: 'geral_maquina', label: 'Máquina - Geral' },
-  { value: 'qualificacao_maquina', label: 'Máquina - Qualificação' },
-  { value: 'pos_qualificacao_maquina', label: 'Máquina - Pós-qualificação' },
-  { value: 'purificador', label: 'Purificador' },
+  { value: 'maquina_gelo', label: 'Máquina de Gelo', tipoFaqs: ['geral_maquina', 'qualificacao_maquina', 'pos_qualificacao_maquina'] },
+  { value: 'purificador', label: 'Purificador', tipoFaqs: ['purificador'] },
 ];
 
 export default function GerenciarFaqs() {
@@ -75,11 +73,13 @@ export default function GerenciarFaqs() {
     if (!empresaId) return;
     setLoading(true);
     try {
+      const currentTab = TABS.find(t => t.value === activeTab);
+      const tipoFaqs = currentTab?.tipoFaqs ?? [activeTab];
       const { data, error } = await supabase
         .from('faqs')
         .select('id, contexto, pergunta, resposta, observacoes, tipo_faq, tags, ativo, faq_labels(label_id)')
         .eq('id_empresa', empresaId)
-        .eq('tipo_faq', activeTab)
+        .in('tipo_faq', tipoFaqs)
         .eq('ativo', true)
         .order('id', { ascending: true });
 
@@ -125,6 +125,8 @@ export default function GerenciarFaqs() {
       if (error) { toast({ title: 'Erro ao atualizar FAQ', variant: 'destructive' }); throw error; }
       toast({ title: 'FAQ atualizado!' });
     } else {
+      const currentTab = TABS.find(t => t.value === activeTab);
+      const defaultTipoFaq = currentTab?.tipoFaqs?.[0] ?? activeTab;
       const { error } = await supabase
         .from('faqs')
         .insert({
@@ -133,7 +135,7 @@ export default function GerenciarFaqs() {
           pergunta: data.pergunta,
           resposta: data.resposta,
           observacoes: data.observacoes || null,
-          tipo_faq: activeTab,
+          tipo_faq: defaultTipoFaq,
           tags: data.tags,
           ativo: true,
         });
@@ -162,15 +164,17 @@ export default function GerenciarFaqs() {
     setDeletingFaq(null);
   };
 
-  const handleMoveToTab = async (faq: FaqItem, newTipoFaq: string) => {
+  const handleMoveToTab = async (faq: FaqItem, newTabValue: string) => {
     if (!empresaId) return;
     try {
+      const targetTab = TABS.find(t => t.value === newTabValue);
+      const newTipoFaq = targetTab?.tipoFaqs?.[0] ?? newTabValue;
       const { error } = await supabase
         .from('faqs')
         .update({ tipo_faq: newTipoFaq })
         .eq('id', faq.id);
       if (error) throw error;
-      const targetLabel = TABS.find(t => t.value === newTipoFaq)?.label ?? newTipoFaq;
+      const targetLabel = targetTab?.label ?? newTabValue;
       toast({ title: `FAQ movido para "${targetLabel}"` });
       fetchFaqs();
     } catch {
@@ -182,13 +186,17 @@ export default function GerenciarFaqs() {
     if (!empresaId) return;
     setBulkActionLoading(true);
     try {
+      const resolveTipoFaq = (tab: string) => {
+        const t = TABS.find(x => x.value === tab);
+        return t?.tipoFaqs?.[0] ?? tab;
+      };
       const inserts = faqsToDuplicate.map(faq => ({
         id_empresa: empresaId,
         contexto: faq.contexto,
         pergunta: faq.pergunta,
         resposta: faq.resposta,
         observacoes: faq.observacoes,
-        tipo_faq: targetTab ?? activeTab,
+        tipo_faq: targetTab ? resolveTipoFaq(targetTab) : faq.tipo_faq,
         tags: faq.tags,
         ativo: true,
       }));
@@ -213,12 +221,14 @@ export default function GerenciarFaqs() {
     setBulkActionLoading(true);
     try {
       const ids = Array.from(selectedIds);
+      const targetTab = TABS.find(t => t.value === newTipoFaq);
+      const resolvedTipoFaq = targetTab?.tipoFaqs?.[0] ?? newTipoFaq;
       const { error } = await supabase
         .from('faqs')
-        .update({ tipo_faq: newTipoFaq })
+        .update({ tipo_faq: resolvedTipoFaq })
         .in('id', ids);
       if (error) throw error;
-      const targetLabel = TABS.find(t => t.value === newTipoFaq)?.label ?? newTipoFaq;
+      const targetLabel = targetTab?.label ?? newTipoFaq;
       toast({ title: `${ids.length} FAQ(s) movido(s) para "${targetLabel}"` });
       setSelectedIds(new Set());
       fetchFaqs();
