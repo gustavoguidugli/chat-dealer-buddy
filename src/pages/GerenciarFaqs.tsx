@@ -37,8 +37,8 @@ interface FaqItem {
 }
 
 const TABS = [
-{ value: 'maquina_gelo', label: 'Máquina de Gelo', tipoFaqs: ['geral_maquina', 'qualificacao_maquina', 'pos_qualificacao_maquina'] },
-{ value: 'purificador', label: 'Purificador', tipoFaqs: ['purificador'] }];
+{ value: 'maquina_gelo', label: 'FAQ Máquina de Gelo', tipoFaqs: ['geral_maquina', 'qualificacao_maquina', 'pos_qualificacao_maquina'] },
+{ value: 'purificador', label: 'FAQ Purificador', tipoFaqs: ['purificador'] }];
 
 
 export default function GerenciarFaqs() {
