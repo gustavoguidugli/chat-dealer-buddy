@@ -305,7 +305,7 @@ export default function GerenciarFaqs() {
             <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
             )}
           </TabsList>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Lista de Perguntas</h2>
+          
 
           {TABS.map((tab) =>
           <TabsContent key={tab.value} value={tab.value}>
