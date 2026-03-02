@@ -3,15 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Link2, Pencil, Power, Building2, Users, Trash } from 'lucide-react';
+import { Plus, Link2, Power, Building2, Users, Trash, Search, MoreVertical } from 'lucide-react';
 import { CreateCompanyModal } from '@/components/CreateCompanyModal';
 import { InviteModal } from '@/components/InviteModal';
 import { DeleteEmpresaModal } from '@/components/DeleteEmpresaModal';
 import { Navigate } from 'react-router-dom';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface Empresa {
   id: number;
@@ -26,6 +32,7 @@ export default function AdminEmpresas() {
   const { toast } = useToast();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [inviteEmpresa, setInviteEmpresa] = useState<Empresa | null>(null);
   const [deleteEmpresa, setDeleteEmpresa] = useState<Empresa | null>(null);
@@ -40,7 +47,6 @@ export default function AdminEmpresas() {
 
       if (error) throw error;
 
-      // Get user counts per empresa
       const { data: counts } = await supabase
         .from('user_empresa')
         .select('empresa_id');
@@ -84,93 +90,127 @@ export default function AdminEmpresas() {
 
   if (!isAdmin) return <Navigate to="/home" replace />;
 
+  const filtered = empresas.filter(e =>
+    (e.nome ?? '').toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <AppLayout>
-      <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Gerenciar Empresas</h1>
-            <p className="text-sm text-muted-foreground mt-1">Crie e gerencie empresas e convites</p>
+      <TooltipProvider>
+        <div className="p-6 md:p-10 max-w-3xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Gerenciar Empresas</h1>
+              <p className="text-sm text-muted-foreground mt-1">Crie e gerencie empresas e convites</p>
+            </div>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Empresa
+            </Button>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Empresa
-          </Button>
-        </div>
 
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map(i => (
-              <Card key={i}><CardContent className="p-6 space-y-3">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-8 w-full" />
-              </CardContent></Card>
-            ))}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar empresa..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
           </div>
-        ) : empresas.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+
+          {loading ? (
+            <div className="rounded-lg border border-border bg-card divide-y divide-border">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-4 px-4 py-3">
+                  <Skeleton className="h-9 w-9 rounded-md" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
               <Building2 className="h-12 w-12 text-muted-foreground/40 mb-4" />
-              <p className="text-muted-foreground">Nenhuma empresa cadastrada</p>
+              <p className="text-muted-foreground">Nenhuma empresa encontrada</p>
               <Button className="mt-4" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" /> Criar primeira empresa
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {empresas.map(empresa => (
-              <Card key={empresa.id} className="relative">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-foreground truncate">{empresa.nome || 'Sem nome'}</h3>
-                      {empresa.numero_automacao && (
-                        <p className="text-sm text-muted-foreground mt-0.5">{empresa.numero_automacao}</p>
-                      )}
-                    </div>
-                    <Badge variant={empresa.ativo ? 'default' : 'secondary'} className="ml-2 shrink-0">
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border bg-card divide-y divide-border">
+              {filtered.map(empresa => (
+                <div
+                  key={empresa.id}
+                  className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50 transition-colors group"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm text-foreground truncate">
+                      {empresa.nome || 'Sem nome'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {empresa.numero_automacao || 'Sem número'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant={empresa.ativo ? 'default' : 'secondary'} className="hidden sm:inline-flex text-xs">
                       {empresa.ativo ? 'Ativo' : 'Inativo'}
                     </Badge>
-                  </div>
 
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{empresa.userCount} usuário{empresa.userCount !== 1 ? 's' : ''}</span>
-                  </div>
+                    <Badge variant="secondary" className="hidden sm:inline-flex text-xs">
+                      <Users className="h-3 w-3 mr-1" />
+                      {empresa.userCount}
+                    </Badge>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => setInviteEmpresa(empresa)}
-                    >
-                      <Link2 className="h-4 w-4 mr-1" />
-                      Convites
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleAtivo(empresa)}
-                    >
-                      <Power className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleteEmpresa(empresa)}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="left">Opções</TooltipContent>
+                      </Tooltip>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setInviteEmpresa(empresa)}>
+                          <Link2 className="h-4 w-4 mr-2" />
+                          Convites
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleAtivo(empresa)}>
+                          <Power className="h-4 w-4 mr-2" />
+                          {empresa.ativo ? 'Desativar' : 'Ativar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeleteEmpresa(empresa)}
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </TooltipProvider>
 
       <CreateCompanyModal
         open={createOpen}
