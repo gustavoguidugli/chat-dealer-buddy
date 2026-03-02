@@ -168,7 +168,7 @@ export default function HorarioAtendimento() {
               </CardContent>
             </Card>
 
-            <div className={`space-y-3 transition-opacity ${alwaysOn ? 'opacity-40 pointer-events-none' : ''}`}>
+            <div className={`space-y-3 transition-opacity ${alwaysOn ? 'opacity-70 pointer-events-none' : ''}`}>
             {DAY_ORDER.map(day => {
               const isActive = schedule[day].length > 0;
               return (
