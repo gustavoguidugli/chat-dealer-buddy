@@ -160,7 +160,7 @@ export function ManageLabelsModal({ isOpen, onClose, empresaId, onLabelsChanged 
               <div>
                 <Label>Preview</Label>
                 <div className="mt-1.5">
-                  <Badge className="text-white border-0" style={{ backgroundColor: cor }}>
+                  <Badge className="border-0" style={{ backgroundColor: `${cor}20`, color: cor }}>
                     <LabelIcon name={icone} className="h-3 w-3 mr-1" />
                     {nome || 'Nome da etiqueta'}
                   </Badge>
@@ -188,7 +188,7 @@ export function ManageLabelsModal({ isOpen, onClose, empresaId, onLabelsChanged 
                     <div key={label.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                       <div className="flex items-center gap-2">
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <Badge className="text-white border-0" style={{ backgroundColor: label.cor }}>
+                        <Badge className="border-0" style={{ backgroundColor: `${label.cor}20`, color: label.cor }}>
                           <LabelIcon name={label.icone} className="h-3 w-3 mr-1" />
                           {label.nome}
                         </Badge>
