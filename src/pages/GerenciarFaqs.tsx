@@ -293,18 +293,19 @@ export default function GerenciarFaqs() {
         </div>
 
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Gerenciar Perguntas do FAQ</h1>
+          <h1 className="text-3xl font-bold text-foreground">Gerenciar Perguntas do FAQ</h1>
           <Button variant="outline" onClick={() => setLabelsModalOpen(true)}>
             <Tags className="h-4 w-4 mr-2" /> Gerenciar Etiquetas
           </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
+          <TabsList className="mb-4">
             {TABS.map((t) =>
             <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
             )}
           </TabsList>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Lista de Perguntas</h2>
 
           {TABS.map((tab) =>
           <TabsContent key={tab.value} value={tab.value}>
