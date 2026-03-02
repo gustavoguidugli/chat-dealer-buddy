@@ -76,18 +76,22 @@ Deno.serve(async (req) => {
     const results = {
       faqs_copied: 0,
       labels_copied: 0,
+      faq_labels_copied: 0,
       config_copied: false,
       interests_copied: 0,
     };
 
-    // 1. Copy FAQs
+    // 1. Copy FAQs and their labels
     const { data: sourceFaqs } = await supabaseAdmin
       .from("faqs")
-      .select("pergunta, resposta, contexto, tipo_faq, tags, observacoes, ativo")
+      .select("id, pergunta, resposta, contexto, tipo_faq, tags, observacoes, ativo")
       .eq("id_empresa", source_company_id);
 
+    // We'll need a map from old FAQ id -> new FAQ id for faq_labels
+    const faqIdMap: Record<number, number> = {};
+
     if (sourceFaqs && sourceFaqs.length > 0) {
-      const newFaqs = sourceFaqs.map((faq) => ({
+      const newFaqs = sourceFaqs.map(({ id, ...faq }) => ({
         ...faq,
         id_empresa: target_company_id,
       }));
@@ -100,17 +104,27 @@ Deno.serve(async (req) => {
         console.error("Error copying FAQs:", faqErr);
       } else {
         results.faqs_copied = inserted?.length ?? 0;
+        // Build the id map (inserted order matches sourceFaqs order)
+        if (inserted) {
+          sourceFaqs.forEach((src, idx) => {
+            if (inserted[idx]) {
+              faqIdMap[src.id] = inserted[idx].id;
+            }
+          });
+        }
       }
     }
 
     // 2. Copy Labels
     const { data: sourceLabels } = await supabaseAdmin
       .from("labels")
-      .select("nome, cor, icone, ordem, ativo")
+      .select("id, nome, cor, icone, ordem, ativo")
       .eq("empresa_id", source_company_id);
 
+    const labelIdMap: Record<string, string> = {};
+
     if (sourceLabels && sourceLabels.length > 0) {
-      const newLabels = sourceLabels.map((label) => ({
+      const newLabels = sourceLabels.map(({ id, ...label }) => ({
         ...label,
         empresa_id: target_company_id,
       }));
@@ -123,10 +137,48 @@ Deno.serve(async (req) => {
         console.error("Error copying labels:", labelErr);
       } else {
         results.labels_copied = insertedLabels?.length ?? 0;
+        if (insertedLabels) {
+          sourceLabels.forEach((src, idx) => {
+            if (insertedLabels[idx]) {
+              labelIdMap[src.id] = insertedLabels[idx].id;
+            }
+          });
+        }
       }
     }
 
-    // 3. Copy config_empresas_geral
+    // 3. Copy faq_labels (mapping old IDs to new IDs)
+    const sourceFaqIds = Object.keys(faqIdMap).map(Number);
+    if (sourceFaqIds.length > 0 && Object.keys(labelIdMap).length > 0) {
+      const { data: sourceFaqLabels } = await supabaseAdmin
+        .from("faq_labels")
+        .select("faq_id, label_id")
+        .in("faq_id", sourceFaqIds);
+
+      if (sourceFaqLabels && sourceFaqLabels.length > 0) {
+        const newFaqLabels = sourceFaqLabels
+          .filter((fl) => faqIdMap[fl.faq_id] && labelIdMap[fl.label_id])
+          .map((fl) => ({
+            faq_id: faqIdMap[fl.faq_id],
+            label_id: labelIdMap[fl.label_id],
+          }));
+
+        if (newFaqLabels.length > 0) {
+          const { data: insertedFL, error: flErr } = await supabaseAdmin
+            .from("faq_labels")
+            .insert(newFaqLabels)
+            .select("faq_id");
+
+          if (flErr) {
+            console.error("Error copying faq_labels:", flErr);
+          } else {
+            results.faq_labels_copied = insertedFL?.length ?? 0;
+          }
+        }
+      }
+    }
+
+    // 4. Copy config_empresas_geral
     const { data: sourceConfig } = await supabaseAdmin
       .from("config_empresas_geral")
       .select(
@@ -150,7 +202,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Copy lista_interesses
+    // 5. Copy lista_interesses
     const { data: sourceInterests } = await supabaseAdmin
       .from("lista_interesses")
       .select("nome, label, palavras_chave, mensagem_resposta, ordem, ativo")
