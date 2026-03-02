@@ -63,8 +63,8 @@ export function LabelSelector({ faqId, labels, selectedLabelIds, onToggle }: Lab
       {selectedLabels.map(label => (
         <Badge
           key={label.id}
-          className="text-xs text-white border-0"
-          style={{ backgroundColor: label.cor }}
+          className="text-xs border-0"
+          style={{ backgroundColor: `${label.cor}20`, color: label.cor }}
         >
           <LabelIcon name={label.icone} className="h-3 w-3 mr-1" />
           {label.nome}
