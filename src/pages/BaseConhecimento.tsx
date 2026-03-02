@@ -17,7 +17,7 @@ export default function BaseConhecimento() {
     if (!empresaId) return;
     const fetchCount = async () => {
       const { count } = await supabase
-        .from('documents')
+        .from('faqs')
         .select('*', { count: 'exact', head: true })
         .eq('id_empresa', empresaId);
       setFaqCount(count ?? 0);
