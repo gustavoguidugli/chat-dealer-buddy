@@ -412,9 +412,9 @@ export default function GerenciarFaqs() {
 
                   {filtered.map((faq, idx) =>
               <Card key={faq.id} className={selectedIds.has(faq.id) ? 'ring-2 ring-primary' : ''}>
-                      <CardContent className="p-4">
+                      <CardContent className="p-4 cursor-pointer" onClick={() => {setEditingFaq(faq);setModalOpen(true);}}>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                         checked={selectedIds.has(faq.id)}
                         onCheckedChange={() => toggleSelect(faq.id)} />
@@ -431,7 +431,7 @@ export default function GerenciarFaqs() {
                               </p>
                       }
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                             <LabelSelector
                         faqId={faq.id}
                         labels={companyLabels}
