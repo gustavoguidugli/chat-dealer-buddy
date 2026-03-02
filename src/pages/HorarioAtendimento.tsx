@@ -29,6 +29,7 @@ interface HorariosFuncionamento {
   weekly: WeeklySchedule;
   timezone: string;
   exceptions: Record<string, unknown>;
+  always_on?: boolean;
 }
 
 const DAY_LABELS: Record<keyof WeeklySchedule, string> = {
@@ -54,6 +55,7 @@ export default function HorarioAtendimento() {
   const [schedule, setSchedule] = useState<WeeklySchedule>({
     mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [],
   });
+  const [alwaysOn, setAlwaysOn] = useState(false);
 
   useEffect(() => {
     if (!empresaId) return;
@@ -68,6 +70,7 @@ export default function HorarioAtendimento() {
       if (data?.horarios_funcionamento) {
         const h = data.horarios_funcionamento as unknown as HorariosFuncionamento;
         setSchedule(h.weekly);
+        setAlwaysOn(!!h.always_on);
       }
       if (error) console.error(error);
       setLoading(false);
@@ -111,6 +114,7 @@ export default function HorarioAtendimento() {
       weekly: schedule,
       timezone: 'America/Sao_Paulo',
       exceptions: {},
+      always_on: alwaysOn,
     };
 
     const { error } = await supabase
@@ -153,7 +157,18 @@ export default function HorarioAtendimento() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="space-y-3">
+          <>
+            <Card className="mb-4">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Sempre ativado</p>
+                  <p className="text-xs text-muted-foreground">A IA responde 24h por dia, todos os dias</p>
+                </div>
+                <Switch checked={alwaysOn} onCheckedChange={setAlwaysOn} />
+              </CardContent>
+            </Card>
+
+            <div className={`space-y-3 transition-opacity ${alwaysOn ? 'opacity-40 pointer-events-none' : ''}`}>
             {DAY_ORDER.map(day => {
               const isActive = schedule[day].length > 0;
               return (
@@ -208,7 +223,8 @@ export default function HorarioAtendimento() {
                 </Card>
               );
             })}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </AppLayout>
