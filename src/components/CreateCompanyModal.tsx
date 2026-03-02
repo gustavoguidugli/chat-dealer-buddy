@@ -54,7 +54,51 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
         max_usos: 5,
       });
 
-      toast({ title: 'Empresa criada com sucesso!' });
+      // 4. Copy config from template company
+      try {
+        // Get first company as template (excluding the one just created)
+        const { data: templateCompanies } = await supabase
+          .from('empresas_geral')
+          .select('id')
+          .neq('id', empresa.id)
+          .order('id', { ascending: true })
+          .limit(1);
+
+        const templateId = templateCompanies?.[0]?.id;
+
+        if (templateId) {
+          const { data: copyResult, error: copyError } = await supabase.functions.invoke('copy-company-config', {
+            body: {
+              source_company_id: templateId,
+              target_company_id: empresa.id,
+            },
+          });
+
+          if (copyError) {
+            console.error('Error copying config:', copyError);
+            toast({
+              title: 'Empresa criada, mas houve erro ao copiar configurações',
+              description: copyError.message,
+              variant: 'destructive',
+            });
+          } else if (copyResult?.results) {
+            const r = copyResult.results;
+            toast({
+              title: 'Empresa criada com sucesso!',
+              description: `Copiados: ${r.faqs_copied} FAQs, ${r.labels_copied} labels, ${r.interests_copied} interesses${r.config_copied ? ', configurações' : ''}`,
+            });
+          }
+        } else {
+          toast({ title: 'Empresa criada com sucesso!' });
+        }
+      } catch (copyErr) {
+        console.error('Error calling copy-company-config:', copyErr);
+        toast({
+          title: 'Empresa criada com sucesso!',
+          description: 'Não foi possível copiar configurações do modelo.',
+        });
+      }
+
       setNome('');
       setWhatsapp('');
       setEmailConvite('');
