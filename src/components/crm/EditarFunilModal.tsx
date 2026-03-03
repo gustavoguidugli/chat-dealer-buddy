@@ -291,7 +291,7 @@ export function EditarFunilModal({ open, onOpenChange, funilId, funilNome, etapa
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-green-700 hover:bg-green-800 text-white"
+              className="bg-accent hover:bg-accent/90 text-accent-foreground"
             >
               {saving ? 'Salvando...' : 'Salvar alterações'}
             </Button>
