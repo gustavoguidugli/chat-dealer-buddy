@@ -467,40 +467,39 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           const value = lead.campos_extras?.[campo.slug];
                           const isEditing = editingField === campo.slug;
                           return (
-                            <div key={campo.id} className="mb-3">
-                              <div
-                                className="flex items-start gap-2 cursor-pointer group"
-                                onClick={() => {
-                                  if (!isEditing) {
-                                    setEditingField(campo.slug);
-                                    setEditingValue(value || '');
-                                  }
-                                }}
-                              >
-                                <span className="h-2 w-2 rounded-full bg-amber-400 mt-1.5 shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-muted-foreground">{campo.nome}</p>
-                                  {isEditing ? (
-                                    <div className="mt-1">
-                                      <Input
-                                        value={editingValue}
-                                        onChange={e => setEditingValue(e.target.value)}
-                                        className="h-7 text-xs"
-                                        autoFocus
-                                        onKeyDown={e => {
-                                          if (e.key === 'Enter') handleSaveField(campo.slug);
-                                          if (e.key === 'Escape') setEditingField(null);
-                                        }}
-                                        onBlur={() => handleSaveField(campo.slug)}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm text-foreground">
-                                      {value || '-'}
-                                    </p>
-                                  )}
+                            <div
+                              key={campo.id}
+                              className="flex items-center justify-between py-2 px-1 rounded-md group hover:bg-muted/50 cursor-pointer"
+                              onClick={() => {
+                                if (!isEditing) {
+                                  setEditingField(campo.slug);
+                                  setEditingValue(value || '');
+                                }
+                              }}
+                            >
+                              <span className="text-xs text-muted-foreground font-medium shrink-0 w-[90px] text-right pr-3">
+                                {campo.nome}
+                              </span>
+                              {isEditing ? (
+                                <div className="flex-1 flex items-center gap-1">
+                                  <Input
+                                    value={editingValue}
+                                    onChange={e => setEditingValue(e.target.value)}
+                                    className="h-7 text-xs flex-1"
+                                    autoFocus
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') handleSaveField(campo.slug);
+                                      if (e.key === 'Escape') setEditingField(null);
+                                    }}
+                                    onBlur={() => handleSaveField(campo.slug)}
+                                  />
                                 </div>
-                              </div>
+                              ) : (
+                                <div className="flex-1 flex items-center justify-between">
+                                  <span className="text-sm text-foreground">{value || '-'}</span>
+                                  <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              )}
                             </div>
                           );
                         })}
