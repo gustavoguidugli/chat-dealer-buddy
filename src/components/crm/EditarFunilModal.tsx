@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,6 +46,7 @@ function SortableEtapaCard({
   onChangeName: (val: string) => void;
   onDelete: () => void;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: etapa.id?.toString() || `new-${etapa.ordem}`,
   });
@@ -56,41 +58,66 @@ function SortableEtapaCard({
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex flex-col w-[260px] shrink-0 rounded-lg bg-secondary/60 border p-4 gap-4"
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm text-foreground truncate">{etapa.nome || 'Nova etapa'}</h3>
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1"
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="flex flex-col w-[260px] shrink-0 rounded-lg bg-secondary/60 border p-4 gap-4"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm text-foreground truncate">{etapa.nome || 'Nova etapa'}</h3>
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-foreground">Nome</label>
+          <Input
+            value={etapa.nome}
+            onChange={(e) => onChangeName(e.target.value)}
+            placeholder="Nome da etapa"
+          />
+        </div>
+
+        <div className="mt-auto pt-4">
+          <button
+            onClick={() => setConfirmOpen(true)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Excluir etapa
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-foreground">Nome</label>
-        <Input
-          value={etapa.nome}
-          onChange={(e) => onChangeName(e.target.value)}
-          placeholder="Nome da etapa"
-        />
-      </div>
-
-      <div className="mt-auto pt-4">
-        <button
-          onClick={onDelete}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Excluir etapa
-        </button>
-      </div>
-    </div>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir etapa "{etapa.nome || 'Nova etapa'}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação não pode ser desfeita. Os negócios dessa etapa precisarão ser movidos para outra etapa.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onDelete();
+                setConfirmOpen(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
