@@ -6,6 +6,9 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -43,6 +46,7 @@ interface LeadDetail {
   status: string | null;
   campos_extras: Record<string, any> | null;
   id_funil: number;
+  id_empresa: number;
   id_etapa_atual: number;
   proprietario_id: string | null;
   data_entrada_etapa_atual: string | null;
@@ -142,6 +146,36 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [excluirOpen, setExcluirOpen] = useState(false);
   const [duplicarOpen, setDuplicarOpen] = useState(false);
   const [concluirAtividadeId, setConcluirAtividadeId] = useState<number | null>(null);
+  const [addFieldOpen, setAddFieldOpen] = useState(false);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldType, setNewFieldType] = useState('texto');
+  const [savingField, setSavingField] = useState(false);
+
+  const handleAddField = async () => {
+    if (!newFieldName.trim() || !lead) return;
+    setSavingField(true);
+    const slug = newFieldName.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const { error } = await supabase.from('campos_customizados').insert({
+      nome: newFieldName.trim(),
+      slug,
+      tipo: newFieldType,
+      id_empresa: lead.id_empresa,
+      id_funil: lead.id_funil,
+      ordem: campos.length,
+      ativo: true,
+      obrigatorio: false,
+    });
+    setSavingField(false);
+    if (error) {
+      toast({ title: 'Erro ao criar campo', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Campo criado com sucesso' });
+      setNewFieldName('');
+      setNewFieldType('texto');
+      setAddFieldOpen(false);
+      fetchAll();
+    }
+  };
 
   const fetchAll = useCallback(async () => {
     if (!leadId) return;
@@ -380,7 +414,48 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                       </CollapsibleTrigger>
                       <div className="flex items-center gap-1">
                         <Pencil className="h-3.5 w-3.5 text-muted-foreground cursor-pointer hover:text-foreground" />
-                        <Plus className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" />
+                        <Popover open={addFieldOpen} onOpenChange={setAddFieldOpen}>
+                          <PopoverTrigger asChild>
+                            <Plus className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" />
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-3" side="bottom" align="end">
+                            <p className="text-sm font-semibold text-foreground mb-3">Novo campo</p>
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Nome</Label>
+                                <Input
+                                  value={newFieldName}
+                                  onChange={e => setNewFieldName(e.target.value)}
+                                  placeholder="Ex: Gasto Mensal"
+                                  className="h-8 text-sm mt-1"
+                                  autoFocus
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Tipo</Label>
+                                <Select value={newFieldType} onValueChange={setNewFieldType}>
+                                  <SelectTrigger className="h-8 text-sm mt-1">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="texto">Texto</SelectItem>
+                                    <SelectItem value="numero">Número</SelectItem>
+                                    <SelectItem value="data">Data</SelectItem>
+                                    <SelectItem value="select">Seleção</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+                                onClick={handleAddField}
+                                disabled={!newFieldName.trim() || savingField}
+                              >
+                                {savingField ? 'Criando...' : 'Adicionar'}
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
                     <CollapsibleContent>
