@@ -24,7 +24,7 @@ import {
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
-  Pencil, Pin, Plus,
+  Pencil, Pin, Plus, Trash2, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -71,6 +71,7 @@ interface CampoCustomizado {
   tipo: string;
   opcoes: any;
   obrigatorio: boolean;
+  ordem: number;
 }
 
 interface Anotacao {
@@ -150,6 +151,57 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldType, setNewFieldType] = useState('texto');
   const [savingField, setSavingField] = useState(false);
+  const [manageFieldsOpen, setManageFieldsOpen] = useState(false);
+  const [editingCampos, setEditingCampos] = useState<CampoCustomizado[]>([]);
+  const [deletingFieldId, setDeletingFieldId] = useState<number | null>(null);
+
+  const openManageFields = () => {
+    setEditingCampos(campos.map(c => ({ ...c })));
+    setManageFieldsOpen(true);
+  };
+
+  const handleUpdateField = async (campo: CampoCustomizado) => {
+    const { error } = await supabase.from('campos_customizados')
+      .update({ nome: campo.nome, tipo: campo.tipo, ordem: campo.ordem })
+      .eq('id', campo.id);
+    if (error) {
+      toast({ title: 'Erro ao atualizar campo', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteField = async (id: number) => {
+    const { error } = await supabase.from('campos_customizados')
+      .update({ ativo: false })
+      .eq('id', id);
+    if (error) {
+      toast({ title: 'Erro ao excluir campo', description: error.message, variant: 'destructive' });
+    } else {
+      setEditingCampos(prev => prev.filter(c => c.id !== id));
+      setDeletingFieldId(null);
+      toast({ title: 'Campo excluído' });
+      fetchAll();
+    }
+  };
+
+  const handleSaveAllFields = async () => {
+    for (const campo of editingCampos) {
+      await handleUpdateField(campo);
+    }
+    toast({ title: 'Campos atualizados' });
+    setManageFieldsOpen(false);
+    fetchAll();
+  };
+
+  const moveFieldOrder = (index: number, direction: 'up' | 'down') => {
+    const newCampos = [...editingCampos];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newCampos.length) return;
+    const tempOrdem = newCampos[index].ordem;
+    newCampos[index].ordem = newCampos[swapIndex].ordem;
+    newCampos[swapIndex].ordem = tempOrdem;
+    [newCampos[index], newCampos[swapIndex]] = [newCampos[swapIndex], newCampos[index]];
+    setEditingCampos(newCampos);
+  };
 
   const handleAddField = async () => {
     if (!newFieldName.trim() || !lead) return;
@@ -413,7 +465,82 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                         Campos
                       </CollapsibleTrigger>
                       <div className="flex items-center gap-1">
-                        <Pencil className="h-3.5 w-3.5 text-muted-foreground cursor-pointer hover:text-foreground" />
+                        <Popover open={manageFieldsOpen} onOpenChange={setManageFieldsOpen}>
+                          <PopoverTrigger asChild>
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground cursor-pointer hover:text-foreground" onClick={openManageFields} />
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-3" side="bottom" align="end">
+                            <p className="text-sm font-semibold text-foreground mb-3">Gerenciar campos</p>
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                              {editingCampos.map((campo, index) => (
+                                <div key={campo.id} className="flex items-center gap-1.5 p-2 rounded-md border bg-background">
+                                  <div className="flex flex-col gap-0.5">
+                                    <button
+                                      className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                                      onClick={() => moveFieldOrder(index, 'up')}
+                                      disabled={index === 0}
+                                    >
+                                      <ArrowUp className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                                      onClick={() => moveFieldOrder(index, 'down')}
+                                      disabled={index === editingCampos.length - 1}
+                                    >
+                                      <ArrowDown className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                  <div className="flex-1 space-y-1">
+                                    <Input
+                                      value={campo.nome}
+                                      onChange={e => {
+                                        const updated = [...editingCampos];
+                                        updated[index] = { ...updated[index], nome: e.target.value };
+                                        setEditingCampos(updated);
+                                      }}
+                                      className="h-7 text-xs"
+                                      placeholder="Nome do campo"
+                                    />
+                                    <Select
+                                      value={campo.tipo}
+                                      onValueChange={v => {
+                                        const updated = [...editingCampos];
+                                        updated[index] = { ...updated[index], tipo: v };
+                                        setEditingCampos(updated);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-7 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="texto">Texto</SelectItem>
+                                        <SelectItem value="numero">Número</SelectItem>
+                                        <SelectItem value="data">Data</SelectItem>
+                                        <SelectItem value="select">Seleção</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <button
+                                    className="text-destructive hover:text-destructive/80 shrink-0"
+                                    onClick={() => setDeletingFieldId(campo.id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                              {editingCampos.length === 0 && (
+                                <p className="text-xs text-muted-foreground text-center py-2">Nenhum campo</p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              className="w-full mt-3 bg-accent hover:bg-accent/90 text-accent-foreground"
+                              onClick={handleSaveAllFields}
+                            >
+                              Salvar alterações
+                            </Button>
+                          </PopoverContent>
+                        </Popover>
                         <Popover open={addFieldOpen} onOpenChange={setAddFieldOpen}>
                           <PopoverTrigger asChild>
                             <Plus className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" />
@@ -754,6 +881,21 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handleConcluirAtividade}>
               Concluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deletingFieldId !== null} onOpenChange={(v) => { if (!v) setDeletingFieldId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir campo?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja excluir este campo? Os valores já preenchidos nos leads serão mantidos.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={() => deletingFieldId && handleDeleteField(deletingFieldId)}>
+              Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
