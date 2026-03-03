@@ -436,12 +436,21 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
   const handleEditAnotacao = async () => {
     if (!editAnotacaoId || !editAnotacaoText.trim()) return;
+    const conteudo = editAnotacaoText.trim();
     const { error } = await supabase.from('anotacoes_lead')
-      .update({ conteudo: editAnotacaoText.trim() })
+      .update({ conteudo })
       .eq('id', editAnotacaoId);
     if (error) {
       toast({ title: 'Erro ao editar anotação', description: error.message, variant: 'destructive' });
     } else {
+      // Also update the historico_lead entry so it reflects in real-time
+      await supabase.from('historico_lead')
+        .update({
+          descricao: conteudo.substring(0, 100) + (conteudo.length > 100 ? '...' : ''),
+          metadados: { anotacao_id: editAnotacaoId, conteudo_completo: conteudo },
+        })
+        .eq('tipo_evento', 'anotacao')
+        .contains('metadados', { anotacao_id: editAnotacaoId });
       toast({ title: 'Anotação atualizada' });
     }
     setEditAnotacaoId(null);
@@ -450,6 +459,11 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
   const handleExcluirAnotacao = async () => {
     if (!excluirAnotacaoId) return;
+    // Delete historico entry first (FK won't cascade here)
+    await supabase.from('historico_lead')
+      .delete()
+      .eq('tipo_evento', 'anotacao')
+      .contains('metadados', { anotacao_id: excluirAnotacaoId });
     const { error } = await supabase.from('anotacoes_lead')
       .delete()
       .eq('id', excluirAnotacaoId);
