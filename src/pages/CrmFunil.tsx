@@ -316,9 +316,20 @@ export default function CrmFunil() {
             <div className="flex items-center justify-center h-full text-muted-foreground">
               Carregando funil...
             </div>
+          ) : funis.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <p className="text-muted-foreground text-lg">Você não possui nenhum funil criado.</p>
+              <Button
+                onClick={() => setCriarFunilOpen(true)}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold gap-1.5"
+              >
+                <Plus className="h-4 w-4" />
+                Criar seu primeiro funil
+              </Button>
+            </div>
           ) : etapas.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              Nenhum funil configurado. Crie um funil para começar.
+              Nenhuma etapa configurada. Edite o funil para adicionar etapas.
             </div>
           ) : (
             <KanbanBoard
