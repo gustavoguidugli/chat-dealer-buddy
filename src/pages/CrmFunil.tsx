@@ -98,7 +98,7 @@ export default function CrmFunil() {
       })));
     };
     enrichLeads();
-  }, [realtimeLeads]);
+  }, [realtimeLeads, reloadKey]);
 
   const loading = loadingFunis || loadingLeads;
 
