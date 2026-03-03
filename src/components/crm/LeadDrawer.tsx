@@ -24,6 +24,7 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { EtiquetaSelector } from '@/components/crm/EtiquetaSelector';
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
@@ -464,7 +465,10 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
               <div className="border-b px-6 py-4 bg-card shrink-0">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h1 className="text-xl font-bold text-foreground">{lead.nome}</h1>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-xl font-bold text-foreground">{lead.nome}</h1>
+                      <EtiquetaSelector leadId={lead.id} empresaId={lead.id_empresa} />
+                    </div>
                     <span className="text-sm text-primary cursor-pointer hover:underline">{funilNome}</span>
                   </div>
                   <div className="flex items-center gap-2">
