@@ -467,7 +467,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                   <div>
                     <div className="flex items-center gap-2">
                       <h1 className="text-xl font-bold text-foreground">{lead.nome}</h1>
-                      <EtiquetaSelector leadId={lead.id} empresaId={lead.id_empresa} />
+                      <EtiquetaSelector leadId={lead.id} empresaId={lead.id_empresa} onChange={onLeadChanged} />
                     </div>
                     <span className="text-sm text-primary cursor-pointer hover:underline">{funilNome}</span>
                   </div>
