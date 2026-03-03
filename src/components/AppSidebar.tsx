@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Home, Bot, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2, Kanban, ChevronDown, Target, CheckSquare } from 'lucide-react';
+import { Home, Bot, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2, Kanban, ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -14,7 +14,7 @@ const navItems = [
   { to: '/base-conhecimento', icon: BookOpen, label: 'Base de conhecimento' },
 ];
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
   const { isAdmin, empresaNome, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,11 +22,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-3 px-6 py-6 border-b border-sidebar-border">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-          <Snowflake className="h-6 w-6 text-sidebar-primary-foreground" />
+      <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
+            <Snowflake className="h-6 w-6 text-sidebar-primary-foreground" />
+          </div>
+          <span className="text-xl font-bold">EcoIce</span>
         </div>
-        <span className="text-xl font-bold">EcoIce</span>
+        {onCollapse && (
+          <button onClick={onCollapse} className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
+            <PanelLeftClose className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {empresaNome && (
@@ -135,6 +142,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function AppSidebar() {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   if (isMobile) {
     return (
@@ -149,16 +157,26 @@ export function AppSidebar() {
         </Button>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetContent side="left" className="p-0 w-64 border-0 [&>button]:hidden">
-            <SidebarContent onNavigate={() => setOpen(false)} />
+            <SidebarInner onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
       </>
     );
   }
 
+  if (collapsed) {
+    return (
+      <aside className="w-12 shrink-0 flex flex-col items-center py-4 bg-sidebar border-r border-sidebar-border">
+        <button onClick={() => setCollapsed(false)} className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
+          <PanelLeftOpen className="h-5 w-5" />
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside className="w-64 shrink-0">
-      <SidebarContent />
+      <SidebarInner onCollapse={() => setCollapsed(true)} />
     </aside>
   );
 }
