@@ -374,10 +374,15 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                 {/* LEFT SIDEBAR - Campos */}
                 <div className="w-[260px] border-r bg-muted/30 shrink-0 overflow-y-auto">
                   <Collapsible open={camposAbertos} onOpenChange={setCamposAbertos}>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted/50">
-                      <span>{camposAbertos ? '∧' : '∨'} Preencher</span>
-                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                    </CollapsibleTrigger>
+                    <div className="flex items-center justify-between w-full px-4 py-3">
+                      <CollapsibleTrigger className="text-sm font-semibold text-foreground hover:text-foreground/80">
+                        Campos
+                      </CollapsibleTrigger>
+                      <div className="flex items-center gap-1">
+                        <Pencil className="h-3.5 w-3.5 text-muted-foreground cursor-pointer hover:text-foreground" />
+                        <Plus className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" />
+                      </div>
+                    </div>
                     <CollapsibleContent>
                       <div className="px-4 pb-2">
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
