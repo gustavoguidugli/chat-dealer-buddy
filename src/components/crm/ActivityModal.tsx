@@ -41,23 +41,15 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
   const [saving, setSaving] = useState(false);
   const [usuarios, setUsuarios] = useState<{ id: string; nome: string }[]>([]);
 
-  // Load users for the dropdown
+  // Load users for the dropdown using RPC
   useEffect(() => {
     if (!isOpen) return;
     const fetchUsers = async () => {
-      const { data } = await supabase
-        .from('user_empresa_geral')
-        .select('user_id')
-        .eq('empresa_id', empresaId);
-      if (data && data.length > 0) {
-        const userIds = data.map((u: any) => u.user_id);
-        const { data: usersData } = await supabase
-          .from('usuarios')
-          .select('uuid, nome')
-          .in('uuid', userIds);
-        if (usersData) {
-          setUsuarios(usersData.map((u: any) => ({ id: u.uuid, nome: u.nome || 'Sem nome' })));
-        }
+      const { data } = await supabase.rpc('get_usuarios_empresa', {
+        empresa_id_param: empresaId,
+      });
+      if (data) {
+        setUsuarios(data.map((u: any) => ({ id: u.id, nome: u.nome || u.email || 'Sem nome' })));
       }
     };
     fetchUsers();

@@ -112,10 +112,14 @@ function formatDateShort(dateStr: string | null) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  if (isToday) return `Hoje às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-  return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }) +
-    ` às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  const spOptions: Intl.DateTimeFormatOptions = { timeZone: 'America/Sao_Paulo' };
+  const dSP = new Date(d.toLocaleString('en-US', spOptions));
+  const nowSP = new Date(now.toLocaleString('en-US', spOptions));
+  const isToday = dSP.toDateString() === nowSP.toDateString();
+  const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  if (isToday) return `Hoje às ${hora}`;
+  const dia = d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', timeZone: 'America/Sao_Paulo' });
+  return `${dia} às ${hora}`;
 }
 
 function diasEntre(dateStr: string | null) {
@@ -423,7 +427,6 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     });
     setNovaAnotacao('');
     setSavingAnotacao(false);
-    fetchAll();
   };
 
   const handleConcluirAtividade = async () => {
@@ -434,7 +437,6 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
       concluida_por: user?.id || null,
     }).eq('id', concluirAtividadeId);
     setConcluirAtividadeId(null);
-    fetchAll();
   };
 
   const handleSaveField = async (slug: string) => {

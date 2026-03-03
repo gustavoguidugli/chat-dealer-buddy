@@ -92,6 +92,13 @@ export type Database = {
             referencedRelation: "atividades"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "atividade_participantes_id_atividade_fkey"
+            columns: ["id_atividade"]
+            isOneToOne: false
+            referencedRelation: "atividades_sao_paulo"
+            referencedColumns: ["id"]
+          },
         ]
       }
       atividades: {
@@ -2506,7 +2513,93 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      atividades_sao_paulo: {
+        Row: {
+          assunto: string | null
+          atribuida_a: string | null
+          concluida: boolean | null
+          concluida_em: string | null
+          concluida_por: string | null
+          created_at: string | null
+          created_by: string | null
+          data_formatada: string | null
+          data_legivel: string | null
+          data_vencimento: string | null
+          data_vencimento_sp: string | null
+          descricao: string | null
+          hora_fim: string | null
+          hora_inicio: string | null
+          id: number | null
+          id_empresa: number | null
+          id_lead: number | null
+          prioridade: string | null
+          tipo: string | null
+          updated_at: string | null
+          visivel_convidados: boolean | null
+        }
+        Insert: {
+          assunto?: string | null
+          atribuida_a?: string | null
+          concluida?: boolean | null
+          concluida_em?: string | null
+          concluida_por?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_formatada?: never
+          data_legivel?: never
+          data_vencimento?: string | null
+          data_vencimento_sp?: never
+          descricao?: string | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: number | null
+          id_empresa?: number | null
+          id_lead?: number | null
+          prioridade?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+          visivel_convidados?: boolean | null
+        }
+        Update: {
+          assunto?: string | null
+          atribuida_a?: string | null
+          concluida?: boolean | null
+          concluida_em?: string | null
+          concluida_por?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_formatada?: never
+          data_legivel?: never
+          data_vencimento?: string | null
+          data_vencimento_sp?: never
+          descricao?: string | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: number | null
+          id_empresa?: number | null
+          id_lead?: number | null
+          prioridade?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+          visivel_convidados?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_id_lead_fkey"
+            columns: ["id_lead"]
+            isOneToOne: false
+            referencedRelation: "leads_crm"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       buscar_faq_similar: {
@@ -2535,6 +2628,15 @@ export type Database = {
         }[]
       }
       get_user_empresa_id: { Args: { user_uuid: string }; Returns: number }
+      get_usuarios_empresa: {
+        Args: { empresa_id_param: number }
+        Returns: {
+          email: string
+          id: string
+          nome: string
+          raw_user_meta_data: Json
+        }[]
+      }
       is_admin: { Args: { user_uuid: string }; Returns: boolean }
       match_documents: {
         Args: { filter?: Json; match_count?: number; query_embedding: string }
@@ -2595,6 +2697,7 @@ export type Database = {
           similarity: number
         }[]
       }
+      timestamp_sao_paulo: { Args: { ts: string }; Returns: string }
       usar_convite: {
         Args: { p_convite_id: string; p_user_id: string }
         Returns: boolean
