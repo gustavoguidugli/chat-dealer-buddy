@@ -211,6 +211,8 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [historyFilter, setHistoryFilter] = useState<'todos' | 'anotacoes' | 'atividades'>('todos');
+  const [editingAnotacaoId, setEditingAnotacaoId] = useState<number | null>(null);
+  const [editingAnotacaoText, setEditingAnotacaoText] = useState('');
 
   // Dialogs
   const [ganhoOpen, setGanhoOpen] = useState(false);
@@ -412,14 +414,46 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const handleSalvarAnotacao = async () => {
     if (!lead || !novaAnotacao.trim()) return;
     setSavingAnotacao(true);
-    await supabase.from('anotacoes_lead').insert({
+    const { data: anotData } = await supabase.from('anotacoes_lead').insert({
       id_lead: lead.id,
       id_empresa: empresaId!,
       conteudo: novaAnotacao.trim(),
       criado_por: user?.id || null,
-    });
+    }).select('id').single();
+
+    if (anotData) {
+      await supabase.from('historico_lead').insert({
+        id_lead: lead.id,
+        id_empresa: empresaId!,
+        tipo_evento: 'anotacao',
+        descricao: novaAnotacao.trim().slice(0, 100),
+        usuario_id: user?.id || null,
+        metadados: { conteudo_completo: novaAnotacao.trim(), id_anotacao: anotData.id },
+      });
+    }
+
     setNovaAnotacao('');
     setSavingAnotacao(false);
+    fetchAll();
+  };
+
+  const handleEditarAnotacao = async (anotacaoId: number) => {
+    if (!editingAnotacaoText.trim()) return;
+    await supabase.from('anotacoes_lead').update({ conteudo: editingAnotacaoText.trim() }).eq('id', anotacaoId);
+    // Also update historico metadados
+    await supabase.from('historico_lead')
+      .update({ descricao: editingAnotacaoText.trim().slice(0, 100), metadados: { conteudo_completo: editingAnotacaoText.trim(), id_anotacao: anotacaoId } })
+      .eq('tipo_evento', 'anotacao')
+      .eq('id_lead', lead!.id)
+      .filter('metadados->>id_anotacao', 'eq', String(anotacaoId));
+    setEditingAnotacaoId(null);
+    setEditingAnotacaoText('');
+    fetchAll();
+  };
+
+  const handleExcluirAnotacao = async (anotacaoId: number, historicoId: number) => {
+    await supabase.from('anotacoes_lead').delete().eq('id', anotacaoId);
+    await supabase.from('historico_lead').delete().eq('id', historicoId);
     fetchAll();
   };
 
@@ -780,7 +814,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           {filteredHistory.map(h => (
                             <div
                               key={h.id}
-                              className={`flex items-start gap-3 p-3 rounded-lg ${
+                              className={`group flex items-start gap-3 p-3 rounded-lg ${
                                 h.tipo_evento === 'anotacao' ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-muted/40'
                               }`}
                             >
@@ -789,12 +823,45 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                 <p className="text-xs text-muted-foreground">
                                   {formatDateShort(h.created_at)}
                                 </p>
-                                <p className="text-sm text-foreground mt-0.5">
-                                  {h.tipo_evento === 'anotacao'
-                                    ? (h.metadados as any)?.conteudo_completo || h.descricao
-                                    : h.descricao}
-                                </p>
+                                {editingAnotacaoId === (h.metadados as any)?.id_anotacao ? (
+                                  <div className="mt-1 space-y-2">
+                                    <Textarea
+                                      value={editingAnotacaoText}
+                                      onChange={e => setEditingAnotacaoText(e.target.value)}
+                                      className="text-sm min-h-[50px]"
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button size="sm" onClick={() => handleEditarAnotacao((h.metadados as any).id_anotacao)}>Salvar</Button>
+                                      <Button size="sm" variant="ghost" onClick={() => setEditingAnotacaoId(null)}>Cancelar</Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-foreground mt-0.5">
+                                    {h.tipo_evento === 'anotacao'
+                                      ? (h.metadados as any)?.conteudo_completo || h.descricao
+                                      : h.descricao}
+                                  </p>
+                                )}
                               </div>
+                              {h.tipo_evento === 'anotacao' && (h.metadados as any)?.id_anotacao && editingAnotacaoId !== (h.metadados as any)?.id_anotacao && (
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                  <button
+                                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    onClick={() => {
+                                      setEditingAnotacaoId((h.metadados as any).id_anotacao);
+                                      setEditingAnotacaoText((h.metadados as any)?.conteudo_completo || h.descricao);
+                                    }}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                    onClick={() => handleExcluirAnotacao((h.metadados as any).id_anotacao, h.id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ))}
                           {filteredHistory.length === 0 && (
