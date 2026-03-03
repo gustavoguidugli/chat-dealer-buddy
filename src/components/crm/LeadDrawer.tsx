@@ -224,6 +224,8 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [excluirOpen, setExcluirOpen] = useState(false);
   const [duplicarOpen, setDuplicarOpen] = useState(false);
   const [concluirAtividadeId, setConcluirAtividadeId] = useState<number | null>(null);
+  const [duplicarAtividade, setDuplicarAtividade] = useState<Atividade | null>(null);
+  const [excluirAtividadeId, setExcluirAtividadeId] = useState<number | null>(null);
   const [addFieldOpen, setAddFieldOpen] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldType, setNewFieldType] = useState('texto');
@@ -765,21 +767,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingActivity(ativ); setActivityModalOpen(true); }}>
                                       <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={async (e) => {
-                                      e.stopPropagation();
-                                      await supabase.from('atividades').insert({
-                                        id_empresa: empresaId!,
-                                        id_lead: leadId!,
-                                        tipo: ativ.tipo,
-                                        assunto: `${ativ.assunto} (Cópia)`,
-                                        descricao: ativ.descricao,
-                                        atribuida_a: ativ.atribuida_a,
-                                        data_vencimento: ativ.data_vencimento,
-                                        prioridade: ativ.prioridade,
-                                        created_by: user?.id || null,
-                                      });
-                                      toast({ title: 'Atividade duplicada' });
-                                    }}>
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDuplicarAtividade(ativ); }}>
                                       <FileText className="h-3.5 w-3.5 mr-2" /> Duplicar
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setConcluirAtividadeId(ativ.id); }}>
@@ -787,11 +775,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="text-destructive"
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        await supabase.from('atividades').delete().eq('id', ativ.id);
-                                        toast({ title: 'Atividade excluída' });
-                                      }}
+                                      onClick={(e) => { e.stopPropagation(); setExcluirAtividadeId(ativ.id); }}
                                     >
                                       <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
                                     </DropdownMenuItem>
@@ -1002,6 +986,58 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={() => deletingFieldId && handleDeleteField(deletingFieldId)}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicar atividade */}
+      <AlertDialog open={duplicarAtividade !== null} onOpenChange={(v) => { if (!v) setDuplicarAtividade(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicar atividade?</AlertDialogTitle>
+            <AlertDialogDescription>Deseja duplicar "{duplicarAtividade?.assunto}"?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={async () => {
+              if (!duplicarAtividade) return;
+              await supabase.from('atividades').insert({
+                id_empresa: empresaId!,
+                id_lead: leadId!,
+                tipo: duplicarAtividade.tipo,
+                assunto: `${duplicarAtividade.assunto} (Cópia)`,
+                descricao: duplicarAtividade.descricao,
+                atribuida_a: duplicarAtividade.atribuida_a,
+                data_vencimento: duplicarAtividade.data_vencimento,
+                prioridade: duplicarAtividade.prioridade,
+                created_by: user?.id || null,
+              });
+              toast({ title: 'Atividade duplicada' });
+              setDuplicarAtividade(null);
+            }}>
+              Duplicar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Excluir atividade */}
+      <AlertDialog open={excluirAtividadeId !== null} onOpenChange={(v) => { if (!v) setExcluirAtividadeId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir atividade?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza? Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={async () => {
+              if (!excluirAtividadeId) return;
+              await supabase.from('atividades').delete().eq('id', excluirAtividadeId);
+              toast({ title: 'Atividade excluída' });
+              setExcluirAtividadeId(null);
+            }}>
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
