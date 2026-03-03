@@ -377,15 +377,12 @@ export default function CrmAtividades() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className={cn(
-                          'shrink-0',
-                          a.concluida ? 'text-muted-foreground' : 'text-destructive'
-                        )}>
+                        <span className="shrink-0 text-muted-foreground">
                           {iconePorTipo[a.tipo] || <FileText className="h-4 w-4" />}
                         </span>
                         <span className={cn(
                           'text-sm',
-                          a.concluida ? 'text-muted-foreground line-through' : 'text-destructive font-medium'
+                          a.concluida && 'line-through text-muted-foreground'
                         )}>
                           {a.assunto}
                         </span>
