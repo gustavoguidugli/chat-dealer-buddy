@@ -1,4 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +27,7 @@ import {
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
-  Pencil, Pin, Plus, Trash2, ArrowUp, ArrowDown,
+  Pencil, Pin, Plus, Trash2, GripVertical,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -119,6 +122,61 @@ function diasEntre(dateStr: string | null) {
   return Math.max(0, Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
+function SortableFieldItem({ campo, index, editingCampos, setEditingCampos, onDelete }: {
+  campo: CampoCustomizado;
+  index: number;
+  editingCampos: CampoCustomizado[];
+  setEditingCampos: (c: CampoCustomizado[]) => void;
+  onDelete: (id: number) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: campo.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1.5 p-2 rounded-md border bg-background">
+      <div {...attributes} {...listeners} className="cursor-grab text-muted-foreground hover:text-foreground shrink-0">
+        <GripVertical className="h-4 w-4" />
+      </div>
+      <div className="flex-1 space-y-1">
+        <Input
+          value={campo.nome}
+          onChange={e => {
+            const updated = [...editingCampos];
+            updated[index] = { ...updated[index], nome: e.target.value };
+            setEditingCampos(updated);
+          }}
+          className="h-7 text-xs"
+          placeholder="Nome do campo"
+        />
+        <Select
+          value={campo.tipo}
+          onValueChange={v => {
+            const updated = [...editingCampos];
+            updated[index] = { ...updated[index], tipo: v };
+            setEditingCampos(updated);
+          }}
+        >
+          <SelectTrigger className="h-7 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="texto">Texto</SelectItem>
+            <SelectItem value="numero">Número</SelectItem>
+            <SelectItem value="data">Data</SelectItem>
+            <SelectItem value="select">Seleção</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <button
+        className="text-destructive hover:text-destructive/80 shrink-0"
+        onClick={() => onDelete(campo.id)}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDrawerProps) {
   const { user, empresaId } = useAuth();
   const { toast } = useToast();
@@ -192,16 +250,21 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     fetchAll();
   };
 
-  const moveFieldOrder = (index: number, direction: 'up' | 'down') => {
+  const handleFieldDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = editingCampos.findIndex(c => c.id === active.id);
+    const newIndex = editingCampos.findIndex(c => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
     const newCampos = [...editingCampos];
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= newCampos.length) return;
-    const tempOrdem = newCampos[index].ordem;
-    newCampos[index].ordem = newCampos[swapIndex].ordem;
-    newCampos[swapIndex].ordem = tempOrdem;
-    [newCampos[index], newCampos[swapIndex]] = [newCampos[swapIndex], newCampos[index]];
+    const [moved] = newCampos.splice(oldIndex, 1);
+    newCampos.splice(newIndex, 0, moved);
+    newCampos.forEach((c, i) => { c.ordem = i; });
     setEditingCampos(newCampos);
   };
+
+  const fieldSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const fieldIds = useMemo(() => editingCampos.map(c => c.id), [editingCampos]);
 
   const handleAddField = async () => {
     if (!newFieldName.trim() || !lead) return;
@@ -471,67 +534,25 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           </PopoverTrigger>
                           <PopoverContent className="w-80 p-3" side="bottom" align="end">
                             <p className="text-sm font-semibold text-foreground mb-3">Gerenciar campos</p>
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                              {editingCampos.map((campo, index) => (
-                                <div key={campo.id} className="flex items-center gap-1.5 p-2 rounded-md border bg-background">
-                                  <div className="flex flex-col gap-0.5">
-                                    <button
-                                      className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                                      onClick={() => moveFieldOrder(index, 'up')}
-                                      disabled={index === 0}
-                                    >
-                                      <ArrowUp className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                                      onClick={() => moveFieldOrder(index, 'down')}
-                                      disabled={index === editingCampos.length - 1}
-                                    >
-                                      <ArrowDown className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                  <div className="flex-1 space-y-1">
-                                    <Input
-                                      value={campo.nome}
-                                      onChange={e => {
-                                        const updated = [...editingCampos];
-                                        updated[index] = { ...updated[index], nome: e.target.value };
-                                        setEditingCampos(updated);
-                                      }}
-                                      className="h-7 text-xs"
-                                      placeholder="Nome do campo"
+                            <DndContext sensors={fieldSensors} collisionDetection={closestCenter} onDragEnd={handleFieldDragEnd}>
+                              <SortableContext items={fieldIds} strategy={verticalListSortingStrategy}>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                                  {editingCampos.map((campo, index) => (
+                                    <SortableFieldItem
+                                      key={campo.id}
+                                      campo={campo}
+                                      index={index}
+                                      editingCampos={editingCampos}
+                                      setEditingCampos={setEditingCampos}
+                                      onDelete={(id) => setDeletingFieldId(id)}
                                     />
-                                    <Select
-                                      value={campo.tipo}
-                                      onValueChange={v => {
-                                        const updated = [...editingCampos];
-                                        updated[index] = { ...updated[index], tipo: v };
-                                        setEditingCampos(updated);
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-7 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="texto">Texto</SelectItem>
-                                        <SelectItem value="numero">Número</SelectItem>
-                                        <SelectItem value="data">Data</SelectItem>
-                                        <SelectItem value="select">Seleção</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <button
-                                    className="text-destructive hover:text-destructive/80 shrink-0"
-                                    onClick={() => setDeletingFieldId(campo.id)}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                                  ))}
+                                  {editingCampos.length === 0 && (
+                                    <p className="text-xs text-muted-foreground text-center py-2">Nenhum campo</p>
+                                  )}
                                 </div>
-                              ))}
-                              {editingCampos.length === 0 && (
-                                <p className="text-xs text-muted-foreground text-center py-2">Nenhum campo</p>
-                              )}
-                            </div>
+                              </SortableContext>
+                            </DndContext>
                             <Button
                               size="sm"
                               className="w-full mt-3 bg-accent hover:bg-accent/90 text-accent-foreground"
