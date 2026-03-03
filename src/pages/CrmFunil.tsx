@@ -12,6 +12,7 @@ import { KanbanBoard } from '@/components/crm/KanbanBoard';
 import { EditarFunilModal } from '@/components/crm/EditarFunilModal';
 import { CriarFunilModal } from '@/components/crm/CriarFunilModal';
 import { LeadDrawer } from '@/components/crm/LeadDrawer';
+import { useFunilRealtime } from '@/hooks/useFunilRealtime';
 
 interface Funil {
   id: number;
@@ -45,14 +46,61 @@ export default function CrmFunil() {
   const [funis, setFunis] = useState<Funil[]>([]);
   const [funilAtual, setFunilAtual] = useState<number | null>(null);
   const [etapas, setEtapas] = useState<EtapaFunil[]>([]);
-  const [leads, setLeads] = useState<LeadCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingFunis, setLoadingFunis] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editarFunilOpen, setEditarFunilOpen] = useState(false);
   const [criarFunilOpen, setCriarFunilOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Realtime leads
+  const { leads: realtimeLeads, setLeads, loading: loadingLeads } = useFunilRealtime(funilAtual || 0);
+
+  // Enrich leads with etiquetas
+  const [leads, setEnrichedLeads] = useState<LeadCard[]>([]);
+
+  useEffect(() => {
+    if (!realtimeLeads.length) {
+      setEnrichedLeads([]);
+      return;
+    }
+    const enrichLeads = async () => {
+      const leadIds = realtimeLeads.map((l: any) => l.id);
+      let etiquetasMap: Record<number, { nome: string; cor: string }[]> = {};
+      
+      if (leadIds.length > 0) {
+        const { data: leData } = await supabase
+          .from('lead_etiquetas')
+          .select('id_lead, etiquetas_card(nome, cor)')
+          .in('id_lead', leadIds);
+        
+        if (leData) {
+          for (const item of leData) {
+            if (!etiquetasMap[item.id_lead]) etiquetasMap[item.id_lead] = [];
+            const ec = item.etiquetas_card as any;
+            if (ec) etiquetasMap[item.id_lead].push({ nome: ec.nome, cor: ec.cor });
+          }
+        }
+      }
+
+      setEnrichedLeads(realtimeLeads.map((l: any) => ({
+        id: l.id,
+        nome: l.nome,
+        empresa_cliente: l.empresa_cliente,
+        whatsapp: l.whatsapp,
+        valor_estimado: l.valor_estimado,
+        data_criacao: l.data_criacao,
+        id_etapa_atual: l.id_etapa_atual,
+        ordem_no_funil: l.ordem_no_funil,
+        proprietario_id: l.proprietario_id,
+        etiquetas: etiquetasMap[l.id] || []
+      })));
+    };
+    enrichLeads();
+  }, [realtimeLeads]);
+
+  const loading = loadingFunis || loadingLeads;
 
   // Fetch funis
   useEffect(() => {
@@ -68,16 +116,15 @@ export default function CrmFunil() {
         setFunis(data);
         setFunilAtual(data[0].id);
       }
-      setLoading(false);
+      setLoadingFunis(false);
     };
     fetch();
   }, [empresaId, reloadKey]);
 
-  // Fetch etapas + leads when funil changes
+  // Fetch etapas when funil changes
   useEffect(() => {
     if (!funilAtual) return;
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchEtapas = async () => {
       const { data: etapasData } = await supabase
         .from('etapas_funil')
         .select('id, nome, ordem, cor')
@@ -86,49 +133,13 @@ export default function CrmFunil() {
         .order('ordem');
 
       if (etapasData) setEtapas(etapasData);
-
-      const { data: leadsData } = await supabase
-        .from('leads_crm')
-        .select('id, nome, empresa_cliente, whatsapp, valor_estimado, data_criacao, id_etapa_atual, ordem_no_funil, proprietario_id')
-        .eq('id_funil', funilAtual)
-        .eq('status', 'aberto')
-        .eq('ativo', true)
-        .order('ordem_no_funil')
-        .order('created_at', { ascending: false });
-
-      if (leadsData) {
-        // Fetch etiquetas for all leads
-        const leadIds = leadsData.map(l => l.id);
-        let etiquetasMap: Record<number, { nome: string; cor: string }[]> = {};
-        
-        if (leadIds.length > 0) {
-          const { data: leData } = await supabase
-            .from('lead_etiquetas')
-            .select('id_lead, etiquetas_card(nome, cor)')
-            .in('id_lead', leadIds);
-          
-          if (leData) {
-            for (const item of leData) {
-              if (!etiquetasMap[item.id_lead]) etiquetasMap[item.id_lead] = [];
-              const ec = item.etiquetas_card as any;
-              if (ec) etiquetasMap[item.id_lead].push({ nome: ec.nome, cor: ec.cor });
-            }
-          }
-        }
-
-        setLeads(leadsData.map(l => ({
-          ...l,
-          etiquetas: etiquetasMap[l.id] || []
-        })));
-      }
-      setLoading(false);
     };
-    fetchData();
+    fetchEtapas();
   }, [funilAtual, reloadKey]);
 
   const handleMoveLead = useCallback(async (leadId: number, newEtapaId: number, newOrder: number) => {
     // Optimistic update
-    setLeads(prev => prev.map(l => 
+    setLeads((prev: any[]) => prev.map(l => 
       l.id === leadId ? { ...l, id_etapa_atual: newEtapaId, ordem_no_funil: newOrder } : l
     ));
 
@@ -142,15 +153,13 @@ export default function CrmFunil() {
 
     if (error) {
       toast({ title: 'Erro ao mover negócio', description: error.message, variant: 'destructive' });
-      // Revert - refetch
-      setFunilAtual(prev => prev);
     }
-  }, [toast]);
+  }, [toast, setLeads]);
 
   const handleNewDeal = useCallback((lead: LeadCard) => {
-    setLeads(prev => [lead, ...prev]);
+    setLeads((prev: any[]) => [lead, ...prev]);
     setModalOpen(false);
-  }, []);
+  }, [setLeads]);
 
   const totalNegocios = leads.length;
   const funilNome = funis.find(f => f.id === funilAtual)?.nome || '';
