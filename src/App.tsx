@@ -15,6 +15,7 @@ import GerenciarFaqs from "./pages/GerenciarFaqs";
 import HorarioAtendimento from "./pages/HorarioAtendimento";
 import AdminEmpresas from "./pages/AdminEmpresas";
 import CrmFunil from "./pages/CrmFunil";
+import CrmAtividades from "./pages/CrmAtividades";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,9 @@ const App = () => (
             } />
             <Route path="/crm" element={
               <ProtectedRoute><CrmFunil /></ProtectedRoute>
+            } />
+            <Route path="/crm/atividades" element={
+              <ProtectedRoute><CrmAtividades /></ProtectedRoute>
             } />
             <Route path="/admin/empresas" element={
               <ProtectedRoute><AdminEmpresas /></ProtectedRoute>
