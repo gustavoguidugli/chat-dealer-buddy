@@ -55,7 +55,7 @@ export default function CrmFunil() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Realtime leads
-  const { leads: realtimeLeads, setLeads, loading: loadingLeads } = useFunilRealtime(funilAtual || 0);
+  const { leads: realtimeLeads, setLeads, loading: loadingLeads, etiquetaVersion } = useFunilRealtime(funilAtual || 0);
 
   // Enrich leads with etiquetas
   const [leads, setEnrichedLeads] = useState<LeadCard[]>([]);
@@ -98,7 +98,7 @@ export default function CrmFunil() {
       })));
     };
     enrichLeads();
-  }, [realtimeLeads, reloadKey]);
+  }, [realtimeLeads, reloadKey, etiquetaVersion]);
 
   const loading = loadingFunis || loadingLeads;
 
