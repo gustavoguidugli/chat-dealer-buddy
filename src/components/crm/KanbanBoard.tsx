@@ -21,9 +21,10 @@ interface KanbanBoardProps {
   leadsByEtapa: Record<number, LeadCard[]>;
   onMoveLead: (leadId: number, newEtapaId: number, newOrder: number) => void;
   onLeadClick?: (leadId: number) => void;
+  onAddClick?: (etapaId: number) => void;
 }
 
-export function KanbanBoard({ etapas, leadsByEtapa, onMoveLead, onLeadClick }: KanbanBoardProps) {
+export function KanbanBoard({ etapas, leadsByEtapa, onMoveLead, onLeadClick, onAddClick }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<number | null>(null);
 
   const sensors = useSensors(
@@ -94,6 +95,7 @@ export function KanbanBoard({ etapas, leadsByEtapa, onMoveLead, onLeadClick }: K
               leads={etapaLeads}
               totalValor={totalValor}
               onLeadClick={onLeadClick}
+              onAddClick={onAddClick}
             />
           );
         })}

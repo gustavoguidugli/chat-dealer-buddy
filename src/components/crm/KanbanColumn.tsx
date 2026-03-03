@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LeadCardComponent } from './LeadCardComponent';
+import { Plus } from 'lucide-react';
 import type { LeadCard } from '@/pages/CrmFunil';
 
 interface KanbanColumnProps {
@@ -8,13 +9,14 @@ interface KanbanColumnProps {
   leads: LeadCard[];
   totalValor: number;
   onLeadClick?: (leadId: number) => void;
+  onAddClick?: (etapaId: number) => void;
 }
 
 function formatCurrency(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
 }
 
-export function KanbanColumn({ etapa, leads, totalValor, onLeadClick }: KanbanColumnProps) {
+export function KanbanColumn({ etapa, leads, totalValor, onLeadClick, onAddClick }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `etapa-${etapa.id}` });
 
   return (
@@ -40,11 +42,12 @@ export function KanbanColumn({ etapa, leads, totalValor, onLeadClick }: KanbanCo
               <LeadCardComponent lead={lead} />
             </div>
           ))}
-          {leads.length === 0 && (
-            <div className="text-xs text-muted-foreground text-center py-8">
-              Nenhum negócio
-            </div>
-          )}
+          <button
+            onClick={() => onAddClick?.(etapa.id)}
+            className="w-full flex items-center justify-center py-3 rounded-md bg-muted/50 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
         </div>
       </ScrollArea>
     </div>
