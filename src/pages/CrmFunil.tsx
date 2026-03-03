@@ -156,10 +156,9 @@ export default function CrmFunil() {
     }
   }, [toast, setLeads]);
 
-  const handleNewDeal = useCallback((lead: LeadCard) => {
-    setLeads((prev: any[]) => [lead, ...prev]);
+  const handleNewDeal = useCallback(() => {
     setModalOpen(false);
-  }, [setLeads]);
+  }, []);
 
   const totalNegocios = leads.length;
   const funilNome = funis.find(f => f.id === funilAtual)?.nome || '';
