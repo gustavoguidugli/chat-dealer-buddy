@@ -41,17 +41,54 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
   const [saving, setSaving] = useState(false);
   const [usuarios, setUsuarios] = useState<{ id: string; nome: string }[]>([]);
 
-  // Load users for the dropdown using RPC
+  const normalizeTime = (time?: string | null) => {
+    if (!time) return '';
+    const [h = '', m = ''] = time.split(':');
+    if (!h || !m) return '';
+    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+  };
+
+  const buildUtcFromSaoPaulo = (date: Date, time: string) => {
+    const normalized = normalizeTime(time);
+    if (!normalized) return null;
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return new Date(`${dateStr}T${normalized}:00-03:00`).toISOString();
+  };
+
+  // Load users for the dropdown using RPC (with fallback)
   useEffect(() => {
     if (!isOpen) return;
+
     const fetchUsers = async () => {
-      const { data } = await supabase.rpc('get_usuarios_empresa', {
+      const { data: rpcUsers } = await supabase.rpc('get_usuarios_empresa', {
         empresa_id_param: empresaId,
       });
-      if (data) {
-        setUsuarios(data.map((u: any) => ({ id: u.id, nome: u.nome || u.email || 'Sem nome' })));
+
+      if (rpcUsers && rpcUsers.length > 0) {
+        setUsuarios(rpcUsers.map((u: any) => ({ id: u.id, nome: u.nome || u.email || 'Sem nome' })));
+        return;
       }
+
+      // Fallback para bases antigas que usam user_empresa_geral + usuarios
+      const { data: links } = await supabase
+        .from('user_empresa_geral')
+        .select('user_id')
+        .eq('empresa_id', empresaId);
+
+      if (!links || links.length === 0) {
+        setUsuarios([]);
+        return;
+      }
+
+      const userIds = links.map((u: any) => u.user_id);
+      const { data: usersData } = await supabase
+        .from('usuarios')
+        .select('uuid, nome')
+        .in('uuid', userIds);
+
+      setUsuarios((usersData || []).map((u: any) => ({ id: u.uuid, nome: u.nome || 'Sem nome' })));
     };
+
     fetchUsers();
   }, [isOpen, empresaId]);
 
@@ -62,8 +99,8 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
       setDescricao(activity.descricao || '');
       setAtribuidaA(activity.atribuida_a || user?.id || '');
       setDataVencimento(activity.data_vencimento ? new Date(activity.data_vencimento) : new Date());
-      setHoraInicio(activity.hora_inicio || '');
-      setHoraFim(activity.hora_fim || '');
+      setHoraInicio(normalizeTime(activity.hora_inicio));
+      setHoraFim(normalizeTime(activity.hora_fim));
       setMarcarComoFeito(activity.concluida || false);
     } else if (isOpen) {
       setAssunto('');
@@ -86,12 +123,20 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
       return;
     }
 
+    if (!horaInicio) {
+      toast({ title: 'Hora de início é obrigatória', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
 
-    // Build date with time
-    const dateStr = format(dataVencimento, 'yyyy-MM-dd');
-    const timeStr = horaInicio || '09:00';
-    const fullDate = `${dateStr}T${timeStr}:00`;
+    // Converte horário de São Paulo para UTC antes de salvar
+    const fullDate = buildUtcFromSaoPaulo(dataVencimento, horaInicio);
+    if (!fullDate) {
+      toast({ title: 'Horário inválido', variant: 'destructive' });
+      setSaving(false);
+      return;
+    }
 
     if (isEditing) {
       const { error } = await supabase.from('atividades').update({
