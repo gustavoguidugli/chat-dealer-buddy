@@ -27,7 +27,7 @@ import { ActivityModal } from '@/components/crm/ActivityModal';
 import { LeadDrawer } from '@/components/crm/LeadDrawer';
 import {
   Plus, ChevronDown, Filter, MoreHorizontal, ArrowUp, ArrowDown,
-  Phone, Video, Mail, FileText, DollarSign, AlertCircle, Pencil, Copy, Trash2, CalendarIcon, Users,
+  Phone, Video, Mail, FileText, DollarSign, AlertCircle, Pencil, Copy, Trash2, CalendarIcon, CheckSquare,
 } from 'lucide-react';
 import { format, isToday, isTomorrow, isThisWeek, addWeeks, startOfWeek, endOfWeek, isWithinInterval, differenceInCalendarDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -109,6 +109,11 @@ export default function CrmAtividades() {
   const [excluirId, setExcluirId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerLeadId, setDrawerLeadId] = useState<number | null>(null);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkExcluirOpen, setBulkExcluirOpen] = useState(false);
+  const [bulkConcluirOpen, setBulkConcluirOpen] = useState(false);
 
   useEffect(() => {
     if (!empresaId) return;
@@ -196,6 +201,46 @@ export default function CrmAtividades() {
     await supabase.from('atividades').delete().eq('id', excluirId);
     setExcluirId(null);
     toast({ title: 'Atividade excluída' });
+  };
+
+  const handleBulkExcluir = async () => {
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      await supabase.from('atividades').delete().eq('id', id);
+    }
+    setSelectedIds(new Set());
+    setBulkExcluirOpen(false);
+    toast({ title: `${ids.length} atividade(s) excluída(s)` });
+  };
+
+  const handleBulkConcluir = async () => {
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      await supabase.from('atividades').update({
+        concluida: true,
+        concluida_em: new Date().toISOString(),
+        concluida_por: user?.id || null,
+      }).eq('id', id);
+    }
+    setSelectedIds(new Set());
+    setBulkConcluirOpen(false);
+    toast({ title: `${ids.length} atividade(s) concluída(s)` });
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(a => a.id)));
+    }
   };
 
   const handleDuplicar = async (a: AtividadeRow) => {
@@ -305,6 +350,20 @@ export default function CrmAtividades() {
           )}
         </div>
 
+        {/* Bulk Actions Bar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 px-4 py-2 border-b bg-muted/50">
+            <span className="text-sm font-medium">{selectedIds.size} selecionada(s)</span>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setBulkConcluirOpen(true)}>
+              <CheckSquare className="h-4 w-4" /> Concluir
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5 text-destructive hover:text-destructive" onClick={() => setBulkExcluirOpen(true)}>
+              <Trash2 className="h-4 w-4" /> Excluir
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Limpar seleção</Button>
+          </div>
+        )}
+
         {/* Table */}
         <div className="flex-1 overflow-auto">
           {loading ? (
@@ -315,6 +374,12 @@ export default function CrmAtividades() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]" onClick={e => e.stopPropagation()}>
+                    <Checkbox
+                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="w-[40px]" />
                   <TableHead className="w-[80px]">Concluído</TableHead>
                   <TableHead>Assunto</TableHead>
@@ -349,6 +414,12 @@ export default function CrmAtividades() {
                       }
                     }}
                   >
+                    <TableCell onClick={e => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(a.id)}
+                        onCheckedChange={() => toggleSelect(a.id)}
+                      />
+                    </TableCell>
                     <TableCell onClick={e => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -453,7 +524,34 @@ export default function CrmAtividades() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Advanced Filter Dialog */}
+      {/* Bulk conclude */}
+      <AlertDialog open={bulkConcluirOpen} onOpenChange={setBulkConcluirOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Concluir {selectedIds.size} atividade(s)?</AlertDialogTitle>
+            <AlertDialogDescription>Todas as atividades selecionadas serão marcadas como concluídas.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkConcluir} className="bg-emerald-500 hover:bg-emerald-600">Concluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk delete */}
+      <AlertDialog open={bulkExcluirOpen} onOpenChange={setBulkExcluirOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedIds.size} atividade(s)?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkExcluir} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
         <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
