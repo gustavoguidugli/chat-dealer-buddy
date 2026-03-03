@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      anotacoes_lead: {
+        Row: {
+          conteudo: string
+          created_at: string | null
+          criado_por: string | null
+          id: number
+          id_empresa: number
+          id_lead: number
+          mencionados: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string | null
+          criado_por?: string | null
+          id?: number
+          id_empresa: number
+          id_lead: number
+          mencionados?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string | null
+          criado_por?: string | null
+          id?: number
+          id_empresa?: number
+          id_lead?: number
+          mencionados?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anotacoes_lead_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anotacoes_lead_id_lead_fkey"
+            columns: ["id_lead"]
+            isOneToOne: false
+            referencedRelation: "leads_crm"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atividade_participantes: {
         Row: {
           created_at: string | null

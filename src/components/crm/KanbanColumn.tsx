@@ -7,13 +7,14 @@ interface KanbanColumnProps {
   etapa: { id: number; nome: string; cor: string | null };
   leads: LeadCard[];
   totalValor: number;
+  onLeadClick?: (leadId: number) => void;
 }
 
 function formatCurrency(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
 }
 
-export function KanbanColumn({ etapa, leads, totalValor }: KanbanColumnProps) {
+export function KanbanColumn({ etapa, leads, totalValor, onLeadClick }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `etapa-${etapa.id}` });
 
   return (
@@ -35,7 +36,9 @@ export function KanbanColumn({ etapa, leads, totalValor }: KanbanColumnProps) {
       <ScrollArea className="flex-1 px-2 pb-2">
         <div className="flex flex-col gap-2 p-1">
           {leads.map(lead => (
-            <LeadCardComponent key={lead.id} lead={lead} />
+            <div key={lead.id} onClick={() => onLeadClick?.(lead.id)}>
+              <LeadCardComponent lead={lead} />
+            </div>
           ))}
           {leads.length === 0 && (
             <div className="text-xs text-muted-foreground text-center py-8">
