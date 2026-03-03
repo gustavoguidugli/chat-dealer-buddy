@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { NovoNegocioModal } from '@/components/crm/NovoNegocioModal';
 import { KanbanBoard } from '@/components/crm/KanbanBoard';
+import { EditarFunilModal } from '@/components/crm/EditarFunilModal';
 
 interface Funil {
   id: number;
@@ -45,6 +46,8 @@ export default function CrmFunil() {
   const [leads, setLeads] = useState<LeadCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editarFunilOpen, setEditarFunilOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Fetch funis
   useEffect(() => {
@@ -63,7 +66,7 @@ export default function CrmFunil() {
       setLoading(false);
     };
     fetch();
-  }, [empresaId]);
+  }, [empresaId, reloadKey]);
 
   // Fetch etapas + leads when funil changes
   useEffect(() => {
@@ -116,7 +119,7 @@ export default function CrmFunil() {
       setLoading(false);
     };
     fetchData();
-  }, [funilAtual]);
+  }, [funilAtual, reloadKey]);
 
   const handleMoveLead = useCallback(async (leadId: number, newEtapaId: number, newOrder: number) => {
     // Optimistic update
@@ -193,7 +196,7 @@ export default function CrmFunil() {
               </SelectContent>
             </Select>
 
-            <Button variant="ghost" size="icon" className="h-9 w-9">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditarFunilOpen(true)}>
               <Pencil className="h-4 w-4" />
             </Button>
 
@@ -228,6 +231,17 @@ export default function CrmFunil() {
           etapas={etapas}
           empresaId={empresaId!}
           onCreated={handleNewDeal}
+        />
+      )}
+
+      {funilAtual && (
+        <EditarFunilModal
+          open={editarFunilOpen}
+          onOpenChange={setEditarFunilOpen}
+          funilId={funilAtual}
+          funilNome={funilNome}
+          etapas={etapas}
+          onSaved={() => setReloadKey((k) => k + 1)}
         />
       )}
     </AppLayout>
