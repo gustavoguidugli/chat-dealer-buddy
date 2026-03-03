@@ -202,18 +202,6 @@ export function EtiquetaSelector({ leadId, empresaId }: EtiquetaSelectorProps) {
 
   return (
     <div className="inline-flex items-center gap-1.5">
-      {selectedEtiquetas.map(e => (
-        <span
-          key={e.id}
-          className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded"
-          style={{
-            backgroundColor: `${e.cor}20`,
-            color: e.cor,
-          }}
-        >
-          {e.nome}
-        </span>
-      ))}
       <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setIsEditing(false); setAddingNew(false); setSearch(''); } }}>
         <PopoverTrigger asChild>
           <button className="text-muted-foreground hover:text-foreground transition-colors">
@@ -323,6 +311,18 @@ export function EtiquetaSelector({ leadId, empresaId }: EtiquetaSelectorProps) {
           </div>
         </PopoverContent>
       </Popover>
+      {selectedEtiquetas.map(e => (
+        <span
+          key={e.id}
+          className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded"
+          style={{
+            backgroundColor: `${e.cor}20`,
+            color: e.cor,
+          }}
+        >
+          {e.nome}
+        </span>
+      ))}
     </div>
   );
 }
