@@ -90,9 +90,17 @@ export default function AdminEmpresas() {
 
   if (!isAdmin) return <Navigate to="/home" replace />;
 
-  const filtered = empresas.filter(e =>
-    (e.nome ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = empresas
+    .filter(e => (e.nome ?? '').toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const aIsGustavo = (a.nome ?? '').toLowerCase().includes('gustavo');
+      const bIsGustavo = (b.nome ?? '').toLowerCase().includes('gustavo');
+      if (aIsGustavo && !bIsGustavo) return -1;
+      if (!aIsGustavo && bIsGustavo) return 1;
+      if (a.ativo && !b.ativo) return -1;
+      if (!a.ativo && b.ativo) return 1;
+      return (a.nome ?? '').localeCompare(b.nome ?? '');
+    });
 
   return (
     <AppLayout>
