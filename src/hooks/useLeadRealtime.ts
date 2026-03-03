@@ -67,56 +67,106 @@ export function useLeadRealtime(leadId: number | null) {
 
     fetchData()
 
+    const isCurrentLead = (value: unknown) => Number(value) === Number(leadId)
+    const sortAtividades = (items: any[]) => [...items].sort(
+      (a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime()
+    )
+
     // 2. Realtime no lead
     const leadChannel = supabase
       .channel(`lead-${leadId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'leads_crm', filter: `id=eq.${leadId}` },
-        (payload) => setLead((prev: any) => ({ ...prev, ...payload.new }))
-      )
-      .subscribe()
-
-    // 3. Realtime nas anotações
-    const anotacoesChannel = supabase
-      .channel(`anotacoes-${leadId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'anotacoes_lead', filter: `id_lead=eq.${leadId}` },
-        (payload) => setAnotacoes((prev) => [payload.new, ...prev])
-      )
-      .subscribe()
-
-    // 4. Realtime nas atividades
-    const atividadesChannel = supabase
-      .channel(`atividades-${leadId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'atividades', filter: `id_lead=eq.${leadId}` },
+        { event: '*', schema: 'public', table: 'leads_crm', filter: `id=eq.${leadId}` },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setAtividades((prev) => [...prev, payload.new])
-          }
-          if (payload.eventType === 'UPDATE') {
-            setAtividades((prev) =>
-              prev.map((a) => (a.id === payload.new.id ? payload.new : a))
-            )
-          }
           if (payload.eventType === 'DELETE') {
-            setAtividades((prev) => prev.filter((a) => a.id !== payload.old.id))
+            setLead(null)
+            return
           }
+          setLead((prev: any) => ({ ...prev, ...payload.new }))
         }
       )
       .subscribe()
 
-    // 5. Realtime no histórico
+    // 3. Realtime nas anotações (sem filtro para não perder DELETE)
+    const anotacoesChannel = supabase
+      .channel(`anotacoes-${leadId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'anotacoes_lead' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          if (!isCurrentLead((payload.new as any).id_lead)) return
+          setAnotacoes((prev) => [payload.new, ...prev])
+          return
+        }
+
+        if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as any
+          setAnotacoes((prev) => {
+            const withoutCurrent = prev.filter((item) => item.id !== updated.id)
+            if (!isCurrentLead(updated.id_lead)) return withoutCurrent
+            return [updated, ...withoutCurrent]
+          })
+          return
+        }
+
+        if (payload.eventType === 'DELETE') {
+          const oldRow = payload.old as any
+          setAnotacoes((prev) => prev.filter((item) => item.id !== oldRow.id))
+        }
+      })
+      .subscribe()
+
+    // 4. Realtime nas atividades (sem filtro para não perder DELETE)
+    const atividadesChannel = supabase
+      .channel(`atividades-${leadId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          if (!isCurrentLead((payload.new as any).id_lead)) return
+          setAtividades((prev) => sortAtividades([...prev.filter((a) => a.id !== (payload.new as any).id), payload.new]))
+          return
+        }
+
+        if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as any
+          setAtividades((prev) => {
+            const withoutCurrent = prev.filter((a) => a.id !== updated.id)
+            if (!isCurrentLead(updated.id_lead)) return withoutCurrent
+            return sortAtividades([...withoutCurrent, updated])
+          })
+          return
+        }
+
+        if (payload.eventType === 'DELETE') {
+          const oldRow = payload.old as any
+          setAtividades((prev) => prev.filter((a) => a.id !== oldRow.id))
+        }
+      })
+      .subscribe()
+
+    // 5. Realtime no histórico (sem filtro para não perder DELETE)
     const historicoChannel = supabase
       .channel(`historico-${leadId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'historico_lead', filter: `id_lead=eq.${leadId}` },
-        (payload) => setHistorico((prev) => [payload.new, ...prev])
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'historico_lead' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          if (!isCurrentLead((payload.new as any).id_lead)) return
+          setHistorico((prev) => [payload.new, ...prev])
+          return
+        }
+
+        if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as any
+          setHistorico((prev) => {
+            const withoutCurrent = prev.filter((item) => item.id !== updated.id)
+            if (!isCurrentLead(updated.id_lead)) return withoutCurrent
+            return [updated, ...withoutCurrent]
+          })
+          return
+        }
+
+        if (payload.eventType === 'DELETE') {
+          const oldRow = payload.old as any
+          setHistorico((prev) => prev.filter((item) => item.id !== oldRow.id))
+        }
+      })
       .subscribe()
 
     // 6. Cleanup
