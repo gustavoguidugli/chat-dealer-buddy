@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Copy, Loader2, CheckCircle2, XCircle, Plus, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 interface Convite {
   id: string;
@@ -16,6 +18,7 @@ interface Convite {
   usos_atuais: number | null;
   ativo: boolean | null;
   created_at: string | null;
+  role?: string;
 }
 
 interface Props {
@@ -30,6 +33,7 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState<string>('member');
   const [creating, setCreating] = useState(false);
 
   const fetchInvites = useCallback(async () => {
@@ -72,12 +76,14 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
         tipo: 'link',
         max_usos: 1,
         email_destino: email,
+        role: newRole,
       } as any);
 
       if (error) throw error;
 
       toast({ title: 'Convite criado!', description: `Convite para ${email}` });
       setNewEmail('');
+      setNewRole('member');
       setShowForm(false);
       await fetchInvites();
     } catch (err: any) {
@@ -110,8 +116,23 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
                   disabled={creating}
                 />
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Nível de permissão</Label>
+                <Select value={newRole} onValueChange={setNewRole} disabled={creating}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin — Gerente da empresa</SelectItem>
+                    <SelectItem value="member">Membro — Vendedor/Colaborador</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Admin pode gerenciar a empresa. Membro tem acessos limitados.
+                </p>
+              </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setNewEmail(''); }}>
+                <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setNewEmail(''); setNewRole('member'); }}>
                   Cancelar
                 </Button>
                 <Button size="sm" onClick={createInvite} disabled={creating || !newEmail.trim()}>
@@ -149,6 +170,11 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
                         <span className="text-sm font-medium truncate">
                           {invite.email_destino || 'Sem email'}
                         </span>
+                        {(invite as any).role === 'admin' ? (
+                          <Badge className="bg-yellow-500/15 text-yellow-600 border-yellow-500/30 text-[10px] hover:bg-yellow-500/15">Admin</Badge>
+                        ) : (
+                          <Badge className="bg-green-500/15 text-green-600 border-green-500/30 text-[10px] hover:bg-green-500/15">Membro</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5">
                         {isExpired ? (

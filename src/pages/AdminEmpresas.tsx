@@ -11,6 +11,7 @@ import { Plus, Link2, Power, Building2, Users, Trash, Search, MoreVertical } fro
 import { CreateCompanyModal } from '@/components/CreateCompanyModal';
 import { InviteModal } from '@/components/InviteModal';
 import { DeleteEmpresaModal } from '@/components/DeleteEmpresaModal';
+import { ManageUsersModal } from '@/components/ManageUsersModal';
 import { Navigate } from 'react-router-dom';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
@@ -36,6 +37,7 @@ export default function AdminEmpresas() {
   const [createOpen, setCreateOpen] = useState(false);
   const [inviteEmpresa, setInviteEmpresa] = useState<Empresa | null>(null);
   const [deleteEmpresa, setDeleteEmpresa] = useState<Empresa | null>(null);
+  const [usersEmpresa, setUsersEmpresa] = useState<Empresa | null>(null);
 
   const fetchEmpresas = useCallback(async () => {
     setLoading(true);
@@ -198,6 +200,10 @@ export default function AdminEmpresas() {
                           <Link2 className="h-4 w-4 mr-2" />
                           Convites
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setUsersEmpresa(empresa)}>
+                          <Users className="h-4 w-4 mr-2" />
+                          Usuários
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleAtivo(empresa)}>
                           <Power className="h-4 w-4 mr-2" />
                           {empresa.ativo ? 'Desativar' : 'Ativar'}
@@ -240,6 +246,14 @@ export default function AdminEmpresas() {
         onOpenChange={open => { if (!open) setDeleteEmpresa(null); }}
         onDeleted={fetchEmpresas}
       />
+
+      {usersEmpresa && (
+        <ManageUsersModal
+          open={!!usersEmpresa}
+          onOpenChange={open => { if (!open) setUsersEmpresa(null); }}
+          empresa={usersEmpresa}
+        />
+      )}
     </AppLayout>
   );
 }

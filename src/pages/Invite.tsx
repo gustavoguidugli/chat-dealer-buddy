@@ -25,10 +25,12 @@ export default function Invite() {
 
   const [validating, setValidating] = useState(true);
   const [validation, setValidation] = useState<InviteValidation | null>(null);
+  const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [inviteRole, setInviteRole] = useState<string>('member');
 
   useEffect(() => {
     if (!token) {
@@ -43,7 +45,18 @@ export default function Invite() {
         if (error || !data || data.length === 0) {
           setValidation({ valido: false, empresa_id: 0, convite_id: '', erro: 'Não foi possível validar o convite.', email_destino: '' });
         } else {
-          setValidation(data[0] as unknown as InviteValidation);
+          const v = data[0] as unknown as InviteValidation;
+          setValidation(v);
+
+          // Fetch role from convite
+          if (v.valido && v.convite_id) {
+            const { data: convite } = await (supabase as any)
+              .from('convites')
+              .select('role')
+              .eq('id', v.convite_id)
+              .maybeSingle();
+            if (convite?.role) setInviteRole(convite.role as string);
+          }
         }
       } catch {
         setValidation({ valido: false, empresa_id: 0, convite_id: '', erro: 'Erro ao validar convite.', email_destino: '' });
@@ -59,6 +72,18 @@ export default function Invite() {
     e.preventDefault();
     setErrors({});
 
+    // Validate full name
+    const trimmedName = fullName.trim();
+    if (trimmedName.length < 3) {
+      setErrors({ fullName: 'Nome completo deve ter pelo menos 3 caracteres' });
+      return;
+    }
+    const nomeValido = /^[a-zA-ZÀ-ÿ\s]+$/.test(trimmedName);
+    if (!nomeValido) {
+      setErrors({ fullName: 'Nome deve conter apenas letras e espaços' });
+      return;
+    }
+
     if (password.length < 8) {
       setErrors({ password: 'Senha deve ter no mínimo 8 caracteres' });
       return;
@@ -72,12 +97,11 @@ export default function Invite() {
 
     setSubmitting(true);
     try {
-      // 1. Create user with email from invite (no email confirmation needed)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: validation.email_destino,
         password,
         options: {
-          data: { full_name: validation.email_destino.split('@')[0] },
+          data: { full_name: trimmedName },
           emailRedirectTo: undefined,
         },
       });
@@ -97,19 +121,19 @@ export default function Invite() {
         return;
       }
 
-      // 2. Link user to company
+      // Link user to company with role from invite
       const { error: linkError } = await supabase
         .from('user_empresa')
         .insert({
           user_id: userId,
           empresa_id: validation.empresa_id,
           convite_id: validation.convite_id,
-          role: 'member',
+          role: inviteRole,
         });
 
       if (linkError) console.error('Error linking user_empresa:', linkError);
 
-      // 3. Link user_empresa_geral
+      // Link user_empresa_geral
       const { error: linkGeralError } = await supabase
         .from('user_empresa_geral')
         .insert({
@@ -119,13 +143,12 @@ export default function Invite() {
 
       if (linkGeralError) console.error('Error linking user_empresa_geral:', linkGeralError);
 
-      // 4. Increment invite usage
+      // Increment invite usage
       await supabase.rpc('usar_convite', {
         p_convite_id: validation.convite_id,
         p_user_id: userId,
       });
 
-      // 5. Sign out and redirect to login
       await supabase.auth.signOut();
 
       toast({ title: 'Conta criada!', description: 'Faça login para continuar.' });
@@ -201,6 +224,21 @@ export default function Invite() {
                 disabled={submitting}
               />
               <p className="text-xs text-muted-foreground">Email vinculado ao convite (não editável)</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Nome completo</Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="Seu nome completo"
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                required
+                minLength={3}
+                disabled={submitting}
+              />
+              {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
             </div>
 
             <div className="space-y-2">
