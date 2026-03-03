@@ -48,6 +48,7 @@ export default function CrmFunil() {
   const [etapas, setEtapas] = useState<EtapaFunil[]>([]);
   const [loadingFunis, setLoadingFunis] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalEtapaId, setModalEtapaId] = useState<number | null>(null);
   const [editarFunilOpen, setEditarFunilOpen] = useState(false);
   const [criarFunilOpen, setCriarFunilOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -325,6 +326,7 @@ export default function CrmFunil() {
               leadsByEtapa={leadsByEtapa}
               onMoveLead={handleMoveLead}
               onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
+              onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
             />
           )}
         </div>
@@ -333,11 +335,12 @@ export default function CrmFunil() {
       {funilAtual && etapas.length > 0 && (
         <NovoNegocioModal
           open={modalOpen}
-          onOpenChange={setModalOpen}
+          onOpenChange={(open) => { setModalOpen(open); if (!open) setModalEtapaId(null); }}
           funilId={funilAtual}
           etapas={etapas}
           empresaId={empresaId!}
           onCreated={handleNewDeal}
+          defaultEtapaId={modalEtapaId}
         />
       )}
 

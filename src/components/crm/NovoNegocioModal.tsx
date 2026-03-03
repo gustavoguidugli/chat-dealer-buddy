@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,16 +15,23 @@ interface Props {
   etapas: { id: number; nome: string }[];
   empresaId: number;
   onCreated: (lead: LeadCard) => void;
+  defaultEtapaId?: number | null;
 }
 
-export function NovoNegocioModal({ open, onOpenChange, funilId, etapas, empresaId, onCreated }: Props) {
+export function NovoNegocioModal({ open, onOpenChange, funilId, etapas, empresaId, onCreated, defaultEtapaId }: Props) {
   const { toast } = useToast();
   const [nome, setNome] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
-  const [etapaId, setEtapaId] = useState(etapas[0]?.id.toString() || '');
+  const [etapaId, setEtapaId] = useState((defaultEtapaId ?? etapas[0]?.id)?.toString() || '');
   const [valorEstimado, setValorEstimado] = useState('');
   const [empresaCliente, setEmpresaCliente] = useState('');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setEtapaId((defaultEtapaId ?? etapas[0]?.id)?.toString() || '');
+    }
+  }, [open, defaultEtapaId, etapas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
