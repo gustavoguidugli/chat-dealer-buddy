@@ -21,6 +21,7 @@ interface Etiqueta {
 interface EtiquetaSelectorProps {
   leadId: number;
   empresaId: number;
+  onChange?: () => void;
 }
 
 const CORES_DISPONIVEIS = [
@@ -111,7 +112,7 @@ function SortableEtiquetaItem({
   );
 }
 
-export function EtiquetaSelector({ leadId, empresaId }: EtiquetaSelectorProps) {
+export function EtiquetaSelector({ leadId, empresaId, onChange }: EtiquetaSelectorProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [etiquetas, setEtiquetas] = useState<Etiqueta[]>([]);
@@ -134,6 +135,10 @@ export function EtiquetaSelector({ leadId, empresaId }: EtiquetaSelectorProps) {
   }, [leadId, empresaId]);
 
   useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
     if (open) fetchData();
   }, [open, fetchData]);
 
@@ -145,6 +150,7 @@ export function EtiquetaSelector({ leadId, empresaId }: EtiquetaSelectorProps) {
       await supabase.from('lead_etiquetas').insert({ id_lead: leadId, id_etiqueta: id });
       setSelectedIds(prev => [...prev, id]);
     }
+    onChange?.();
   };
 
   const handleUpdate = async (etiqueta: Etiqueta) => {
