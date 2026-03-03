@@ -2635,6 +2635,7 @@ export type Database = {
           id: string
           nome: string
           raw_user_meta_data: Json
+          role: string
         }[]
       }
       is_admin: { Args: { user_uuid: string }; Returns: boolean }
@@ -2697,7 +2698,15 @@ export type Database = {
           similarity: number
         }[]
       }
+      remove_user_from_empresa: {
+        Args: { p_empresa_id: number; p_user_id: string }
+        Returns: boolean
+      }
       timestamp_sao_paulo: { Args: { ts: string }; Returns: string }
+      update_user_role: {
+        Args: { p_empresa_id: number; p_new_role: string; p_user_id: string }
+        Returns: boolean
+      }
       usar_convite: {
         Args: { p_convite_id: string; p_user_id: string }
         Returns: boolean
