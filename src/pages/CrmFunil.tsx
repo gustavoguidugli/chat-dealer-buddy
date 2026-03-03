@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { NovoNegocioModal } from '@/components/crm/NovoNegocioModal';
 import { KanbanBoard } from '@/components/crm/KanbanBoard';
 import { EditarFunilModal } from '@/components/crm/EditarFunilModal';
+import { CriarFunilModal } from '@/components/crm/CriarFunilModal';
 
 interface Funil {
   id: number;
@@ -47,6 +48,7 @@ export default function CrmFunil() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editarFunilOpen, setEditarFunilOpen] = useState(false);
+  const [criarFunilOpen, setCriarFunilOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   // Fetch funis
@@ -200,6 +202,9 @@ export default function CrmFunil() {
               <Pencil className="h-4 w-4" />
             </Button>
 
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setCriarFunilOpen(true)}>
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -242,6 +247,14 @@ export default function CrmFunil() {
           funilNome={funilNome}
           etapas={etapas}
           onSaved={() => setReloadKey((k) => k + 1)}
+        />
+      )}
+      {empresaId && (
+        <CriarFunilModal
+          open={criarFunilOpen}
+          onOpenChange={setCriarFunilOpen}
+          empresaId={empresaId}
+          onCreated={() => setReloadKey((k) => k + 1)}
         />
       )}
     </AppLayout>
