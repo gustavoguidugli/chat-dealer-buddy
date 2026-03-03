@@ -14,6 +14,7 @@ import BaseConhecimento from "./pages/BaseConhecimento";
 import GerenciarFaqs from "./pages/GerenciarFaqs";
 import HorarioAtendimento from "./pages/HorarioAtendimento";
 import AdminEmpresas from "./pages/AdminEmpresas";
+import CrmFunil from "./pages/CrmFunil";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,9 @@ const App = () => (
             } />
             <Route path="/base-conhecimento/horarios" element={
               <ProtectedRoute><HorarioAtendimento /></ProtectedRoute>
+            } />
+            <Route path="/crm" element={
+              <ProtectedRoute><CrmFunil /></ProtectedRoute>
             } />
             <Route path="/admin/empresas" element={
               <ProtectedRoute><AdminEmpresas /></ProtectedRoute>
