@@ -14,6 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
+      atividade_participantes: {
+        Row: {
+          created_at: string | null
+          email: string
+          id_atividade: number
+          nome: string | null
+          tipo: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id_atividade: number
+          nome?: string | null
+          tipo?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id_atividade?: number
+          nome?: string | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividade_participantes_id_atividade_fkey"
+            columns: ["id_atividade"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atividades: {
+        Row: {
+          assunto: string
+          atribuida_a: string | null
+          concluida: boolean | null
+          concluida_em: string | null
+          concluida_por: string | null
+          created_at: string | null
+          created_by: string | null
+          data_vencimento: string
+          descricao: string | null
+          hora_fim: string | null
+          hora_inicio: string | null
+          id: number
+          id_empresa: number
+          id_lead: number | null
+          prioridade: string | null
+          tipo: string
+          updated_at: string | null
+          visivel_convidados: boolean | null
+        }
+        Insert: {
+          assunto: string
+          atribuida_a?: string | null
+          concluida?: boolean | null
+          concluida_em?: string | null
+          concluida_por?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_vencimento: string
+          descricao?: string | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: number
+          id_empresa: number
+          id_lead?: number | null
+          prioridade?: string | null
+          tipo: string
+          updated_at?: string | null
+          visivel_convidados?: boolean | null
+        }
+        Update: {
+          assunto?: string
+          atribuida_a?: string | null
+          concluida?: boolean | null
+          concluida_em?: string | null
+          concluida_por?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_vencimento?: string
+          descricao?: string | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: number
+          id_empresa?: number
+          id_lead?: number | null
+          prioridade?: string | null
+          tipo?: string
+          updated_at?: string | null
+          visivel_convidados?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_id_lead_fkey"
+            columns: ["id_lead"]
+            isOneToOne: false
+            referencedRelation: "leads_crm"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buffer_supabase: {
         Row: {
           created_at: string | null
@@ -46,6 +156,63 @@ export type Database = {
           },
         ]
       }
+      campos_customizados: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: number
+          id_empresa: number
+          id_funil: number | null
+          nome: string
+          obrigatorio: boolean | null
+          opcoes: Json | null
+          ordem: number | null
+          slug: string
+          tipo: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: number
+          id_empresa: number
+          id_funil?: number | null
+          nome: string
+          obrigatorio?: boolean | null
+          opcoes?: Json | null
+          ordem?: number | null
+          slug: string
+          tipo: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: number
+          id_empresa?: number
+          id_funil?: number | null
+          nome?: string
+          obrigatorio?: boolean | null
+          opcoes?: Json | null
+          ordem?: number | null
+          slug?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campos_customizados_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campos_customizados_id_funil_fkey"
+            columns: ["id_funil"]
+            isOneToOne: false
+            referencedRelation: "funis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       config_empresas_geral: {
         Row: {
           created_at: string
@@ -55,6 +222,7 @@ export type Database = {
           faq_qualificacao_maquina: string
           horarios_funcionamento: Json
           id_empresa: number
+          mensagem_saudacao: string | null
           mensagem_triagem: string | null
           triagem_is_ativo: boolean | null
           updated_at: string
@@ -68,6 +236,7 @@ export type Database = {
           faq_qualificacao_maquina?: string
           horarios_funcionamento?: Json
           id_empresa: number
+          mensagem_saudacao?: string | null
           mensagem_triagem?: string | null
           triagem_is_ativo?: boolean | null
           updated_at?: string
@@ -81,6 +250,7 @@ export type Database = {
           faq_qualificacao_maquina?: string
           horarios_funcionamento?: Json
           id_empresa?: number
+          mensagem_saudacao?: string | null
           mensagem_triagem?: string | null
           triagem_is_ativo?: boolean | null
           updated_at?: string
@@ -940,6 +1110,56 @@ export type Database = {
         }
         Relationships: []
       }
+      etapas_funil: {
+        Row: {
+          ativo: boolean | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          id: number
+          id_funil: number
+          meta_dias: number | null
+          nome: string
+          ordem: number
+          probabilidade_fechamento: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: number
+          id_funil: number
+          meta_dias?: number | null
+          nome: string
+          ordem: number
+          probabilidade_fechamento?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: number
+          id_funil?: number
+          meta_dias?: number | null
+          nome?: string
+          ordem?: number
+          probabilidade_fechamento?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etapas_funil_id_funil_fkey"
+            columns: ["id_funil"]
+            isOneToOne: false
+            referencedRelation: "funis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       etiquestas_conversa: {
         Row: {
           created_at: string
@@ -1014,6 +1234,53 @@ export type Database = {
             columns: ["id_empresa"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etiquetas_card: {
+        Row: {
+          ativo: boolean | null
+          cor: string | null
+          created_at: string | null
+          icone: string | null
+          id: number
+          id_empresa: number
+          nome: string
+          ordem: number | null
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          icone?: string | null
+          id?: number
+          id_empresa: number
+          nome: string
+          ordem?: number | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          icone?: string | null
+          id?: number
+          id_empresa?: number
+          nome?: string
+          ordem?: number | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etiquetas_card_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
         ]
@@ -1214,6 +1481,142 @@ export type Database = {
           },
         ]
       }
+      funis: {
+        Row: {
+          ativo: boolean | null
+          cor: string | null
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          id: number
+          id_empresa: number
+          nome: string
+          ordem: number | null
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          id?: number
+          id_empresa: number
+          nome: string
+          ordem?: number | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          id?: number
+          id_empresa?: number
+          nome?: string
+          ordem?: number | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funis_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historico_lead: {
+        Row: {
+          automatico: boolean | null
+          created_at: string | null
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          descricao: string
+          etapa_destino_id: number | null
+          etapa_origem_id: number | null
+          id: number
+          id_empresa: number
+          id_lead: number
+          metadados: Json | null
+          tempo_na_etapa_anterior: unknown
+          tipo_evento: string
+          usuario_id: string | null
+          valor_antigo: number | null
+          valor_novo: number | null
+        }
+        Insert: {
+          automatico?: boolean | null
+          created_at?: string | null
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          descricao: string
+          etapa_destino_id?: number | null
+          etapa_origem_id?: number | null
+          id?: number
+          id_empresa: number
+          id_lead: number
+          metadados?: Json | null
+          tempo_na_etapa_anterior?: unknown
+          tipo_evento: string
+          usuario_id?: string | null
+          valor_antigo?: number | null
+          valor_novo?: number | null
+        }
+        Update: {
+          automatico?: boolean | null
+          created_at?: string | null
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          descricao?: string
+          etapa_destino_id?: number | null
+          etapa_origem_id?: number | null
+          id?: number
+          id_empresa?: number
+          id_lead?: number
+          metadados?: Json | null
+          tempo_na_etapa_anterior?: unknown
+          tipo_evento?: string
+          usuario_id?: string | null
+          valor_antigo?: number | null
+          valor_novo?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_lead_etapa_destino_id_fkey"
+            columns: ["etapa_destino_id"]
+            isOneToOne: false
+            referencedRelation: "etapas_funil"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_lead_etapa_origem_id_fkey"
+            columns: ["etapa_origem_id"]
+            isOneToOne: false
+            referencedRelation: "etapas_funil"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_lead_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_lead_id_lead_fkey"
+            columns: ["id_lead"]
+            isOneToOne: false
+            referencedRelation: "leads_crm"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       labels: {
         Row: {
           ativo: boolean | null
@@ -1254,6 +1657,185 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_etiquetas: {
+        Row: {
+          aplicada_automaticamente: boolean | null
+          aplicada_por: string | null
+          created_at: string | null
+          id_etiqueta: number
+          id_lead: number
+        }
+        Insert: {
+          aplicada_automaticamente?: boolean | null
+          aplicada_por?: string | null
+          created_at?: string | null
+          id_etiqueta: number
+          id_lead: number
+        }
+        Update: {
+          aplicada_automaticamente?: boolean | null
+          aplicada_por?: string | null
+          created_at?: string | null
+          id_etiqueta?: number
+          id_lead?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_etiquetas_id_etiqueta_fkey"
+            columns: ["id_etiqueta"]
+            isOneToOne: false
+            referencedRelation: "etiquetas_card"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_etiquetas_id_lead_fkey"
+            columns: ["id_lead"]
+            isOneToOne: false
+            referencedRelation: "leads_crm"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads_crm: {
+        Row: {
+          anotacoes: string | null
+          ativo: boolean | null
+          campanha: string | null
+          campos_extras: Json | null
+          cpf_cnpj: string | null
+          created_at: string | null
+          data_criacao: string | null
+          data_entrada_etapa_atual: string | null
+          data_entrada_funil: string | null
+          data_ganho: string | null
+          data_perdido: string | null
+          data_primeira_proposta: string | null
+          data_primeira_qualificacao: string | null
+          email: string | null
+          empresa_cliente: string | null
+          id: number
+          id_contato_geral: number | null
+          id_contato_sdr: number | null
+          id_empresa: number
+          id_etapa_atual: number
+          id_funil: number
+          midia: string | null
+          motivo_perda: string | null
+          nome: string
+          ordem_no_funil: number | null
+          origem: string | null
+          previsao_fechamento: string | null
+          proprietario_id: string | null
+          status: string | null
+          tipo_contato_sdr: string | null
+          updated_at: string | null
+          valor_estimado: number | null
+          valor_final: number | null
+          whatsapp: string | null
+        }
+        Insert: {
+          anotacoes?: string | null
+          ativo?: boolean | null
+          campanha?: string | null
+          campos_extras?: Json | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          data_criacao?: string | null
+          data_entrada_etapa_atual?: string | null
+          data_entrada_funil?: string | null
+          data_ganho?: string | null
+          data_perdido?: string | null
+          data_primeira_proposta?: string | null
+          data_primeira_qualificacao?: string | null
+          email?: string | null
+          empresa_cliente?: string | null
+          id?: number
+          id_contato_geral?: number | null
+          id_contato_sdr?: number | null
+          id_empresa: number
+          id_etapa_atual: number
+          id_funil: number
+          midia?: string | null
+          motivo_perda?: string | null
+          nome: string
+          ordem_no_funil?: number | null
+          origem?: string | null
+          previsao_fechamento?: string | null
+          proprietario_id?: string | null
+          status?: string | null
+          tipo_contato_sdr?: string | null
+          updated_at?: string | null
+          valor_estimado?: number | null
+          valor_final?: number | null
+          whatsapp?: string | null
+        }
+        Update: {
+          anotacoes?: string | null
+          ativo?: boolean | null
+          campanha?: string | null
+          campos_extras?: Json | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          data_criacao?: string | null
+          data_entrada_etapa_atual?: string | null
+          data_entrada_funil?: string | null
+          data_ganho?: string | null
+          data_perdido?: string | null
+          data_primeira_proposta?: string | null
+          data_primeira_qualificacao?: string | null
+          email?: string | null
+          empresa_cliente?: string | null
+          id?: number
+          id_contato_geral?: number | null
+          id_contato_sdr?: number | null
+          id_empresa?: number
+          id_etapa_atual?: number
+          id_funil?: number
+          midia?: string | null
+          motivo_perda?: string | null
+          nome?: string
+          ordem_no_funil?: number | null
+          origem?: string | null
+          previsao_fechamento?: string | null
+          proprietario_id?: string | null
+          status?: string | null
+          tipo_contato_sdr?: string | null
+          updated_at?: string | null
+          valor_estimado?: number | null
+          valor_final?: number | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_crm_id_contato_geral_fkey"
+            columns: ["id_contato_geral"]
+            isOneToOne: false
+            referencedRelation: "contatos_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_crm_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_crm_id_etapa_atual_fkey"
+            columns: ["id_etapa_atual"]
+            isOneToOne: false
+            referencedRelation: "etapas_funil"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_crm_id_funil_fkey"
+            columns: ["id_funil"]
+            isOneToOne: false
+            referencedRelation: "funis"
             referencedColumns: ["id"]
           },
         ]

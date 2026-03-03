@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Home, Bot, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2 } from 'lucide-react';
+import { Home, Bot, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2, Kanban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/home', icon: Home, label: 'Home' },
+  { to: '/crm', icon: Kanban, label: 'CRM' },
   { to: '/triagem', icon: Bot, label: 'Triagem do agente' },
   { to: '/base-conhecimento', icon: BookOpen, label: 'Base de conhecimento' },
 ];
