@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Home, Bot, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2, Kanban } from 'lucide-react';
+import { Home, Bot, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2, Kanban, ChevronDown, Target, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/home', icon: Home, label: 'Home' },
-  { to: '/crm', icon: Kanban, label: 'CRM' },
   { to: '/triagem', icon: Bot, label: 'Triagem do agente' },
   { to: '/base-conhecimento', icon: BookOpen, label: 'Base de conhecimento' },
 ];
@@ -17,6 +17,8 @@ const navItems = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { isAdmin, empresaNome, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCrmActive = location.pathname.startsWith('/crm');
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -51,6 +53,51 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             {item.label}
           </NavLink>
         ))}
+
+        {/* CRM Collapsible Menu */}
+        <Collapsible defaultOpen={isCrmActive}>
+          <CollapsibleTrigger className={cn(
+            'flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+            isCrmActive
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+          )}>
+            <div className="flex items-center gap-3">
+              <Kanban className="h-5 w-5" />
+              CRM
+            </div>
+            <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pl-8 space-y-0.5 mt-0.5">
+            <NavLink
+              to="/crm"
+              end
+              onClick={onNavigate}
+              className={({ isActive }) => cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                isActive
+                  ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
+                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
+              )}
+            >
+              <Target className="h-4 w-4" />
+              Funil
+            </NavLink>
+            <NavLink
+              to="/crm/atividades"
+              onClick={onNavigate}
+              className={({ isActive }) => cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                isActive
+                  ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
+                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
+              )}
+            >
+              <CheckSquare className="h-4 w-4" />
+              Atividades
+            </NavLink>
+          </CollapsibleContent>
+        </Collapsible>
 
         {isAdmin && (
           <>
