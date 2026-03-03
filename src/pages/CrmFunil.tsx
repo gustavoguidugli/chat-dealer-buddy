@@ -11,6 +11,7 @@ import { NovoNegocioModal } from '@/components/crm/NovoNegocioModal';
 import { KanbanBoard } from '@/components/crm/KanbanBoard';
 import { EditarFunilModal } from '@/components/crm/EditarFunilModal';
 import { CriarFunilModal } from '@/components/crm/CriarFunilModal';
+import { LeadDrawer } from '@/components/crm/LeadDrawer';
 
 interface Funil {
   id: number;
@@ -50,6 +51,8 @@ export default function CrmFunil() {
   const [editarFunilOpen, setEditarFunilOpen] = useState(false);
   const [criarFunilOpen, setCriarFunilOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Fetch funis
   useEffect(() => {
@@ -223,6 +226,7 @@ export default function CrmFunil() {
               etapas={etapas}
               leadsByEtapa={leadsByEtapa}
               onMoveLead={handleMoveLead}
+              onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
             />
           )}
         </div>
@@ -257,6 +261,12 @@ export default function CrmFunil() {
           onCreated={() => setReloadKey((k) => k + 1)}
         />
       )}
+      <LeadDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        leadId={selectedLeadId}
+        onLeadChanged={() => setReloadKey((k) => k + 1)}
+      />
     </AppLayout>
   );
 }
