@@ -26,6 +26,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { EtiquetaSelector } from '@/components/crm/EtiquetaSelector';
+import { ActivityModal } from '@/components/crm/ActivityModal';
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
@@ -226,6 +227,8 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [manageFieldsOpen, setManageFieldsOpen] = useState(false);
   const [editingCampos, setEditingCampos] = useState<CampoCustomizado[]>([]);
   const [deletingFieldId, setDeletingFieldId] = useState<number | null>(null);
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<any>(null);
 
   const openManageFields = () => {
     setEditingCampos(campos.map(c => ({ ...c })));
@@ -718,16 +721,31 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                       </div>
 
                       {/* A fazer */}
-                      {atividadesPendentes.length > 0 && (
-                        <div className="mt-6">
-                          <h3 className="font-semibold text-sm text-foreground mb-3">A fazer</h3>
+                      <div className="mt-6">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold text-sm text-foreground">A fazer</h3>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="text-primary gap-1 h-auto p-0"
+                            onClick={() => { setEditingActivity(null); setActivityModalOpen(true); }}
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Agendar uma atividade
+                          </Button>
+                        </div>
+                        {atividadesPendentes.length > 0 && (
                           <div className="space-y-2">
                             {atividadesPendentes.map(ativ => (
-                              <div key={ativ.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                              <div
+                                key={ativ.id}
+                                className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                                onClick={() => { setEditingActivity(ativ); setActivityModalOpen(true); }}
+                              >
                                 <Checkbox
                                   className="mt-0.5"
                                   checked={false}
-                                  onCheckedChange={() => setConcluirAtividadeId(ativ.id)}
+                                  onCheckedChange={(e) => { e && setConcluirAtividadeId(ativ.id); }}
+                                  onClick={(e) => e.stopPropagation()}
                                 />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-foreground">{ativ.assunto}</p>
@@ -737,21 +755,51 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                 </div>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={e => e.stopPropagation()}>
                                       <MoreHorizontal className="h-3.5 w-3.5" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => setConcluirAtividadeId(ativ.id)}>
-                                      Concluir
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingActivity(ativ); setActivityModalOpen(true); }}>
+                                      <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await supabase.from('atividades').insert({
+                                        id_empresa: empresaId!,
+                                        id_lead: leadId!,
+                                        tipo: ativ.tipo,
+                                        assunto: `${ativ.assunto} (Cópia)`,
+                                        descricao: ativ.descricao,
+                                        atribuida_a: ativ.atribuida_a,
+                                        data_vencimento: ativ.data_vencimento,
+                                        prioridade: ativ.prioridade,
+                                        created_by: user?.id || null,
+                                      });
+                                      toast({ title: 'Atividade duplicada' });
+                                    }}>
+                                      <FileText className="h-3.5 w-3.5 mr-2" /> Duplicar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setConcluirAtividadeId(ativ.id); }}>
+                                      <CheckCircle2 className="h-3.5 w-3.5 mr-2" /> Concluir
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        await supabase.from('atividades').delete().eq('id', ativ.id);
+                                        toast({ title: 'Atividade excluída' });
+                                      }}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
                       {/* Histórico */}
                       <div className="mt-6">
@@ -807,12 +855,24 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                     {/* TAB: ATIVIDADE */}
                     <TabsContent value="atividade" className="flex-1 overflow-y-auto px-4 pb-4 mt-0">
                       <div className="mt-3">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="text-primary gap-1 h-auto p-0 mb-4"
+                          onClick={() => { setEditingActivity(null); setActivityModalOpen(true); }}
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Agendar uma atividade
+                        </Button>
                         {atividades.length === 0 ? (
                           <p className="text-sm text-muted-foreground text-center py-8">Nenhuma atividade</p>
                         ) : (
                           <div className="space-y-2">
                             {atividades.map(ativ => (
-                              <div key={ativ.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                              <div
+                                key={ativ.id}
+                                className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                                onClick={() => { setEditingActivity(ativ); setActivityModalOpen(true); }}
+                              >
                                 <Checkbox
                                   className="mt-0.5"
                                   checked={ativ.concluida}
@@ -820,6 +880,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                   onCheckedChange={() => {
                                     if (!ativ.concluida) setConcluirAtividadeId(ativ.id);
                                   }}
+                                  onClick={e => e.stopPropagation()}
                                 />
                                 <div className="flex-1 min-w-0">
                                   <p className={`text-sm font-medium ${ativ.concluida ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
@@ -944,6 +1005,16 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {lead && (
+        <ActivityModal
+          leadId={lead.id}
+          empresaId={lead.id_empresa}
+          activity={editingActivity}
+          isOpen={activityModalOpen}
+          onClose={() => { setActivityModalOpen(false); setEditingActivity(null); }}
+        />
+      )}
     </>
   );
 }
