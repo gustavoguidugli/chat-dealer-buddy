@@ -235,6 +235,9 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [deletingFieldId, setDeletingFieldId] = useState<number | null>(null);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<any>(null);
+  const [editAnotacaoId, setEditAnotacaoId] = useState<number | null>(null);
+  const [editAnotacaoText, setEditAnotacaoText] = useState('');
+  const [excluirAnotacaoId, setExcluirAnotacaoId] = useState<number | null>(null);
 
   const openManageFields = () => {
     setEditingCampos(campos.map(c => ({ ...c })));
@@ -429,6 +432,33 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     });
     setNovaAnotacao('');
     setSavingAnotacao(false);
+  };
+
+  const handleEditAnotacao = async () => {
+    if (!editAnotacaoId || !editAnotacaoText.trim()) return;
+    const { error } = await supabase.from('anotacoes_lead')
+      .update({ conteudo: editAnotacaoText.trim() })
+      .eq('id', editAnotacaoId);
+    if (error) {
+      toast({ title: 'Erro ao editar anotação', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Anotação atualizada' });
+    }
+    setEditAnotacaoId(null);
+    setEditAnotacaoText('');
+  };
+
+  const handleExcluirAnotacao = async () => {
+    if (!excluirAnotacaoId) return;
+    const { error } = await supabase.from('anotacoes_lead')
+      .delete()
+      .eq('id', excluirAnotacaoId);
+    if (error) {
+      toast({ title: 'Erro ao excluir anotação', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Anotação excluída' });
+    }
+    setExcluirAnotacaoId(null);
   };
 
   const handleConcluirAtividade = async () => {
@@ -829,6 +859,25 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                     : h.descricao}
                                 </p>
                               </div>
+                              {h.tipo_evento === 'anotacao' && (h.metadados as any)?.anotacao_id && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    className="text-muted-foreground hover:text-foreground p-1 rounded"
+                                    onClick={() => {
+                                      setEditAnotacaoId((h.metadados as any).anotacao_id);
+                                      setEditAnotacaoText((h.metadados as any)?.conteudo_completo || h.descricao);
+                                    }}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    className="text-muted-foreground hover:text-destructive p-1 rounded"
+                                    onClick={() => setExcluirAnotacaoId((h.metadados as any).anotacao_id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ))}
                           {filteredHistory.length === 0 && (
@@ -1038,6 +1087,43 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
               toast({ title: 'Atividade excluída' });
               setExcluirAtividadeId(null);
             }}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Editar anotação */}
+      <AlertDialog open={editAnotacaoId !== null} onOpenChange={(v) => { if (!v) { setEditAnotacaoId(null); setEditAnotacaoText(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Editar anotação</AlertDialogTitle>
+            <AlertDialogDescription>Edite o conteúdo da anotação abaixo.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={editAnotacaoText}
+            onChange={e => setEditAnotacaoText(e.target.value)}
+            className="min-h-[80px] text-sm"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={!editAnotacaoText.trim()} onClick={handleEditAnotacao}>
+              Salvar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Excluir anotação */}
+      <AlertDialog open={excluirAnotacaoId !== null} onOpenChange={(v) => { if (!v) setExcluirAnotacaoId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir anotação?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja excluir esta anotação? Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={handleExcluirAnotacao}>
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
