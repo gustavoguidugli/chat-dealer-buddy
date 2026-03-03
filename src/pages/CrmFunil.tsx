@@ -197,14 +197,6 @@ export default function CrmFunil() {
               <Pencil className="h-4 w-4" />
             </Button>
 
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Filter className="h-4 w-4" />
-              Filtro
-            </Button>
-
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
