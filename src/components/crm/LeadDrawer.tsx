@@ -727,7 +727,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                       {/* A fazer */}
                       <div className="mt-6">
                         <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-sm text-foreground">A fazer</h3>
+                          <h3 className="font-semibold text-base text-foreground">Atividades a fazer</h3>
                           <Button
                             variant="link"
                             size="sm"
