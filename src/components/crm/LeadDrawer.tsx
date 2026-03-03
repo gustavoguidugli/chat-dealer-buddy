@@ -3,6 +3,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEn
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '@/integrations/supabase/client';
+import { useLeadRealtime } from '@/hooks/useLeadRealtime';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -182,14 +183,26 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const { user, empresaId } = useAuth();
   const { toast } = useToast();
 
+  // Realtime data for lead, annotations, activities, history
+  const {
+    lead: realtimeLead,
+    setLead: setRealtimeLead,
+    anotacoes: realtimeAnotacoes,
+    atividades: realtimeAtividades,
+    historico: realtimeHistorico,
+    loading: realtimeLoading,
+  } = useLeadRealtime(open ? leadId : null);
+
   const [lead, setLead] = useState<LeadDetail | null>(null);
   const [funilNome, setFunilNome] = useState('');
   const [etapas, setEtapas] = useState<EtapaInfo[]>([]);
   const [campos, setCampos] = useState<CampoCustomizado[]>([]);
-  const [anotacoes, setAnotacoes] = useState<Anotacao[]>([]);
-  const [atividades, setAtividades] = useState<Atividade[]>([]);
-  const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Map realtime data to typed state
+  const anotacoes = useMemo(() => (realtimeAnotacoes || []) as Anotacao[], [realtimeAnotacoes]);
+  const atividades = useMemo(() => (realtimeAtividades || []) as Atividade[], [realtimeAtividades]);
+  const historico = useMemo(() => (realtimeHistorico || []) as HistoricoItem[], [realtimeHistorico]);
 
   // UI state
   const [novaAnotacao, setNovaAnotacao] = useState('');
@@ -293,25 +306,20 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     }
   };
 
-  const fetchAll = useCallback(async () => {
+  // Fetch funil metadata (etapas, campos) - not realtime, only when lead changes
+  const fetchMeta = useCallback(async () => {
     if (!leadId) return;
     setLoading(true);
 
-    const [leadRes, anotRes, ativRes, histRes] = await Promise.all([
-      supabase.from('leads_crm').select('*').eq('id', leadId).single(),
-      supabase.from('anotacoes_lead').select('*').eq('id_lead', leadId).order('created_at', { ascending: false }),
-      supabase.from('atividades').select('*').eq('id_lead', leadId).order('data_vencimento'),
-      supabase.from('historico_lead').select('*').eq('id_lead', leadId).order('created_at', { ascending: false }),
-    ]);
+    const { data: leadData } = await supabase.from('leads_crm').select('*').eq('id', leadId).single();
 
-    if (leadRes.data) {
-      const l = leadRes.data;
+    if (leadData) {
+      const l = leadData;
       setLead({
         ...l,
         campos_extras: (l.campos_extras as Record<string, any>) || {},
       });
 
-      // Fetch funil info + etapas + campos
       const [funilRes, etapasRes, camposRes] = await Promise.all([
         supabase.from('funis').select('nome').eq('id', l.id_funil).single(),
         supabase.from('etapas_funil').select('id, nome, ordem').eq('id_funil', l.id_funil).eq('ativo', true).order('ordem'),
@@ -323,15 +331,26 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
       setCampos((camposRes.data || []) as CampoCustomizado[]);
     }
 
-    setAnotacoes((anotRes.data || []) as Anotacao[]);
-    setAtividades((ativRes.data || []) as Atividade[]);
-    setHistorico((histRes.data || []) as HistoricoItem[]);
     setLoading(false);
   }, [leadId]);
 
+  // Keep lead state in sync with realtime updates
   useEffect(() => {
-    if (open && leadId) fetchAll();
-  }, [open, leadId, fetchAll]);
+    if (realtimeLead) {
+      setLead(prev => prev ? {
+        ...prev,
+        ...realtimeLead,
+        campos_extras: (realtimeLead.campos_extras as Record<string, any>) || prev.campos_extras || {},
+      } : null);
+    }
+  }, [realtimeLead]);
+
+  // Alias for backward compat with field management
+  const fetchAll = fetchMeta;
+
+  useEffect(() => {
+    if (open && leadId) fetchMeta();
+  }, [open, leadId, fetchMeta]);
 
   // --- ACTIONS ---
 
