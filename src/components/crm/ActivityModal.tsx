@@ -107,7 +107,7 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
       setDescricao('');
       setAtribuidaA(user?.id || '');
       setDataVencimento(new Date());
-      setHoraInicio('');
+      setHoraInicio('08:00');
       setHoraFim('');
       setMarcarComoFeito(false);
     }
