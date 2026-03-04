@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import type { LeadCard } from '@/pages/CrmFunil';
 
 interface Props {
@@ -20,6 +21,7 @@ interface Props {
 
 export function NovoNegocioModal({ open, onOpenChange, funilId, etapas, empresaId, onCreated, defaultEtapaId }: Props) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [nome, setNome] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [etapaId, setEtapaId] = useState((defaultEtapaId ?? etapas[0]?.id)?.toString() || '');
