@@ -17,7 +17,6 @@ function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onC
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');
-  const isBaseConhecimentoActive = location.pathname.startsWith('/base-conhecimento') || location.pathname === '/triagem';
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -105,50 +104,19 @@ function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onC
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Base de Conhecimento Collapsible Menu */}
-        <Collapsible defaultOpen={isBaseConhecimentoActive}>
-          <CollapsibleTrigger className={cn(
-            'flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            isBaseConhecimentoActive
+        <NavLink
+          to="/base-conhecimento"
+          onClick={onNavigate}
+          className={({ isActive }) => cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+            isActive
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-          )}>
-            <div className="flex items-center gap-3">
-              <BookOpen className="h-5 w-5" />
-              Base de conhecimento
-            </div>
-            <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pl-8 space-y-0.5 mt-0.5">
-            <NavLink
-              to="/triagem"
-              onClick={onNavigate}
-              className={({ isActive }) => cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                isActive
-                  ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
-              )}
-            >
-              <Bot className="h-4 w-4" />
-              Triagem do agente
-            </NavLink>
-            <NavLink
-              to="/base-conhecimento"
-              end
-              onClick={onNavigate}
-              className={({ isActive }) => cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                isActive
-                  ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
-              )}
-            >
-              <MessageSquare className="h-4 w-4" />
-              FAQs e Horários
-            </NavLink>
-          </CollapsibleContent>
-        </Collapsible>
+          )}
+        >
+          <BookOpen className="h-5 w-5" />
+          Base de conhecimento
+        </NavLink>
 
         {/* Configurações Collapsible Menu */}
         <Collapsible defaultOpen={location.pathname.startsWith('/configuracoes')}>
