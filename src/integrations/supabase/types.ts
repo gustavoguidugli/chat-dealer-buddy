@@ -1599,7 +1599,7 @@ export type Database = {
           id_empresa: number
           id_lead: number
           metadados: Json | null
-          tempo_na_etapa_anterior: unknown
+          tempo_na_etapa_anterior: string | null
           tipo_evento: string
           usuario_id: string | null
           valor_antigo: number | null
@@ -1617,7 +1617,7 @@ export type Database = {
           id_empresa: number
           id_lead: number
           metadados?: Json | null
-          tempo_na_etapa_anterior?: unknown
+          tempo_na_etapa_anterior?: string | null
           tipo_evento: string
           usuario_id?: string | null
           valor_antigo?: number | null
@@ -1635,7 +1635,7 @@ export type Database = {
           id_empresa?: number
           id_lead?: number
           metadados?: Json | null
-          tempo_na_etapa_anterior?: unknown
+          tempo_na_etapa_anterior?: string | null
           tipo_evento?: string
           usuario_id?: string | null
           valor_antigo?: number | null
@@ -2631,8 +2631,10 @@ export type Database = {
       get_usuarios_empresa: {
         Args: { empresa_id_param: number }
         Returns: {
+          banned_until: string
           email: string
           id: string
+          last_sign_in_at: string
           nome: string
           raw_user_meta_data: Json
           role: string
