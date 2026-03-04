@@ -29,7 +29,8 @@ interface Empresa {
 }
 
 export default function AdminEmpresas() {
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.email === 'guidugli.gustavo@gmail.com';
   const { toast } = useToast();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +91,7 @@ export default function AdminEmpresas() {
     }
   };
 
-  if (!isAdmin) return <Navigate to="/home" replace />;
+  if (!isSuperAdmin) return <Navigate to="/home" replace />;
 
   const filtered = empresas
     .filter(e => (e.nome ?? '').toLowerCase().includes(search.toLowerCase()))

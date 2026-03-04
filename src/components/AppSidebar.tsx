@@ -15,7 +15,7 @@ const navItems = [
 ];
 
 function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
-  const { isAdmin, empresaNome, signOut } = useAuth();
+  const { isAdmin, isSuperAdmin, empresaNome, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');
@@ -137,7 +137,7 @@ function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onC
           </CollapsibleContent>
         </Collapsible>
 
-        {isAdmin && (
+        {isSuperAdmin && (
           <>
             <button
               onClick={() => { navigate('/admin/empresas'); onNavigate?.(); }}
