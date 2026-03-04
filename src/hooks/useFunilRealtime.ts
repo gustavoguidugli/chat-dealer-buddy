@@ -18,7 +18,10 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
   const [etiquetaVersion, setEtiquetaVersion] = useState(0)
 
   useEffect(() => {
-    if (!funilId) return
+    if (!funilId) {
+      setLoading(false)
+      return
+    }
 
     // 1. Busca os leads iniciais (primeira vez)
     async function fetchLeads() {
