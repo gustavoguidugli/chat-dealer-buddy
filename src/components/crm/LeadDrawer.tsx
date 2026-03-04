@@ -862,6 +862,14 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     {formatDateShort(ativ.data_vencimento)}
                                   </p>
+                                  {ativ.atribuida_a && (() => {
+                                    const usr = proprietarios.find(p => p.id === ativ.atribuida_a);
+                                    return usr ? (
+                                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                                        👤 {usr.nome}
+                                      </p>
+                                    ) : null;
+                                  })()}
                                 </div>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
