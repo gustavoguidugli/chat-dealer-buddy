@@ -43,7 +43,7 @@ const TABS = [
 
 export default function GerenciarFaqs() {
   const navigate = useNavigate();
-  const { empresaId, isAdmin, isSuperAdmin } = useAuth();
+  const { empresaId, isAdmin, isSuperAdmin, user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(TABS[0].value);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
@@ -137,7 +137,8 @@ export default function GerenciarFaqs() {
         observacoes: data.observacoes || null,
         tipo_faq: defaultTipoFaq,
         tags: data.tags,
-        ativo: true
+        ativo: true,
+        created_by: user?.id || null
       });
       if (error) {toast({ title: 'Erro ao criar FAQ', variant: 'destructive' });throw error;}
       toast({ title: 'FAQ criado com sucesso!' });
@@ -198,7 +199,8 @@ export default function GerenciarFaqs() {
         observacoes: faq.observacoes,
         tipo_faq: targetTab ? resolveTipoFaq(targetTab) : faq.tipo_faq,
         tags: faq.tags,
-        ativo: true
+        ativo: true,
+        created_by: user?.id || null
       }));
       const { error } = await supabase.from('faqs').insert(inserts);
       if (error) throw error;
