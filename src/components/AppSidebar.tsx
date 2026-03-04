@@ -27,7 +27,7 @@ function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onC
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
             <Snowflake className="h-6 w-6 text-sidebar-primary-foreground" />
           </div>
-          <span className="text-xl font-bold">EcoIce</span>
+          <span className="text-xl font-bold">Eco Ice</span>
         </div>
         {onCollapse && (
           <button onClick={onCollapse} className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
