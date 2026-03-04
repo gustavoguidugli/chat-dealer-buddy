@@ -43,7 +43,7 @@ const TABS = [
 
 export default function GerenciarFaqs() {
   const navigate = useNavigate();
-  const { empresaId, isAdmin } = useAuth();
+  const { empresaId, isAdmin, isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(TABS[0].value);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
@@ -257,7 +257,11 @@ export default function GerenciarFaqs() {
 
   const selectedFaqs = faqs.filter((f) => selectedIds.has(f.id));
 
+  const naoMexerLabelId = companyLabels.find((l) => l.nome === 'Não mexer')?.id;
+
   const filtered = faqs.filter((f) => {
+    // Hide FAQs with "Não mexer" label from non-super-admin users
+    if (!isSuperAdmin && naoMexerLabelId && f.labelIds.includes(naoMexerLabelId)) return false;
     if (filterLabelId && !f.labelIds.includes(filterLabelId)) return false;
     if (!search) return true;
     const s = search.toLowerCase();
