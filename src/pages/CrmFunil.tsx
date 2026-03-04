@@ -4,7 +4,8 @@ import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X, UserCircle } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { NovoNegocioModal } from '@/components/crm/NovoNegocioModal';
@@ -59,6 +60,9 @@ export default function CrmFunil() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [filterProprietarioId, setFilterProprietarioId] = useState<string | null>(null);
+  const [proprietarios, setProprietarios] = useState<{id: string; nome: string}[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   // Close search on outside click
   useEffect(() => {
@@ -68,6 +72,24 @@ export default function CrmFunil() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Fetch proprietários (users of the company)
+  useEffect(() => {
+    if (!empresaId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('user_empresa')
+        .select('user_id')
+        .eq('empresa_id', empresaId);
+      if (!data || data.length === 0) return;
+      const userIds = data.map(d => d.user_id);
+      // Fetch names from leads_crm proprietario usage or auth
+      const { data: usersData } = await supabase.rpc('get_usuarios_empresa', { empresa_id_param: empresaId });
+      if (usersData) {
+        setProprietarios(usersData.map((u: any) => ({ id: u.id, nome: u.nome || u.email })));
+      }
+    })();
+  }, [empresaId]);
 
   // Realtime leads
   const { leads: realtimeLeads, setLeads, loading: loadingLeads, etiquetaVersion } = useFunilRealtime(funilAtual || 0);
@@ -175,7 +197,7 @@ export default function CrmFunil() {
     setModalOpen(false);
   }, []);
 
-  const totalNegocios = leads.length;
+  // totalNegocios computed after filteredLeads below
   const funilNome = funis.find(f => f.id === funilAtual)?.nome || '';
 
   // Search leads across all funnels
@@ -200,18 +222,25 @@ export default function CrmFunil() {
     return () => clearTimeout(timeout);
   }, [searchQuery, empresaId]);
 
+  const filteredLeads = useMemo(() => {
+    if (!filterProprietarioId) return leads;
+    return leads.filter(l => l.proprietario_id === filterProprietarioId);
+  }, [leads, filterProprietarioId]);
+
   const leadsByEtapa = useMemo(() => {
     const map: Record<number, LeadCard[]> = {};
     for (const etapa of etapas) {
       map[etapa.id] = [];
     }
-    for (const lead of leads) {
+    for (const lead of filteredLeads) {
       if (map[lead.id_etapa_atual]) {
         map[lead.id_etapa_atual].push(lead);
       }
     }
     return map;
-  }, [leads, etapas]);
+  }, [filteredLeads, etapas]);
+
+  const totalNegocios = filterProprietarioId ? filteredLeads.length : leads.length;
 
   return (
     <AppLayout>
@@ -307,6 +336,40 @@ export default function CrmFunil() {
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setCriarFunilOpen(true)}>
               <Plus className="h-4 w-4" />
             </Button>
+
+            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={filterProprietarioId ? 'default' : 'ghost'}
+                  size="icon"
+                  className="h-9 w-9 relative"
+                >
+                  <Filter className="h-4 w-4" />
+                  {filterProprietarioId && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-destructive" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-2" align="end">
+                <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">Filtrar por proprietário</p>
+                <button
+                  className={`w-full text-left px-2 py-1.5 rounded-sm text-sm hover:bg-accent transition-colors ${!filterProprietarioId ? 'bg-accent font-medium' : ''}`}
+                  onClick={() => { setFilterProprietarioId(null); setFilterOpen(false); }}
+                >
+                  Todos
+                </button>
+                {proprietarios.map(p => (
+                  <button
+                    key={p.id}
+                    className={`w-full text-left px-2 py-1.5 rounded-sm text-sm hover:bg-accent transition-colors flex items-center gap-2 ${filterProprietarioId === p.id ? 'bg-accent font-medium' : ''}`}
+                    onClick={() => { setFilterProprietarioId(p.id); setFilterOpen(false); }}
+                  >
+                    <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    {p.nome}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
