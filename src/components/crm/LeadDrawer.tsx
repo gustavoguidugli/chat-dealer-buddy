@@ -30,7 +30,7 @@ import { ActivityModal } from '@/components/crm/ActivityModal';
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
-  Pencil, Pin, Plus, Trash2, GripVertical, UserCircle,
+  Pencil, Pin, Plus, Trash2, GripVertical, UserCircle, DollarSign,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -240,6 +240,8 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [excluirAnotacaoId, setExcluirAnotacaoId] = useState<number | null>(null);
   const [proprietarios, setProprietarios] = useState<{id: string; nome: string}[]>([]);
   const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
+  const [editingValor, setEditingValor] = useState(false);
+  const [valorTemp, setValorTemp] = useState('');
 
   const openManageFields = () => {
     setEditingCampos(campos.map(c => ({ ...c })));
@@ -648,6 +650,58 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
               <div className="flex flex-1 overflow-hidden">
                 {/* LEFT SIDEBAR - Campos */}
                 <div className="w-[260px] border-r bg-muted/30 shrink-0 overflow-y-auto">
+                  {/* Valor do negócio */}
+                  <div className="px-4 py-3 border-b">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Valor do negócio</span>
+                      {!editingValor && (
+                        <Pencil
+                          className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground"
+                          onClick={() => {
+                            setEditingValor(true);
+                            setValorTemp(lead.valor_estimado != null ? String(lead.valor_estimado) : '');
+                          }}
+                        />
+                      )}
+                    </div>
+                    {editingValor ? (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className="text-sm text-muted-foreground">R$</span>
+                        <Input
+                          type="number"
+                          value={valorTemp}
+                          onChange={e => setValorTemp(e.target.value)}
+                          className="h-7 text-sm flex-1"
+                          placeholder="0"
+                          autoFocus
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                              const val = valorTemp.trim() ? Number(valorTemp) : null;
+                              await supabase.from('leads_crm').update({ valor_estimado: val }).eq('id', lead.id);
+                              setEditingValor(false);
+                              onLeadChanged?.();
+                            } else if (e.key === 'Escape') {
+                              setEditingValor(false);
+                            }
+                          }}
+                          onBlur={async () => {
+                            const val = valorTemp.trim() ? Number(valorTemp) : null;
+                            await supabase.from('leads_crm').update({ valor_estimado: val }).eq('id', lead.id);
+                            setEditingValor(false);
+                            onLeadChanged?.();
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm font-semibold text-foreground mt-0.5">
+                        {lead.valor_estimado != null
+                          ? `R$ ${Number(lead.valor_estimado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                          : <span className="text-muted-foreground font-normal">Não definido</span>
+                        }
+                      </p>
+                    )}
+                  </div>
+
                   <Collapsible open={camposAbertos} onOpenChange={setCamposAbertos}>
                     <div className="flex items-center justify-between w-full px-4 py-3">
                       <CollapsibleTrigger className="text-sm font-semibold text-foreground hover:text-foreground/80">
