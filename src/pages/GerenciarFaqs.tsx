@@ -17,7 +17,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   DropdownMenuSeparator, DropdownMenuLabel } from
 '@/components/ui/dropdown-menu';
-import { Plus, Edit, Trash2, Search, MessageSquare, ChevronRight, ArrowRightLeft, Copy, CheckSquare, Tags } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, MessageSquare, ChevronRight, ArrowRightLeft, Copy, CheckSquare, Tags, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,7 @@ interface FaqItem {
   tags: string[];
   tipo_faq: string;
   labelIds: string[];
+  created_by: string | null;
 }
 
 const TABS = [
@@ -57,6 +58,14 @@ export default function GerenciarFaqs() {
   const [labelsModalOpen, setLabelsModalOpen] = useState(false);
   const [companyLabels, setCompanyLabels] = useState<LabelItem[]>([]);
   const [filterLabelId, setFilterLabelId] = useState<string | null>(null);
+  const [filterCreatedBy, setFilterCreatedBy] = useState<string | null>(null);
+  const [companyUsers, setCompanyUsers] = useState<{ id: string; nome: string }[]>([]);
+
+  const fetchCompanyUsers = useCallback(async () => {
+    if (!empresaId) return;
+    const { data } = await supabase.rpc('get_usuarios_empresa', { empresa_id_param: empresaId });
+    setCompanyUsers((data || []).map((u: any) => ({ id: u.id, nome: u.nome })));
+  }, [empresaId]);
 
   const fetchCompanyLabels = useCallback(async () => {
     if (!empresaId) return;
@@ -77,11 +86,11 @@ export default function GerenciarFaqs() {
       const tipoFaqs = currentTab?.tipoFaqs ?? [activeTab];
       const { data, error } = await supabase.
       from('faqs').
-      select('id, contexto, pergunta, resposta, observacoes, tipo_faq, tags, ativo, faq_labels(label_id)').
-      eq('id_empresa', empresaId).
-      in('tipo_faq', tipoFaqs).
-      eq('ativo', true).
-      order('id', { ascending: true });
+       select('id, contexto, pergunta, resposta, observacoes, tipo_faq, tags, ativo, created_by, faq_labels(label_id)').
+       eq('id_empresa', empresaId).
+       in('tipo_faq', tipoFaqs).
+       eq('ativo', true).
+       order('id', { ascending: true });
 
       if (error) throw error;
 
@@ -94,7 +103,8 @@ export default function GerenciarFaqs() {
           observacoes: faq.observacoes,
           tags: faq.tags ?? [],
           tipo_faq: faq.tipo_faq,
-          labelIds: faq.faq_labels?.map((fl: any) => fl.label_id) ?? []
+          labelIds: faq.faq_labels?.map((fl: any) => fl.label_id) ?? [],
+          created_by: faq.created_by ?? null
         }))
       );
     } catch {
@@ -105,6 +115,7 @@ export default function GerenciarFaqs() {
   }, [empresaId, activeTab, toast]);
 
   useEffect(() => {fetchCompanyLabels();}, [fetchCompanyLabels]);
+  useEffect(() => {fetchCompanyUsers();}, [fetchCompanyUsers]);
   useEffect(() => {fetchFaqs();}, [fetchFaqs]);
   useEffect(() => {setSelectedIds(new Set());}, [activeTab]);
 
@@ -265,6 +276,7 @@ export default function GerenciarFaqs() {
     // Hide FAQs with "Não mexer" label from non-super-admin users
     if (!isSuperAdmin && naoMexerLabelId && f.labelIds.includes(naoMexerLabelId)) return false;
     if (filterLabelId && !f.labelIds.includes(filterLabelId)) return false;
+    if (filterCreatedBy && f.created_by !== filterCreatedBy) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return (
@@ -316,21 +328,19 @@ export default function GerenciarFaqs() {
           {TABS.map((tab) =>
           <TabsContent key={tab.value} value={tab.value}>
               <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                <div className="relative flex-1">
+                <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por pergunta, resposta ou tag..."
                   className="pl-9" />
-
                 </div>
                 {companyLabels.length > 0 &&
               <select
                 value={filterLabelId || ''}
                 onChange={(e) => setFilterLabelId(e.target.value || null)}
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm">
-
                     <option value="">Todas etiquetas</option>
                     {companyLabels.map((l) =>
                 <option key={l.id} value={l.id}>{l.nome}</option>
@@ -340,6 +350,26 @@ export default function GerenciarFaqs() {
                 <Button onClick={() => {setEditingFaq(null);setModalOpen(true);}}>
                   <Plus className="h-4 w-4 mr-2" /> Adicionar FAQ
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant={filterCreatedBy ? 'default' : 'outline'}>
+                      <Filter className="h-4 w-4 mr-2" /> Criado por
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Filtrar por criador</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setFilterCreatedBy(null)}>
+                      Todos
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {companyUsers.map((u) =>
+                      <DropdownMenuItem key={u.id} onClick={() => setFilterCreatedBy(u.id)} className={filterCreatedBy === u.id ? 'bg-accent' : ''}>
+                        {u.nome}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {selectedIds.size > 0 &&
