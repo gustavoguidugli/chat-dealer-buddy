@@ -838,7 +838,17 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             {atividadesPendentes.map(ativ => (
                               <div
                                 key={ativ.id}
-                                className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                                className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:opacity-80 transition-colors ${
+                                  (() => {
+                                    const now = new Date();
+                                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                    const due = new Date(ativ.data_vencimento);
+                                    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+                                    if (dueDay < today) return 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-900/40';
+                                    if (dueDay.getTime() === today.getTime()) return 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900/40';
+                                    return 'bg-muted/30 border-border';
+                                  })()
+                                }`}
                                 onClick={() => { setEditingActivity(ativ); setActivityModalOpen(true); }}
                               >
                                 <Checkbox
