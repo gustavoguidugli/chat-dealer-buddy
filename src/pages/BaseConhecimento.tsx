@@ -4,7 +4,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Clock, Timer, ArrowRight } from 'lucide-react';
+import { MessageSquare, Clock, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -69,19 +69,6 @@ export default function BaseConhecimento() {
             </CardContent>
           </Card>
 
-          {/* Tempo de Espera Card */}
-          <Card className="opacity-60">
-            <CardHeader>
-              <Badge variant="outline" className="w-fit text-xs mb-3">🚧 Em breve</Badge>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted mb-2">
-                <Timer className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <CardTitle className="text-base">Tempo de Espera</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Defina quanto tempo o bot aguarda antes de responder</p>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </AppLayout>
