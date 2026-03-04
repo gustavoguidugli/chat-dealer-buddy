@@ -27,7 +27,8 @@ export default function SelectCompany() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [deleteEmpresa, setDeleteEmpresa] = useState<Empresa | null>(null);
-  const { setEmpresa, isAdmin } = useAuth();
+  const { setEmpresa, isAdmin, user } = useAuth();
+  const isSuperAdmin = user?.email === 'guidugli.gustavo@gmail.com';
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -53,12 +54,12 @@ export default function SelectCompany() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!isSuperAdmin) {
       navigate('/home', { replace: true });
       return;
     }
     fetchEmpresas();
-  }, [isAdmin]);
+  }, [isSuperAdmin]);
 
   const filtered = empresas.filter(e =>
     (e.nome ?? '').toLowerCase().includes(search.toLowerCase())

@@ -3,9 +3,9 @@ import { AppSidebar } from './AppSidebar';
 import { Navigate } from 'react-router-dom';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAdmin, empresaId } = useAuth();
+  const { isSuperAdmin, empresaId } = useAuth();
 
-  if (isAdmin && !empresaId) {
+  if (isSuperAdmin && !empresaId) {
     return <Navigate to="/selecionar-empresa" replace />;
   }
 

@@ -41,7 +41,7 @@ async function callManageUsers(body: any) {
 }
 
 export default function ConfigUsuarios() {
-  const { user, empresaId, empresaNome, isAdmin } = useAuth();
+  const { user, empresaId, empresaNome, isAdmin, isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<UsuarioEmpresa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +66,7 @@ export default function ConfigUsuarios() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteCountsLoading, setDeleteCountsLoading] = useState(false);
 
-  const callerIsSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
+  const callerIsSuperAdmin = isSuperAdmin;
   const callerRole = callerIsSuperAdmin ? 'super_admin' : (isAdmin ? 'admin' : 'member');
   const canManage = callerIsSuperAdmin || isAdmin;
 
