@@ -1763,6 +1763,7 @@ export type Database = {
           campos_extras: Json | null
           cpf_cnpj: string | null
           created_at: string | null
+          criado_por: string | null
           data_criacao: string | null
           data_entrada_etapa_atual: string | null
           data_entrada_funil: string | null
@@ -1799,6 +1800,7 @@ export type Database = {
           campos_extras?: Json | null
           cpf_cnpj?: string | null
           created_at?: string | null
+          criado_por?: string | null
           data_criacao?: string | null
           data_entrada_etapa_atual?: string | null
           data_entrada_funil?: string | null
@@ -1835,6 +1837,7 @@ export type Database = {
           campos_extras?: Json | null
           cpf_cnpj?: string | null
           created_at?: string | null
+          criado_por?: string | null
           data_criacao?: string | null
           data_entrada_etapa_atual?: string | null
           data_entrada_funil?: string | null

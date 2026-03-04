@@ -30,7 +30,7 @@ import { ActivityModal } from '@/components/crm/ActivityModal';
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
-  Pencil, Pin, Plus, Trash2, GripVertical,
+  Pencil, Pin, Plus, Trash2, GripVertical, UserCircle,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -238,6 +238,8 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [editAnotacaoId, setEditAnotacaoId] = useState<number | null>(null);
   const [editAnotacaoText, setEditAnotacaoText] = useState('');
   const [excluirAnotacaoId, setExcluirAnotacaoId] = useState<number | null>(null);
+  const [proprietarios, setProprietarios] = useState<{id: string; nome: string}[]>([]);
+  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
 
   const openManageFields = () => {
     setEditingCampos(campos.map(c => ({ ...c })));
@@ -363,6 +365,26 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   useEffect(() => {
     if (open && leadId) fetchMeta();
   }, [open, leadId, fetchMeta]);
+
+  // Fetch proprietários list
+  useEffect(() => {
+    if (!empresaId) return;
+    (async () => {
+      const { data } = await supabase.rpc('get_usuarios_empresa', { empresa_id_param: empresaId });
+      if (data) {
+        setProprietarios(data.map((u: any) => ({ id: u.id, nome: u.nome || u.email })));
+      }
+    })();
+  }, [empresaId]);
+
+  const handleChangeProprietario = async (newOwnerId: string | null) => {
+    if (!lead) return;
+    await supabase.from('leads_crm').update({ proprietario_id: newOwnerId }).eq('id', lead.id);
+    setLead({ ...lead, proprietario_id: newOwnerId });
+    setOwnerPopoverOpen(false);
+    toast({ title: 'Proprietário atualizado' });
+    onLeadChanged?.();
+  };
 
   // --- ACTIONS ---
 
@@ -542,6 +564,36 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                     <span className="text-sm text-primary cursor-pointer hover:underline">{funilNome}</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Proprietário selector */}
+                    <Popover open={ownerPopoverOpen} onOpenChange={setOwnerPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs font-normal">
+                          <UserCircle className="h-3.5 w-3.5" />
+                          {lead.proprietario_id
+                            ? (proprietarios.find(p => p.id === lead.proprietario_id)?.nome || 'Sem nome')
+                            : 'Sem proprietário'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[220px] p-2" align="start">
+                        <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">Proprietário</p>
+                        <button
+                          className={`w-full text-left px-2 py-1.5 rounded-sm text-sm hover:bg-accent transition-colors ${!lead.proprietario_id ? 'bg-accent font-medium' : ''}`}
+                          onClick={() => handleChangeProprietario(null)}
+                        >
+                          Sem proprietário
+                        </button>
+                        {proprietarios.map(p => (
+                          <button
+                            key={p.id}
+                            className={`w-full text-left px-2 py-1.5 rounded-sm text-sm hover:bg-accent transition-colors flex items-center gap-2 ${lead.proprietario_id === p.id ? 'bg-accent font-medium' : ''}`}
+                            onClick={() => handleChangeProprietario(p.id)}
+                          >
+                            <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                            {p.nome}
+                          </button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
                     <Button
                       size="sm"
                       className="bg-green-600 hover:bg-green-700 text-white font-semibold"

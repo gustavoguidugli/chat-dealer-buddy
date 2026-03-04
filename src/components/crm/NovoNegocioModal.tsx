@@ -52,7 +52,9 @@ export function NovoNegocioModal({ open, onOpenChange, funilId, etapas, empresaI
         id_empresa: empresaId,
         status: 'aberto',
         ativo: true,
-      })
+        criado_por: user?.id || null,
+        proprietario_id: user?.id || null,
+      } as any)
       .select()
       .single();
 
