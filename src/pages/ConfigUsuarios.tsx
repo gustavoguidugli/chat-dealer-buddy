@@ -45,6 +45,7 @@ export default function ConfigUsuarios() {
   const { toast } = useToast();
   const [users, setUsers] = useState<UsuarioEmpresa[]>([]);
   const [loading, setLoading] = useState(true);
+  const [callerRole, setCallerRole] = useState<string>('member');
 
   // Modals
   const [addOpen, setAddOpen] = useState(false);
@@ -67,8 +68,25 @@ export default function ConfigUsuarios() {
   const [deleteCountsLoading, setDeleteCountsLoading] = useState(false);
 
   const callerIsSuperAdmin = isSuperAdmin;
-  const callerRole = callerIsSuperAdmin ? 'super_admin' : (isAdmin ? 'admin' : 'member');
-  const canManage = callerIsSuperAdmin || isAdmin;
+  const canManage = callerIsSuperAdmin || callerRole === 'admin';
+
+  // Fetch caller's actual role from user_empresa
+  useEffect(() => {
+    if (callerIsSuperAdmin) {
+      setCallerRole('super_admin');
+      return;
+    }
+    if (!user || !empresaId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('user_empresa')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('empresa_id', empresaId)
+        .maybeSingle();
+      setCallerRole(data?.role || 'member');
+    })();
+  }, [user, empresaId, callerIsSuperAdmin]);
 
   const fetchUsers = useCallback(async () => {
     if (!empresaId) return;
