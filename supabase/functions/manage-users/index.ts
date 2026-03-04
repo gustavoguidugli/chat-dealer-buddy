@@ -1,0 +1,272 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPER_ADMIN_EMAIL = "guidugli.gustavo@gmail.com";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Verify caller is authenticated and is admin/super_admin
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const anonClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: caller } } = await anonClient.auth.getUser();
+    if (!caller) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const body = await req.json();
+    const { action } = body;
+
+    // Check caller permissions
+    const { data: callerPerms } = await adminClient
+      .from("user_empresa")
+      .select("role, empresa_id")
+      .eq("user_id", caller.id);
+
+    const callerIsSuperAdmin = caller.email === SUPER_ADMIN_EMAIL;
+    const callerRoles = callerPerms || [];
+
+    const isCallerAdminForEmpresa = (empresaId: number) => {
+      if (callerIsSuperAdmin) return true;
+      return callerRoles.some(
+        (r: any) => r.empresa_id === empresaId && ["admin", "super_admin"].includes(r.role)
+      );
+    };
+
+    switch (action) {
+      case "create_user": {
+        const { email, password, full_name, role, empresa_id } = body;
+
+        if (!isCallerAdminForEmpresa(empresa_id)) {
+          return new Response(JSON.stringify({ error: "Apenas administradores podem criar usuários" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (role === "super_admin") {
+          return new Response(JSON.stringify({ error: "Não é possível criar Super Admins" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Create user
+        const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name },
+        });
+
+        if (authError) {
+          return new Response(JSON.stringify({ error: authError.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const userId = authData.user.id;
+
+        // Insert user_empresa
+        await adminClient.from("user_empresa").insert({
+          user_id: userId,
+          empresa_id,
+          role: role || "member",
+        });
+
+        // Insert user_empresa_geral
+        await adminClient.from("user_empresa_geral").insert({
+          user_id: userId,
+          empresa_id,
+        });
+
+        // Insert user_permissions
+        await adminClient.from("user_permissions").insert({
+          user_id: userId,
+          is_admin: role === "admin",
+        });
+
+        return new Response(JSON.stringify({ success: true, user_id: userId }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "edit_user": {
+        const { user_id, email, full_name, role, ativo, empresa_id } = body;
+
+        // Get target user
+        const { data: targetUser } = await adminClient.auth.admin.getUserById(user_id);
+        if (targetUser?.user?.email === SUPER_ADMIN_EMAIL) {
+          return new Response(JSON.stringify({ error: "Super Admin não pode ser editado" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (!isCallerAdminForEmpresa(empresa_id)) {
+          return new Response(JSON.stringify({ error: "Sem permissão" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (role === "super_admin") {
+          return new Response(JSON.stringify({ error: "Não é possível promover a Super Admin" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Update auth user
+        const updateData: any = {
+          user_metadata: { full_name },
+        };
+        if (email) updateData.email = email;
+        if (typeof ativo === "boolean") {
+          updateData.ban_duration = ativo ? "none" : "876000h";
+        }
+
+        const { error: updateError } = await adminClient.auth.admin.updateUserById(user_id, updateData);
+        if (updateError) {
+          return new Response(JSON.stringify({ error: updateError.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Update role if provided
+        if (role) {
+          await adminClient
+            .from("user_empresa")
+            .update({ role })
+            .eq("user_id", user_id)
+            .eq("empresa_id", empresa_id);
+
+          await adminClient
+            .from("user_permissions")
+            .update({ is_admin: role === "admin" })
+            .eq("user_id", user_id);
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "delete_user": {
+        const { user_id, empresa_id, transfer_to } = body;
+
+        const { data: targetUser } = await adminClient.auth.admin.getUserById(user_id);
+        if (targetUser?.user?.email === SUPER_ADMIN_EMAIL) {
+          return new Response(JSON.stringify({ error: "IMPOSSÍVEL excluir o Super Admin!" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (!isCallerAdminForEmpresa(empresa_id)) {
+          return new Response(JSON.stringify({ error: "Sem permissão para excluir" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Transfer or nullify records
+        if (transfer_to) {
+          await adminClient.from("atividades").update({ atribuida_a: transfer_to }).eq("atribuida_a", user_id).eq("id_empresa", empresa_id);
+          await adminClient.from("leads_crm").update({ proprietario_id: transfer_to }).eq("proprietario_id", user_id).eq("id_empresa", empresa_id);
+          await adminClient.from("anotacoes_lead").update({ criado_por: transfer_to }).eq("criado_por", user_id).eq("id_empresa", empresa_id);
+          await adminClient.from("historico_lead").update({ usuario_id: transfer_to }).eq("usuario_id", user_id).eq("id_empresa", empresa_id);
+        } else {
+          await adminClient.from("atividades").update({ atribuida_a: null }).eq("atribuida_a", user_id).eq("id_empresa", empresa_id);
+          await adminClient.from("leads_crm").update({ proprietario_id: null }).eq("proprietario_id", user_id).eq("id_empresa", empresa_id);
+          await adminClient.from("anotacoes_lead").update({ criado_por: null }).eq("criado_por", user_id).eq("id_empresa", empresa_id);
+          await adminClient.from("historico_lead").update({ usuario_id: null }).eq("usuario_id", user_id).eq("id_empresa", empresa_id);
+        }
+
+        // Remove from tables
+        await adminClient.from("user_empresa").delete().eq("user_id", user_id).eq("empresa_id", empresa_id);
+        await adminClient.from("user_empresa_geral").delete().eq("user_id", user_id);
+        await adminClient.from("user_permissions").delete().eq("user_id", user_id);
+
+        // Delete auth user
+        await adminClient.auth.admin.deleteUser(user_id);
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "get_user_counts": {
+        const { user_id, empresa_id } = body;
+
+        const [atividades, leads, anotacoes, historico] = await Promise.all([
+          adminClient.from("atividades").select("id", { count: "exact", head: true }).eq("atribuida_a", user_id).eq("id_empresa", empresa_id),
+          adminClient.from("leads_crm").select("id", { count: "exact", head: true }).eq("proprietario_id", user_id).eq("id_empresa", empresa_id),
+          adminClient.from("anotacoes_lead").select("id", { count: "exact", head: true }).eq("criado_por", user_id).eq("id_empresa", empresa_id),
+          adminClient.from("historico_lead").select("id", { count: "exact", head: true }).eq("usuario_id", user_id).eq("id_empresa", empresa_id),
+        ]);
+
+        return new Response(JSON.stringify({
+          atividades: atividades.count || 0,
+          leads: leads.count || 0,
+          anotacoes: anotacoes.count || 0,
+          historico: historico.count || 0,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "reset_password": {
+        const { email } = body;
+        // Use the admin client to generate a password reset link
+        const { error } = await adminClient.auth.resetPasswordForEmail(email);
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      default:
+        return new Response(JSON.stringify({ error: "Ação inválida" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+    }
+  } catch (err) {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
