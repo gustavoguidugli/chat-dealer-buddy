@@ -40,42 +40,39 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className={`bg-card rounded-lg border shadow-sm cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md ${
-        isDragging ? 'shadow-lg ring-2 ring-primary/20' : ''
+      className={`bg-card rounded-xl border shadow-sm cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:border-primary/20 ${
+        isDragging ? 'shadow-lg ring-2 ring-primary/20 scale-[1.02]' : ''
       }`}
     >
       {/* Top color bar */}
       {topColor && (
-        <div className="h-1 rounded-t-lg" style={{ backgroundColor: topColor }} />
+        <div className="h-1.5 rounded-t-xl" style={{ backgroundColor: topColor }} />
       )}
 
-      <div className="p-3">
-        {/* Title */}
-        <div className="flex items-start justify-between gap-2">
+      <div className="px-3.5 py-3">
+        {/* Header row: Avatar + Title */}
+        <div className="flex items-center gap-2.5">
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarFallback className="text-[11px] font-semibold bg-accent/15 text-accent">
+              {getInitials(lead.nome)}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0">
             <h4 className="text-sm font-semibold text-foreground truncate">{lead.nome}</h4>
             {lead.empresa_cliente && (
-              <p className="text-xs text-muted-foreground truncate mt-0.5">{lead.empresa_cliente}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{lead.empresa_cliente}</p>
             )}
           </div>
-          <button className="shrink-0 h-6 w-6 flex items-center justify-center rounded-full hover:bg-secondary transition-colors">
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
         </div>
 
-        {/* Date */}
-        <p className="text-xs text-muted-foreground mt-2">{formatDate(lead.data_criacao)}</p>
-
-        {/* Bottom row */}
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-1.5">
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-[10px] bg-accent/20 text-accent">
-                {getInitials(lead.nome)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-xs font-medium text-muted-foreground">
+        {/* Info row */}
+        <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border/30">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-foreground">
               {formatCurrency(lead.valor_estimado)}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {formatDate(lead.data_criacao)}
             </span>
           </div>
 
@@ -85,7 +82,7 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
               {lead.etiquetas.slice(0, 3).map((et, i) => (
                 <div
                   key={i}
-                  className="h-2 w-2 rounded-full"
+                  className="h-2.5 w-2.5 rounded-full ring-1 ring-background"
                   style={{ backgroundColor: et.cor }}
                   title={et.nome}
                 />

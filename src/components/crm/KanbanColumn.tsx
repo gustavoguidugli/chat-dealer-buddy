@@ -22,21 +22,29 @@ export function KanbanColumn({ etapa, leads, totalValor, onLeadClick, onAddClick
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col w-[300px] shrink-0 rounded-lg bg-secondary/60 border transition-colors ${
-        isOver ? 'border-primary/40 bg-primary/5' : 'border-transparent'
+      className={`flex flex-col w-[300px] shrink-0 rounded-xl border-2 transition-colors ${
+        isOver ? 'border-primary/40 bg-primary/5' : 'border-border/60 bg-secondary/40'
       }`}
     >
       {/* Column Header */}
-      <div className="px-4 pt-4 pb-2">
-        <h3 className="font-semibold text-sm text-foreground">{etapa.nome}</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {formatCurrency(totalValor)} · {leads.length} negócios
+      <div className="px-4 pt-4 pb-3 border-b border-border/40">
+        <div className="flex items-center gap-2">
+          {etapa.cor && (
+            <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: etapa.cor }} />
+          )}
+          <h3 className="font-semibold text-sm text-foreground">{etapa.nome}</h3>
+          <span className="ml-auto text-xs font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full">
+            {leads.length}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1.5 font-medium">
+          {formatCurrency(totalValor)}
         </p>
       </div>
 
       {/* Cards */}
-      <ScrollArea className="flex-1 px-2 pb-2">
-        <div className="flex flex-col gap-2 p-1">
+      <ScrollArea className="flex-1 px-2.5 pb-2.5 pt-2">
+        <div className="flex flex-col gap-2.5">
           {leads.map(lead => (
             <div key={lead.id} onClick={() => onLeadClick?.(lead.id)}>
               <LeadCardComponent lead={lead} />
@@ -44,7 +52,7 @@ export function KanbanColumn({ etapa, leads, totalValor, onLeadClick, onAddClick
           ))}
           <button
             onClick={() => onAddClick?.(etapa.id)}
-            className="w-full flex items-center justify-center py-3 rounded-md bg-muted/50 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            className="w-full flex items-center justify-center py-3.5 rounded-lg border border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-colors text-muted-foreground hover:text-foreground"
           >
             <Plus className="h-5 w-5" />
           </button>
