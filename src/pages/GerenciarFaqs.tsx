@@ -336,40 +336,42 @@ export default function GerenciarFaqs() {
                   placeholder="Buscar por pergunta, resposta ou tag..."
                   className="pl-9" />
                 </div>
-                {companyLabels.length > 0 &&
-              <select
-                value={filterLabelId || ''}
-                onChange={(e) => setFilterLabelId(e.target.value || null)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm">
-                    <option value="">Todas etiquetas</option>
-                    {companyLabels.map((l) =>
-                <option key={l.id} value={l.id}>{l.nome}</option>
-                )}
-                  </select>
-              }
-                <Button onClick={() => {setEditingFaq(null);setModalOpen(true);}}>
-                  <Plus className="h-4 w-4 mr-2" /> Adicionar FAQ
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant={filterCreatedBy ? 'default' : 'outline'}>
-                      <Filter className="h-4 w-4 mr-2" /> Criado por
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Filtrar por criador</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setFilterCreatedBy(null)}>
-                      Todos
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {companyUsers.map((u) =>
-                      <DropdownMenuItem key={u.id} onClick={() => setFilterCreatedBy(u.id)} className={filterCreatedBy === u.id ? 'bg-accent' : ''}>
-                        {u.nome}
+                <div className="flex items-center gap-3 ml-auto">
+                  {companyLabels.length > 0 &&
+                <select
+                  value={filterLabelId || ''}
+                  onChange={(e) => setFilterLabelId(e.target.value || null)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                      <option value="">Todas etiquetas</option>
+                      {companyLabels.map((l) =>
+                  <option key={l.id} value={l.id}>{l.nome}</option>
+                  )}
+                    </select>
+                }
+                  <Button onClick={() => {setEditingFaq(null);setModalOpen(true);}}>
+                    <Plus className="h-4 w-4 mr-2" /> Adicionar FAQ
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant={filterCreatedBy ? 'default' : 'outline'}>
+                        <Filter className="h-4 w-4 mr-2" /> Criado por
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Filtrar por criador</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setFilterCreatedBy(null)}>
+                        Todos
                       </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <DropdownMenuSeparator />
+                      {companyUsers.map((u) =>
+                        <DropdownMenuItem key={u.id} onClick={() => setFilterCreatedBy(u.id)} className={filterCreatedBy === u.id ? 'bg-accent' : ''}>
+                          {u.nome}
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               {selectedIds.size > 0 &&
