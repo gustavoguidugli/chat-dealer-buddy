@@ -13,7 +13,7 @@ const navItems = [
 ];
 
 function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
-  const { isAdmin, isSuperAdmin, empresaNome, signOut } = useAuth();
+  const { user, isAdmin, isSuperAdmin, empresaNome, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');
@@ -38,6 +38,9 @@ function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onC
         <div className="px-6 py-4 border-b border-sidebar-border">
           <p className="text-xs text-sidebar-foreground/60 uppercase tracking-wider">Empresa</p>
           <p className="text-sm font-semibold truncate mt-1">{empresaNome}</p>
+          {user?.email && (
+            <p className="text-xs text-sidebar-foreground/50 truncate mt-1">{user.email}</p>
+          )}
         </div>
       )}
 
