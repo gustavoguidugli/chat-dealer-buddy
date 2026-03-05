@@ -2,7 +2,10 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
-const SUPER_ADMIN_EMAIL = 'guidugli.gustavo@gmail.com';
+const SUPER_ADMIN_EMAILS = [
+  'guidugli.gustavo@gmail.com',
+  'matheussenacarneiro2322@gmail.com',
+];
 
 interface AuthContextType {
   user: User | null;
@@ -56,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         const admin = perm?.is_admin ?? false;
-        const superAdmin = user.email === SUPER_ADMIN_EMAIL;
+        const superAdmin = SUPER_ADMIN_EMAILS.includes(user.email ?? '');
         setIsAdmin(admin);
 
         if (!perm) {
@@ -115,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, isAdmin, isSuperAdmin: user?.email === SUPER_ADMIN_EMAIL,
+      user, session, isAdmin, isSuperAdmin: SUPER_ADMIN_EMAILS.includes(user?.email ?? ''),
       empresaId, empresaNome,
       setEmpresa, loading, signOut: handleSignOut
     }}>

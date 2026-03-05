@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-const SUPER_ADMIN_EMAIL = 'guidugli.gustavo@gmail.com';
+const SUPER_ADMIN_EMAILS = ['guidugli.gustavo@gmail.com', 'matheussenacarneiro2322@gmail.com'];
 
 interface UsuarioEmpresa {
   id: string;
@@ -50,7 +50,7 @@ export function ManageUsersModal({ open, onOpenChange, empresa }: Props) {
           email: u.email,
           nome: u.nome || u.email?.split('@')[0] || '',
           role: u.role || 'member',
-          isSuperAdmin: u.email === SUPER_ADMIN_EMAIL,
+          isSuperAdmin: SUPER_ADMIN_EMAILS.includes(u.email ?? ''),
         }))
       );
     } catch (err) {

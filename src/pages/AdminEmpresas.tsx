@@ -29,8 +29,7 @@ interface Empresa {
 }
 
 export default function AdminEmpresas() {
-  const { user } = useAuth();
-  const isSuperAdmin = user?.email === 'guidugli.gustavo@gmail.com';
+  const { isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
