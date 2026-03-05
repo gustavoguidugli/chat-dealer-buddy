@@ -27,8 +27,7 @@ export default function SelectCompany() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [deleteEmpresa, setDeleteEmpresa] = useState<Empresa | null>(null);
-  const { setEmpresa, isAdmin, user } = useAuth();
-  const isSuperAdmin = user?.email === 'guidugli.gustavo@gmail.com';
+  const { setEmpresa, isAdmin, user, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 

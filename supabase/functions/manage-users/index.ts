@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPER_ADMIN_EMAIL = "guidugli.gustavo@gmail.com";
+const SUPER_ADMIN_EMAILS = ["guidugli.gustavo@gmail.com", "matheussenacarneiro2322@gmail.com"];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       .select("role, empresa_id")
       .eq("user_id", caller.id);
 
-    const callerIsSuperAdmin = caller.email === SUPER_ADMIN_EMAIL;
+    const callerIsSuperAdmin = SUPER_ADMIN_EMAILS.includes(caller.email ?? "");
     const callerRoles = callerPerms || [];
 
     const isCallerAdminForEmpresa = (empresaId: number) => {
@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
 
         // Get target user
         const { data: targetUser } = await adminClient.auth.admin.getUserById(user_id);
-        if (targetUser?.user?.email === SUPER_ADMIN_EMAIL) {
+        if (SUPER_ADMIN_EMAILS.includes(targetUser?.user?.email ?? "")) {
           return new Response(JSON.stringify({ error: "Super Admin não pode ser editado" }), {
             status: 403,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
         const { user_id, empresa_id, transfer_to } = body;
 
         const { data: targetUser } = await adminClient.auth.admin.getUserById(user_id);
-        if (targetUser?.user?.email === SUPER_ADMIN_EMAIL) {
+        if (SUPER_ADMIN_EMAILS.includes(targetUser?.user?.email ?? "")) {
           return new Response(JSON.stringify({ error: "IMPOSSÍVEL excluir o Super Admin!" }), {
             status: 403,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
