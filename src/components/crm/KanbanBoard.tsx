@@ -83,7 +83,7 @@ export function KanbanBoard({ etapas, leadsByEtapa, onMoveLead, onLeadClick, onA
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 p-4 h-full min-w-max bg-muted/50">
+      <div className="flex gap-4 p-4 h-full min-w-max bg-muted">
         {etapas.map(etapa => {
           const etapaLeads = leadsByEtapa[etapa.id] || [];
           const totalValor = etapaLeads.reduce((sum, l) => sum + (l.valor_estimado || 0), 0);
