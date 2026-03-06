@@ -737,15 +737,31 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                       </PopoverContent>
                     </Popover>
                     {lead.status === 'ganho' ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-100 dark:bg-green-900/30">
+                      <button
+                        onClick={async () => {
+                          await supabase.from('leads_crm').update({ status: 'aberto', data_ganho: null }).eq('id', lead.id);
+                          toast({ title: 'Lead reaberto' });
+                          onLeadChanged?.();
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors cursor-pointer"
+                        title="Clique para reabrir"
+                      >
                         <Trophy className="h-4 w-4 text-green-600 dark:text-green-400" />
                         <span className="text-xs font-semibold text-green-700 dark:text-green-400">Ganho</span>
-                      </div>
+                      </button>
                     ) : lead.status === 'perdido' ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-100 dark:bg-red-900/30">
+                      <button
+                        onClick={async () => {
+                          await supabase.from('leads_crm').update({ status: 'aberto', data_perdido: null, motivo_perda: null }).eq('id', lead.id);
+                          toast({ title: 'Lead reaberto' });
+                          onLeadChanged?.();
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors cursor-pointer"
+                        title="Clique para reabrir"
+                      >
                         <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
                         <span className="text-xs font-semibold text-red-600 dark:text-red-400">Perdido</span>
-                      </div>
+                      </button>
                     ) : (
                       <>
                         <Button
