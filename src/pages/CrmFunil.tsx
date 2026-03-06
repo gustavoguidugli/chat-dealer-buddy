@@ -34,6 +34,9 @@ export interface LeadAtividade {
   concluida: boolean;
   atribuida_a: string | null;
   atribuida_a_nome?: string | null;
+  descricao?: string | null;
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
 }
 
 export interface LeadCard {
@@ -126,7 +129,7 @@ export default function CrmFunil() {
             .in('id_lead', leadIds),
           supabase
             .from('atividades')
-            .select('id, assunto, data_vencimento, concluida, atribuida_a, id_lead')
+            .select('id, assunto, data_vencimento, concluida, atribuida_a, id_lead, descricao, hora_inicio, hora_fim')
             .in('id_lead', leadIds)
             .eq('concluida', false)
             .order('data_vencimento', { ascending: true }),
@@ -154,6 +157,9 @@ export default function CrmFunil() {
                 concluida: at.concluida ?? false,
                 atribuida_a: at.atribuida_a,
                 atribuida_a_nome: ownerName,
+                descricao: at.descricao,
+                hora_inicio: at.hora_inicio,
+                hora_fim: at.hora_fim,
               };
             }
           }

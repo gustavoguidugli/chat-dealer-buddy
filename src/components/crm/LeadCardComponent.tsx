@@ -102,6 +102,9 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
       data_vencimento: atividade.data_vencimento,
       concluida: atividade.concluida,
       atribuida_a: atividade.atribuida_a,
+      descricao: atividade.descricao,
+      hora_inicio: atividade.hora_inicio,
+      hora_fim: atividade.hora_fim,
     });
     setActivityModalOpen(true);
   };
