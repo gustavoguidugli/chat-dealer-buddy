@@ -221,6 +221,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [ganhoOpen, setGanhoOpen] = useState(false);
   const [perdidoOpen, setPerdidoOpen] = useState(false);
   const [motivoPerda, setMotivoPerda] = useState('');
+  const [reabrirOpen, setReabrirOpen] = useState(false);
   const [excluirOpen, setExcluirOpen] = useState(false);
   const [duplicarOpen, setDuplicarOpen] = useState(false);
   const [concluirAtividadeId, setConcluirAtividadeId] = useState<number | null>(null);
@@ -738,11 +739,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                     </Popover>
                     {lead.status === 'ganho' ? (
                       <button
-                        onClick={async () => {
-                          await supabase.from('leads_crm').update({ status: 'aberto', data_ganho: null }).eq('id', lead.id);
-                          toast({ title: 'Lead reaberto' });
-                          onLeadChanged?.();
-                        }}
+                        onClick={() => setReabrirOpen(true)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors cursor-pointer"
                         title="Clique para reabrir"
                       >
@@ -751,11 +748,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                       </button>
                     ) : lead.status === 'perdido' ? (
                       <button
-                        onClick={async () => {
-                          await supabase.from('leads_crm').update({ status: 'aberto', data_perdido: null, motivo_perda: null }).eq('id', lead.id);
-                          toast({ title: 'Lead reaberto' });
-                          onLeadChanged?.();
-                        }}
+                        onClick={() => setReabrirOpen(true)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors cursor-pointer"
                         title="Clique para reabrir"
                       >
