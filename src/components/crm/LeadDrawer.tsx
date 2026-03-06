@@ -736,20 +736,34 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                         ))}
                       </PopoverContent>
                     </Popover>
-                    <Button
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white font-semibold"
-                      onClick={() => setGanhoOpen(true)}
-                    >
-                      Ganho
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-red-500 hover:bg-red-600 text-white font-semibold"
-                      onClick={() => setPerdidoOpen(true)}
-                    >
-                      Perdido
-                    </Button>
+                    {lead.status === 'ganho' ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-100 dark:bg-green-900/30">
+                        <Trophy className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-xs font-semibold text-green-700 dark:text-green-400">Ganho</span>
+                      </div>
+                    ) : lead.status === 'perdido' ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-100 dark:bg-red-900/30">
+                        <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
+                        <span className="text-xs font-semibold text-red-600 dark:text-red-400">Perdido</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+                          onClick={() => setGanhoOpen(true)}
+                        >
+                          Ganho
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold"
+                          onClick={() => setPerdidoOpen(true)}
+                        >
+                          Perdido
+                        </Button>
+                      </>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
