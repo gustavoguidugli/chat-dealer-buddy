@@ -16,6 +16,7 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [etiquetaVersion, setEtiquetaVersion] = useState(0)
+  const [atividadeVersion, setAtividadeVersion] = useState(0)
 
   useEffect(() => {
     if (!funilId) {
