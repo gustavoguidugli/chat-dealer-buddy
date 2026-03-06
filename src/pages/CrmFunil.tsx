@@ -468,8 +468,8 @@ export default function CrmFunil() {
             <KanbanBoard
               etapas={etapas}
               leadsByEtapa={leadsByEtapa}
-              wonLeads={wonLeads}
-              lostLeads={lostLeads}
+              wonLeads={filteredWonLeads}
+              lostLeads={filteredLostLeads}
               onMoveLead={handleMoveLead}
               onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
               onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
