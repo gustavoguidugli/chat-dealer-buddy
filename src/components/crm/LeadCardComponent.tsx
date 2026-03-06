@@ -261,14 +261,15 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
 
       {empresaId && (
         <div data-activity-zone onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-        <ActivityModal
-          leadId={lead.id}
-          empresaId={empresaId}
-          activity={editingActivity}
-          isOpen={activityModalOpen}
-          onClose={() => setActivityModalOpen(false)}
-        />
+          <ActivityModal
+            leadId={lead.id}
+            empresaId={empresaId}
+            activity={editingActivity}
+            isOpen={activityModalOpen}
+            onClose={() => setActivityModalOpen(false)}
+          />
         </div>
       )}
+    </>
   );
 }
