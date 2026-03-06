@@ -75,7 +75,8 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Create user
+        // Try to create user, or find existing one
+        let userId: string;
         const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
           email,
           password,
@@ -84,13 +85,41 @@ Deno.serve(async (req) => {
         });
 
         if (authError) {
-          return new Response(JSON.stringify({ error: authError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          // If user already exists, find them and link to empresa
+          if (authError.message.includes("already been registered")) {
+            const { data: listData } = await adminClient.auth.admin.listUsers();
+            const existingUser = listData?.users?.find((u: any) => u.email === email);
+            if (!existingUser) {
+              return new Response(JSON.stringify({ error: "Usuário existe mas não foi encontrado" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            // Check if already linked to this empresa
+            const { data: existing } = await adminClient
+              .from("user_empresa")
+              .select("user_id")
+              .eq("user_id", existingUser.id)
+              .eq("empresa_id", empresa_id)
+              .maybeSingle();
+            if (existing) {
+              return new Response(JSON.stringify({ error: "Usuário já está vinculado a esta empresa" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            userId = existingUser.id;
+          } else {
+            return new Response(JSON.stringify({ error: authError.message }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } else {
+          userId = authData.user.id;
         }
 
-        const userId = authData.user.id;
+        // userId already set above
 
         // Insert user_empresa
         await adminClient.from("user_empresa").insert({
@@ -99,17 +128,17 @@ Deno.serve(async (req) => {
           role: role || "member",
         });
 
-        // Insert user_empresa_geral
-        await adminClient.from("user_empresa_geral").insert({
+        // Upsert user_empresa_geral (existing user may already have one)
+        await adminClient.from("user_empresa_geral").upsert({
           user_id: userId,
           empresa_id,
-        });
+        }, { onConflict: "user_id" });
 
-        // Insert user_permissions
-        await adminClient.from("user_permissions").insert({
+        // Upsert user_permissions
+        await adminClient.from("user_permissions").upsert({
           user_id: userId,
           is_admin: role === "admin",
-        });
+        }, { onConflict: "user_id" });
 
         return new Response(JSON.stringify({ success: true, user_id: userId }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
