@@ -178,7 +178,7 @@ export function CriarFunilModal({ open, onOpenChange, empresaId, onCreated }: Pr
     try {
       const { data: funil, error: funilError } = await supabase
         .from('funis')
-        .insert({ nome: nome.trim(), id_empresa: empresaId, ativo: true })
+        .insert({ nome: nome.trim(), id_empresa: empresaId, ativo: true, tipo: 'custom' })
         .select('id')
         .single();
 
