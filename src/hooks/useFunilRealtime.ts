@@ -94,8 +94,23 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
           table: 'lead_etiquetas',
         },
         () => {
-          // Incrementa version para forçar re-enrich das etiquetas
           setEtiquetaVersion((v) => v + 1)
+        }
+      )
+      .subscribe()
+
+    // 4. Escuta mudanças em tempo real nas atividades dos leads
+    const atividadeChannel = supabase
+      .channel(`funil-atividades-${funilId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'atividades',
+        },
+        () => {
+          setAtividadeVersion((v) => v + 1)
         }
       )
       .subscribe()
