@@ -102,7 +102,7 @@ export default function CrmFunil() {
   }, [empresaId]);
 
   // Realtime leads
-  const { leads: realtimeLeads, setLeads, loading: loadingLeads, etiquetaVersion } = useFunilRealtime(funilAtual || 0);
+  const { leads: realtimeLeads, setLeads, loading: loadingLeads, etiquetaVersion, atividadeVersion } = useFunilRealtime(funilAtual || 0);
 
   // Enrich leads with etiquetas
   const [leads, setEnrichedLeads] = useState<LeadCard[]>([]);
@@ -175,7 +175,7 @@ export default function CrmFunil() {
       })));
     };
     enrichLeads();
-  }, [realtimeLeads, reloadKey, etiquetaVersion, proprietarios]);
+  }, [realtimeLeads, reloadKey, etiquetaVersion, atividadeVersion, proprietarios]);
 
   const loading = loadingFunis || loadingLeads;
 

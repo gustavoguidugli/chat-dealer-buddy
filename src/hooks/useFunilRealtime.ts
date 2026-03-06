@@ -16,6 +16,7 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [etiquetaVersion, setEtiquetaVersion] = useState(0)
+  const [atividadeVersion, setAtividadeVersion] = useState(0)
 
   useEffect(() => {
     if (!funilId) {
@@ -93,18 +94,34 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
           table: 'lead_etiquetas',
         },
         () => {
-          // Incrementa version para forçar re-enrich das etiquetas
           setEtiquetaVersion((v) => v + 1)
         }
       )
       .subscribe()
 
-    // 4. Cleanup
+    // 4. Escuta mudanças em tempo real nas atividades dos leads
+    const atividadeChannel = supabase
+      .channel(`funil-atividades-${funilId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'atividades',
+        },
+        () => {
+          setAtividadeVersion((v) => v + 1)
+        }
+      )
+      .subscribe()
+
+    // 5. Cleanup
     return () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(etiquetaChannel)
+      supabase.removeChannel(atividadeChannel)
     }
   }, [funilId, etapaId])
 
-  return { leads, setLeads, loading, etiquetaVersion }
+  return { leads, setLeads, loading, etiquetaVersion, atividadeVersion }
 }
