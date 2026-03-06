@@ -115,18 +115,39 @@ export default function CrmFunil() {
   const [wonLeads, setEnrichedWonLeads] = useState<LeadCard[]>([]);
   const [lostLeads, setEnrichedLostLeads] = useState<LeadCard[]>([]);
 
+  const mapLeads = (rawLeads: any[], etiquetasMap: Record<number, { nome: string; cor: string }[]>, atividadesMap: Record<number, LeadAtividade | null>): LeadCard[] => {
+    return rawLeads.map((l: any) => ({
+      id: l.id,
+      nome: l.nome,
+      empresa_cliente: l.empresa_cliente,
+      whatsapp: l.whatsapp,
+      valor_estimado: l.valor_estimado,
+      data_criacao: l.data_criacao,
+      id_etapa_atual: l.id_etapa_atual,
+      ordem_no_funil: l.ordem_no_funil,
+      proprietario_id: l.proprietario_id,
+      etiquetas: etiquetasMap[l.id] || [],
+      proximaAtividade: atividadesMap[l.id] || null,
+      status: l.status,
+      motivo_perda: l.motivo_perda,
+      valor_final: l.valor_final,
+    }));
+  };
+
   useEffect(() => {
-    if (!realtimeLeads.length) {
+    const allRaw = [...realtimeLeads, ...realtimeWonLeads, ...realtimeLostLeads];
+    if (!allRaw.length) {
       setEnrichedLeads([]);
+      setEnrichedWonLeads([]);
+      setEnrichedLostLeads([]);
       return;
     }
     const enrichLeads = async () => {
-      const leadIds = realtimeLeads.map((l: any) => l.id);
+      const leadIds = allRaw.map((l: any) => l.id);
       let etiquetasMap: Record<number, { nome: string; cor: string }[]> = {};
       let atividadesMap: Record<number, LeadAtividade | null> = {};
       
       if (leadIds.length > 0) {
-        // Fetch etiquetas and next activities in parallel
         const [etiquetasRes, atividadesRes] = await Promise.all([
           supabase
             .from('lead_etiquetas')
@@ -149,11 +170,9 @@ export default function CrmFunil() {
         }
 
         if (atividadesRes.data) {
-          // Group by lead, pick the earliest non-completed activity
           for (const at of atividadesRes.data) {
             const lid = (at as any).id_lead;
             if (lid && !atividadesMap[lid]) {
-              // Find owner name from proprietarios
               const ownerName = proprietarios.find(p => p.id === at.atribuida_a)?.nome || null;
               atividadesMap[lid] = {
                 id: at.id,
@@ -171,22 +190,12 @@ export default function CrmFunil() {
         }
       }
 
-      setEnrichedLeads(realtimeLeads.map((l: any) => ({
-        id: l.id,
-        nome: l.nome,
-        empresa_cliente: l.empresa_cliente,
-        whatsapp: l.whatsapp,
-        valor_estimado: l.valor_estimado,
-        data_criacao: l.data_criacao,
-        id_etapa_atual: l.id_etapa_atual,
-        ordem_no_funil: l.ordem_no_funil,
-        proprietario_id: l.proprietario_id,
-        etiquetas: etiquetasMap[l.id] || [],
-        proximaAtividade: atividadesMap[l.id] || null,
-      })));
+      setEnrichedLeads(mapLeads(realtimeLeads, etiquetasMap, atividadesMap));
+      setEnrichedWonLeads(mapLeads(realtimeWonLeads, etiquetasMap, atividadesMap));
+      setEnrichedLostLeads(mapLeads(realtimeLostLeads, etiquetasMap, atividadesMap));
     };
     enrichLeads();
-  }, [realtimeLeads, reloadKey, etiquetaVersion, atividadeVersion, proprietarios]);
+  }, [realtimeLeads, realtimeWonLeads, realtimeLostLeads, reloadKey, etiquetaVersion, atividadeVersion, proprietarios]);
 
   const loading = loadingFunis || loadingLeads;
 
