@@ -51,6 +51,9 @@ export interface LeadCard {
   proprietario_id: string | null;
   etiquetas: { nome: string; cor: string }[];
   proximaAtividade: LeadAtividade | null;
+  status?: string | null;
+  motivo_perda?: string | null;
+  valor_final?: number | null;
 }
 
 export default function CrmFunil() {
