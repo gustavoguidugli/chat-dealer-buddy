@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, AlertTriangle, Play } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import type { LeadCard } from '@/pages/CrmFunil';
 
 interface LeadCardProps {
@@ -23,16 +27,62 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 
+function getActivityStatus(dataVencimento: string): 'overdue' | 'today' | 'future' {
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const dueDate = dataVencimento.slice(0, 10);
+  if (dueDate < todayStr) return 'overdue';
+  if (dueDate === todayStr) return 'today';
+  return 'future';
+}
+
+function getActivityLabel(status: 'overdue' | 'today' | 'future', dataVencimento: string): string {
+  if (status === 'overdue') return 'Atrasada';
+  if (status === 'today') return 'Hoje';
+  const d = new Date(dataVencimento);
+  return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+}
+
 export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: lead.id,
   });
+  const { toast } = useToast();
+  const [completing, setCompleting] = useState(false);
 
   const style = transform
     ? { transform: CSS.Translate.toString(transform) }
     : undefined;
 
   const topColor = lead.etiquetas.length > 0 ? lead.etiquetas[0].cor : null;
+  const atividade = lead.proximaAtividade;
+  const activityStatus = atividade ? getActivityStatus(atividade.data_vencimento) : null;
+
+  const handleComplete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!atividade || completing) return;
+    setCompleting(true);
+    const { error } = await supabase
+      .from('atividades')
+      .update({ concluida: true, concluida_em: new Date().toISOString() })
+      .eq('id', atividade.id);
+    setCompleting(false);
+    if (error) {
+      toast({ title: 'Erro ao concluir', variant: 'destructive' });
+    } else {
+      toast({ title: 'Atividade concluída!' });
+    }
+  };
+
+  const arrowColorClass =
+    activityStatus === 'overdue' ? 'text-destructive' :
+    activityStatus === 'today' ? 'text-green-500' :
+    'text-muted-foreground';
+
+  const labelColorClass =
+    activityStatus === 'overdue' ? 'text-destructive' :
+    activityStatus === 'today' ? 'text-green-500' :
+    'text-muted-foreground';
 
   return (
     <div
@@ -50,7 +100,7 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
       )}
 
       <div className="px-3.5 py-3">
-        {/* Header row: Avatar + Title */}
+        {/* Header row: Avatar + Title + Activity icon */}
         <div className="flex items-center gap-2.5">
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="text-[11px] font-semibold bg-accent/15 text-accent">
@@ -61,6 +111,62 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
             <h4 className="text-sm font-semibold text-foreground truncate">{lead.nome}</h4>
             {lead.empresa_cliente && (
               <p className="text-[11px] text-muted-foreground truncate">{lead.empresa_cliente}</p>
+            )}
+          </div>
+
+          {/* Activity indicator */}
+          <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+            {atividade ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className={`p-1 rounded-full hover:bg-muted transition-colors ${arrowColorClass}`}>
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[280px] p-3" align="end" side="right">
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={handleComplete}
+                      disabled={completing}
+                      className="mt-0.5 h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary hover:bg-primary/10 transition-colors shrink-0 flex items-center justify-center"
+                      title="Concluir atividade"
+                    >
+                      {completing && <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Play className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium text-foreground truncate">{atividade.assunto}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className={`font-medium ${labelColorClass}`}>
+                          {getActivityLabel(activityStatus!, atividade.data_vencimento)}
+                        </span>
+                        {atividade.atribuida_a_nome && (
+                          <>
+                            <span className="text-muted-foreground">·</span>
+                            <span className="text-muted-foreground truncate">{atividade.atribuida_a_nome}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="p-1 rounded-full hover:bg-muted transition-colors text-yellow-500">
+                    <AlertTriangle className="h-5 w-5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[250px] p-3" align="end" side="right">
+                  <div className="flex items-center gap-2">
+                    <Play className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-sm text-muted-foreground">Negócio sem atividade agendada</span>
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
         </div>

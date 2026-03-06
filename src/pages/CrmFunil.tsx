@@ -115,18 +115,47 @@ export default function CrmFunil() {
     const enrichLeads = async () => {
       const leadIds = realtimeLeads.map((l: any) => l.id);
       let etiquetasMap: Record<number, { nome: string; cor: string }[]> = {};
+      let atividadesMap: Record<number, LeadAtividade | null> = {};
       
       if (leadIds.length > 0) {
-        const { data: leData } = await supabase
-          .from('lead_etiquetas')
-          .select('id_lead, etiquetas_card(nome, cor)')
-          .in('id_lead', leadIds);
+        // Fetch etiquetas and next activities in parallel
+        const [etiquetasRes, atividadesRes] = await Promise.all([
+          supabase
+            .from('lead_etiquetas')
+            .select('id_lead, etiquetas_card(nome, cor)')
+            .in('id_lead', leadIds),
+          supabase
+            .from('atividades')
+            .select('id, assunto, data_vencimento, concluida, atribuida_a, id_lead')
+            .in('id_lead', leadIds)
+            .eq('concluida', false)
+            .order('data_vencimento', { ascending: true }),
+        ]);
         
-        if (leData) {
-          for (const item of leData) {
+        if (etiquetasRes.data) {
+          for (const item of etiquetasRes.data) {
             if (!etiquetasMap[item.id_lead]) etiquetasMap[item.id_lead] = [];
             const ec = item.etiquetas_card as any;
             if (ec) etiquetasMap[item.id_lead].push({ nome: ec.nome, cor: ec.cor });
+          }
+        }
+
+        if (atividadesRes.data) {
+          // Group by lead, pick the earliest non-completed activity
+          for (const at of atividadesRes.data) {
+            const lid = (at as any).id_lead;
+            if (lid && !atividadesMap[lid]) {
+              // Find owner name from proprietarios
+              const ownerName = proprietarios.find(p => p.id === at.atribuida_a)?.nome || null;
+              atividadesMap[lid] = {
+                id: at.id,
+                assunto: at.assunto,
+                data_vencimento: at.data_vencimento,
+                concluida: at.concluida ?? false,
+                atribuida_a: at.atribuida_a,
+                atribuida_a_nome: ownerName,
+              };
+            }
           }
         }
       }
@@ -141,11 +170,12 @@ export default function CrmFunil() {
         id_etapa_atual: l.id_etapa_atual,
         ordem_no_funil: l.ordem_no_funil,
         proprietario_id: l.proprietario_id,
-        etiquetas: etiquetasMap[l.id] || []
+        etiquetas: etiquetasMap[l.id] || [],
+        proximaAtividade: atividadesMap[l.id] || null,
       })));
     };
     enrichLeads();
-  }, [realtimeLeads, reloadKey, etiquetaVersion]);
+  }, [realtimeLeads, reloadKey, etiquetaVersion, proprietarios]);
 
   const loading = loadingFunis || loadingLeads;
 
