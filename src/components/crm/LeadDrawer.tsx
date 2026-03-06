@@ -221,6 +221,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [ganhoOpen, setGanhoOpen] = useState(false);
   const [perdidoOpen, setPerdidoOpen] = useState(false);
   const [motivoPerda, setMotivoPerda] = useState('');
+  const [reabrirOpen, setReabrirOpen] = useState(false);
   const [excluirOpen, setExcluirOpen] = useState(false);
   const [duplicarOpen, setDuplicarOpen] = useState(false);
   const [concluirAtividadeId, setConcluirAtividadeId] = useState<number | null>(null);
@@ -738,11 +739,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                     </Popover>
                     {lead.status === 'ganho' ? (
                       <button
-                        onClick={async () => {
-                          await supabase.from('leads_crm').update({ status: 'aberto', data_ganho: null }).eq('id', lead.id);
-                          toast({ title: 'Lead reaberto' });
-                          onLeadChanged?.();
-                        }}
+                        onClick={() => setReabrirOpen(true)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors cursor-pointer"
                         title="Clique para reabrir"
                       >
@@ -751,11 +748,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                       </button>
                     ) : lead.status === 'perdido' ? (
                       <button
-                        onClick={async () => {
-                          await supabase.from('leads_crm').update({ status: 'aberto', data_perdido: null, motivo_perda: null }).eq('id', lead.id);
-                          toast({ title: 'Lead reaberto' });
-                          onLeadChanged?.();
-                        }}
+                        onClick={() => setReabrirOpen(true)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors cursor-pointer"
                         title="Clique para reabrir"
                       >
@@ -1263,6 +1256,33 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {/* REABRIR DIALOG */}
+      <AlertDialog open={reabrirOpen} onOpenChange={setReabrirOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reabrir lead?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja reabrir &quot;{lead?.nome}&quot;? O lead voltará para o funil como aberto.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              if (!lead) return;
+              const isWon = lead.status === 'ganho';
+              await supabase.from('leads_crm').update(
+                isWon
+                  ? { status: 'aberto', data_ganho: null }
+                  : { status: 'aberto', data_perdido: null, motivo_perda: null }
+              ).eq('id', lead.id);
+              toast({ title: 'Lead reaberto' });
+              setReabrirOpen(false);
+              onLeadChanged?.();
+            }}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* DIALOGS */}
       <AlertDialog open={ganhoOpen} onOpenChange={setGanhoOpen}>
