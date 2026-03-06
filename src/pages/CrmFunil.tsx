@@ -27,6 +27,15 @@ interface EtapaFunil {
   cor: string | null;
 }
 
+export interface LeadAtividade {
+  id: number;
+  assunto: string;
+  data_vencimento: string;
+  concluida: boolean;
+  atribuida_a: string | null;
+  atribuida_a_nome?: string | null;
+}
+
 export interface LeadCard {
   id: number;
   nome: string;
@@ -38,6 +47,7 @@ export interface LeadCard {
   ordem_no_funil: number | null;
   proprietario_id: string | null;
   etiquetas: { nome: string; cor: string }[];
+  proximaAtividade: LeadAtividade | null;
 }
 
 export default function CrmFunil() {
