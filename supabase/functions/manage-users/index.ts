@@ -75,7 +75,8 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Create user
+        // Try to create user, or find existing one
+        let userId: string;
         const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
           email,
           password,
@@ -84,10 +85,38 @@ Deno.serve(async (req) => {
         });
 
         if (authError) {
-          return new Response(JSON.stringify({ error: authError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          // If user already exists, find them and link to empresa
+          if (authError.message.includes("already been registered")) {
+            const { data: listData } = await adminClient.auth.admin.listUsers();
+            const existingUser = listData?.users?.find((u: any) => u.email === email);
+            if (!existingUser) {
+              return new Response(JSON.stringify({ error: "Usuário existe mas não foi encontrado" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            // Check if already linked to this empresa
+            const { data: existing } = await adminClient
+              .from("user_empresa")
+              .select("user_id")
+              .eq("user_id", existingUser.id)
+              .eq("empresa_id", empresa_id)
+              .maybeSingle();
+            if (existing) {
+              return new Response(JSON.stringify({ error: "Usuário já está vinculado a esta empresa" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            userId = existingUser.id;
+          } else {
+            return new Response(JSON.stringify({ error: authError.message }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } else {
+          userId = authData.user.id;
         }
 
         const userId = authData.user.id;
