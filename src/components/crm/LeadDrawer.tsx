@@ -385,6 +385,68 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     })();
   }, [empresaId]);
 
+  // Fetch all funnels for the company
+  useEffect(() => {
+    if (!empresaId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('funis')
+        .select('id, nome')
+        .eq('id_empresa', empresaId)
+        .eq('ativo', true)
+        .order('ordem');
+      if (data) setAllFunis(data);
+    })();
+  }, [empresaId]);
+
+  // When funnel/stage popover opens, initialize temp state
+  const handleOpenFunilEtapaPopover = () => {
+    if (!lead) return;
+    setTempFunilId(lead.id_funil);
+    setTempEtapaId(lead.id_etapa_atual);
+    setTempEtapas(etapas);
+    setFunilEtapaPopoverOpen(true);
+  };
+
+  // When temp funnel changes, fetch its etapas
+  const handleTempFunilChange = async (newFunilId: number) => {
+    setTempFunilId(newFunilId);
+    const { data } = await supabase
+      .from('etapas_funil')
+      .select('id, nome, ordem')
+      .eq('id_funil', newFunilId)
+      .eq('ativo', true)
+      .order('ordem');
+    const newEtapas = data || [];
+    setTempEtapas(newEtapas);
+    if (newEtapas.length > 0) {
+      setTempEtapaId(newEtapas[0].id);
+    } else {
+      setTempEtapaId(null);
+    }
+  };
+
+  // Save funnel/stage change
+  const handleSaveFunilEtapa = async () => {
+    if (!lead || !tempFunilId || !tempEtapaId) return;
+    setSavingFunilEtapa(true);
+    const { error } = await supabase.from('leads_crm').update({
+      id_funil: tempFunilId,
+      id_etapa_atual: tempEtapaId,
+      data_entrada_etapa_atual: new Date().toISOString(),
+    }).eq('id', lead.id);
+    setSavingFunilEtapa(false);
+    if (error) {
+      toast({ title: 'Erro ao mover lead', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Funil/etapa atualizado' });
+      setFunilEtapaPopoverOpen(false);
+      // Re-fetch metadata since funnel may have changed
+      fetchMeta();
+      onLeadChanged?.();
+    }
+  };
+
   const handleChangeProprietario = async (newOwnerId: string | null) => {
     if (!lead) return;
     await supabase.from('leads_crm').update({ proprietario_id: newOwnerId }).eq('id', lead.id);
