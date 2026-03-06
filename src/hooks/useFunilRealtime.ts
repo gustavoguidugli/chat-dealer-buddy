@@ -115,12 +115,13 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
       )
       .subscribe()
 
-    // 4. Cleanup
+    // 5. Cleanup
     return () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(etiquetaChannel)
+      supabase.removeChannel(atividadeChannel)
     }
   }, [funilId, etapaId])
 
-  return { leads, setLeads, loading, etiquetaVersion }
+  return { leads, setLeads, loading, etiquetaVersion, atividadeVersion }
 }
