@@ -128,17 +128,17 @@ Deno.serve(async (req) => {
           role: role || "member",
         });
 
-        // Insert user_empresa_geral
-        await adminClient.from("user_empresa_geral").insert({
+        // Upsert user_empresa_geral (existing user may already have one)
+        await adminClient.from("user_empresa_geral").upsert({
           user_id: userId,
           empresa_id,
-        });
+        }, { onConflict: "user_id" });
 
-        // Insert user_permissions
-        await adminClient.from("user_permissions").insert({
+        // Upsert user_permissions
+        await adminClient.from("user_permissions").upsert({
           user_id: userId,
           is_admin: role === "admin",
-        });
+        }, { onConflict: "user_id" });
 
         return new Response(JSON.stringify({ success: true, user_id: userId }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
