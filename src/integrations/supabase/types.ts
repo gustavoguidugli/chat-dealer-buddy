@@ -271,6 +271,7 @@ export type Database = {
       config_empresas_geral: {
         Row: {
           created_at: string
+          crm_is_ativo: boolean | null
           faq_geral_maquina: string | null
           faq_pos_qualificacao_maquina: string
           faq_purificador: string
@@ -285,6 +286,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          crm_is_ativo?: boolean | null
           faq_geral_maquina?: string | null
           faq_pos_qualificacao_maquina?: string
           faq_purificador?: string
@@ -299,6 +301,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          crm_is_ativo?: boolean | null
           faq_geral_maquina?: string | null
           faq_pos_qualificacao_maquina?: string
           faq_purificador?: string
@@ -1536,6 +1539,39 @@ export type Database = {
           },
         ]
       }
+      funil_tipos: {
+        Row: {
+          ativo: boolean | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id: string
+          nome: string
+          ordem?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+        }
+        Relationships: []
+      }
       funis: {
         Row: {
           ativo: boolean | null
@@ -1547,7 +1583,7 @@ export type Database = {
           id_empresa: number
           nome: string
           ordem: number | null
-          tipo: string | null
+          tipo: string
           updated_at: string | null
         }
         Insert: {
@@ -1560,7 +1596,7 @@ export type Database = {
           id_empresa: number
           nome: string
           ordem?: number | null
-          tipo?: string | null
+          tipo: string
           updated_at?: string | null
         }
         Update: {
@@ -1573,7 +1609,7 @@ export type Database = {
           id_empresa?: number
           nome?: string
           ordem?: number | null
-          tipo?: string | null
+          tipo?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -1582,6 +1618,13 @@ export type Database = {
             columns: ["id_empresa"]
             isOneToOne: false
             referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funis_tipo_fkey"
+            columns: ["tipo"]
+            isOneToOne: false
+            referencedRelation: "funil_tipos"
             referencedColumns: ["id"]
           },
         ]
@@ -1775,7 +1818,7 @@ export type Database = {
           empresa_cliente: string | null
           id: number
           id_contato_geral: number | null
-          id_contato_sdr: number | null
+          id_contato_sdr: string | null
           id_empresa: number
           id_etapa_atual: number
           id_funil: number
@@ -1812,7 +1855,7 @@ export type Database = {
           empresa_cliente?: string | null
           id?: number
           id_contato_geral?: number | null
-          id_contato_sdr?: number | null
+          id_contato_sdr?: string | null
           id_empresa: number
           id_etapa_atual: number
           id_funil: number
@@ -1849,7 +1892,7 @@ export type Database = {
           empresa_cliente?: string | null
           id?: number
           id_contato_geral?: number | null
-          id_contato_sdr?: number | null
+          id_contato_sdr?: string | null
           id_empresa?: number
           id_etapa_atual?: number
           id_funil?: number
@@ -2619,6 +2662,10 @@ export type Database = {
           metadata: Json
           similarity: number
         }[]
+      }
+      criar_lead_triagem: {
+        Args: { p_id_empresa?: number; p_nome?: string; p_whatsapp: string }
+        Returns: number
       }
       get_etiquetas_by_empresa: {
         Args: { empresa_id: number }

@@ -62,7 +62,7 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
 
     fetchLeads()
 
-    // 2. Escuta mudanças em tempo real nos leads
+    // 2. Escuta mudanças em tempo real nos leads (sem filtro para capturar mudanças de funil)
     const channel = supabase
       .channel(`funil-${funilId}`)
       .on(
@@ -71,27 +71,36 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
           event: '*',
           schema: 'public',
           table: 'leads_crm',
-          filter: `id_funil=eq.${funilId}`
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setLeads((prev) => [...prev, payload.new])
+            const newData = payload.new as any
+            if (newData.id_funil === funilId && newData.ativo !== false) {
+              if (newData.status === 'ganho') {
+                setWonLeads((prev) => [newData, ...prev])
+              } else if (newData.status === 'perdido') {
+                setLostLeads((prev) => [newData, ...prev])
+              } else {
+                setLeads((prev) => [...prev, newData])
+              }
+            }
           }
 
           if (payload.eventType === 'UPDATE') {
-            const newData = payload.new
+            const newData = payload.new as any
             // Remove from all lists first
             setLeads((prev) => prev.filter((lead) => lead.id !== newData.id))
             setWonLeads((prev) => prev.filter((lead) => lead.id !== newData.id))
             setLostLeads((prev) => prev.filter((lead) => lead.id !== newData.id))
 
-            if (newData?.ativo === false) return
+            // Only add back if belongs to current funil and is active
+            if (newData.id_funil !== funilId || newData.ativo === false) return
 
-            if (newData?.status === 'ganho') {
+            if (newData.status === 'ganho') {
               setWonLeads((prev) => [newData, ...prev])
-            } else if (newData?.status === 'perdido') {
+            } else if (newData.status === 'perdido') {
               setLostLeads((prev) => [newData, ...prev])
-            } else if (newData?.status === 'aberto') {
+            } else if (newData.status === 'aberto') {
               setLeads((prev) =>
                 prev.some(l => l.id === newData.id)
                   ? prev.map(l => l.id === newData.id ? { ...l, ...newData } : l)
@@ -101,7 +110,10 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
           }
 
           if (payload.eventType === 'DELETE') {
-            setLeads((prev) => prev.filter((lead) => lead.id !== payload.old?.id))
+            const oldId = payload.old?.id
+            setLeads((prev) => prev.filter((lead) => lead.id !== oldId))
+            setWonLeads((prev) => prev.filter((lead) => lead.id !== oldId))
+            setLostLeads((prev) => prev.filter((lead) => lead.id !== oldId))
           }
         }
       )
