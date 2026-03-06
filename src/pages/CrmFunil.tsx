@@ -287,6 +287,16 @@ export default function CrmFunil() {
     return leads.filter(l => l.proprietario_id === filterProprietarioId);
   }, [leads, filterProprietarioId]);
 
+  const filteredWonLeads = useMemo(() => {
+    if (!filterProprietarioId) return wonLeads;
+    return wonLeads.filter(l => l.proprietario_id === filterProprietarioId);
+  }, [wonLeads, filterProprietarioId]);
+
+  const filteredLostLeads = useMemo(() => {
+    if (!filterProprietarioId) return lostLeads;
+    return lostLeads.filter(l => l.proprietario_id === filterProprietarioId);
+  }, [lostLeads, filterProprietarioId]);
+
   const leadsByEtapa = useMemo(() => {
     const map: Record<number, LeadCard[]> = {};
     for (const etapa of etapas) {
