@@ -14,6 +14,8 @@ import { supabase } from '@/integrations/supabase/client'
  */
 export function useFunilRealtime(funilId: number, etapaId?: number) {
   const [leads, setLeads] = useState<any[]>([])
+  const [wonLeads, setWonLeads] = useState<any[]>([])
+  const [lostLeads, setLostLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [etiquetaVersion, setEtiquetaVersion] = useState(0)
   const [atividadeVersion, setAtividadeVersion] = useState(0)
@@ -26,23 +28,35 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
 
     // 1. Busca os leads iniciais (primeira vez)
     async function fetchLeads() {
-      let query = supabase
-        .from('leads_crm')
-        .select(`
-          *,
-          funis(nome),
-          etapas_funil(nome, ordem, cor)
-        `)
-        .eq('id_funil', funilId)
-        .eq('status', 'aberto')
-        .eq('ativo', true)
+      const [openRes, wonRes, lostRes] = await Promise.all([
+        supabase
+          .from('leads_crm')
+          .select(`*, funis(nome), etapas_funil(nome, ordem, cor)`)
+          .eq('id_funil', funilId)
+          .eq('status', 'aberto')
+          .eq('ativo', true)
+          .order('ordem_no_funil'),
+        supabase
+          .from('leads_crm')
+          .select(`*, funis(nome), etapas_funil(nome, ordem, cor)`)
+          .eq('id_funil', funilId)
+          .eq('status', 'ganho')
+          .eq('ativo', true)
+          .order('data_ganho', { ascending: false })
+          .limit(50),
+        supabase
+          .from('leads_crm')
+          .select(`*, funis(nome), etapas_funil(nome, ordem, cor)`)
+          .eq('id_funil', funilId)
+          .eq('status', 'perdido')
+          .eq('ativo', true)
+          .order('data_perdido', { ascending: false })
+          .limit(50),
+      ])
 
-      if (etapaId) {
-        query = query.eq('id_etapa_atual', etapaId)
-      }
-
-      const { data } = await query.order('ordem_no_funil')
-      setLeads(data || [])
+      setLeads(openRes.data || [])
+      setWonLeads(wonRes.data || [])
+      setLostLeads(lostRes.data || [])
       setLoading(false)
     }
 
@@ -65,13 +79,23 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
           }
 
           if (payload.eventType === 'UPDATE') {
-            if (payload.new?.status !== 'aberto' || payload.new?.ativo === false) {
-              setLeads((prev) => prev.filter((lead) => lead.id !== payload.new.id))
-            } else {
+            const newData = payload.new
+            // Remove from all lists first
+            setLeads((prev) => prev.filter((lead) => lead.id !== newData.id))
+            setWonLeads((prev) => prev.filter((lead) => lead.id !== newData.id))
+            setLostLeads((prev) => prev.filter((lead) => lead.id !== newData.id))
+
+            if (newData?.ativo === false) return
+
+            if (newData?.status === 'ganho') {
+              setWonLeads((prev) => [newData, ...prev])
+            } else if (newData?.status === 'perdido') {
+              setLostLeads((prev) => [newData, ...prev])
+            } else if (newData?.status === 'aberto') {
               setLeads((prev) =>
-                prev.map((lead) =>
-                  lead.id === payload.new.id ? { ...lead, ...payload.new } : lead
-                )
+                prev.some(l => l.id === newData.id)
+                  ? prev.map(l => l.id === newData.id ? { ...l, ...newData } : l)
+                  : [...prev, newData]
               )
             }
           }
@@ -123,5 +147,5 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
     }
   }, [funilId, etapaId])
 
-  return { leads, setLeads, loading, etiquetaVersion, atividadeVersion }
+  return { leads, setLeads, wonLeads, lostLeads, loading, etiquetaVersion, atividadeVersion }
 }
