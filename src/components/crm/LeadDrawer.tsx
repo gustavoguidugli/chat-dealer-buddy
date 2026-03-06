@@ -242,6 +242,12 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
   const [editingValor, setEditingValor] = useState(false);
   const [valorTemp, setValorTemp] = useState('');
+  const [funilEtapaPopoverOpen, setFunilEtapaPopoverOpen] = useState(false);
+  const [allFunis, setAllFunis] = useState<{id: number; nome: string}[]>([]);
+  const [tempFunilId, setTempFunilId] = useState<number | null>(null);
+  const [tempEtapaId, setTempEtapaId] = useState<number | null>(null);
+  const [tempEtapas, setTempEtapas] = useState<EtapaInfo[]>([]);
+  const [savingFunilEtapa, setSavingFunilEtapa] = useState(false);
 
   const openManageFields = () => {
     setEditingCampos(campos.map(c => ({ ...c })));
