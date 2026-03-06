@@ -242,6 +242,12 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
   const [editingValor, setEditingValor] = useState(false);
   const [valorTemp, setValorTemp] = useState('');
+  const [funilEtapaPopoverOpen, setFunilEtapaPopoverOpen] = useState(false);
+  const [allFunis, setAllFunis] = useState<{id: number; nome: string}[]>([]);
+  const [tempFunilId, setTempFunilId] = useState<number | null>(null);
+  const [tempEtapaId, setTempEtapaId] = useState<number | null>(null);
+  const [tempEtapas, setTempEtapas] = useState<EtapaInfo[]>([]);
+  const [savingFunilEtapa, setSavingFunilEtapa] = useState(false);
 
   const openManageFields = () => {
     setEditingCampos(campos.map(c => ({ ...c })));
@@ -378,6 +384,68 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
       }
     })();
   }, [empresaId]);
+
+  // Fetch all funnels for the company
+  useEffect(() => {
+    if (!empresaId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('funis')
+        .select('id, nome')
+        .eq('id_empresa', empresaId)
+        .eq('ativo', true)
+        .order('ordem');
+      if (data) setAllFunis(data);
+    })();
+  }, [empresaId]);
+
+  // When funnel/stage popover opens, initialize temp state
+  const handleOpenFunilEtapaPopover = () => {
+    if (!lead) return;
+    setTempFunilId(lead.id_funil);
+    setTempEtapaId(lead.id_etapa_atual);
+    setTempEtapas(etapas);
+    setFunilEtapaPopoverOpen(true);
+  };
+
+  // When temp funnel changes, fetch its etapas
+  const handleTempFunilChange = async (newFunilId: number) => {
+    setTempFunilId(newFunilId);
+    const { data } = await supabase
+      .from('etapas_funil')
+      .select('id, nome, ordem')
+      .eq('id_funil', newFunilId)
+      .eq('ativo', true)
+      .order('ordem');
+    const newEtapas = data || [];
+    setTempEtapas(newEtapas);
+    if (newEtapas.length > 0) {
+      setTempEtapaId(newEtapas[0].id);
+    } else {
+      setTempEtapaId(null);
+    }
+  };
+
+  // Save funnel/stage change
+  const handleSaveFunilEtapa = async () => {
+    if (!lead || !tempFunilId || !tempEtapaId) return;
+    setSavingFunilEtapa(true);
+    const { error } = await supabase.from('leads_crm').update({
+      id_funil: tempFunilId,
+      id_etapa_atual: tempEtapaId,
+      data_entrada_etapa_atual: new Date().toISOString(),
+    }).eq('id', lead.id);
+    setSavingFunilEtapa(false);
+    if (error) {
+      toast({ title: 'Erro ao mover lead', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Funil/etapa atualizado' });
+      setFunilEtapaPopoverOpen(false);
+      // Re-fetch metadata since funnel may have changed
+      fetchMeta();
+      onLeadChanged?.();
+    }
+  };
 
   const handleChangeProprietario = async (newOwnerId: string | null) => {
     if (!lead) return;
@@ -563,7 +631,79 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                       <h1 className="text-xl font-bold text-foreground">{lead.nome}</h1>
                       <EtiquetaSelector leadId={lead.id} empresaId={lead.id_empresa} onChange={onLeadChanged} />
                     </div>
-                    <span className="text-sm text-primary cursor-pointer hover:underline">{funilNome}</span>
+                    <Popover open={funilEtapaPopoverOpen} onOpenChange={setFunilEtapaPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <span
+                          className="text-sm text-primary cursor-pointer hover:underline inline-flex items-center gap-1"
+                          onClick={handleOpenFunilEtapaPopover}
+                        >
+                          {funilNome}
+                          {etapas.find(e => e.id === lead.id_etapa_atual) && (
+                            <> → {etapas.find(e => e.id === lead.id_etapa_atual)?.nome}</>
+                          )}
+                        </span>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[340px] p-4" align="start">
+                        <div className="space-y-3">
+                          <Select
+                            value={tempFunilId?.toString() || ''}
+                            onValueChange={(v) => handleTempFunilChange(Number(v))}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecionar funil" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {allFunis.map(f => (
+                                <SelectItem key={f.id} value={f.id.toString()}>{f.nome}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-2">Etapa do funil</p>
+                            <div className="flex items-center">
+                              {tempEtapas.map((etapa, idx) => (
+                                <button
+                                  key={etapa.id}
+                                  onClick={() => setTempEtapaId(etapa.id)}
+                                  className={`relative h-8 flex-1 text-xs font-medium transition-colors ${
+                                    tempEtapaId === etapa.id
+                                      ? 'bg-primary text-primary-foreground'
+                                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                  } ${idx === 0 ? 'rounded-l-md' : ''} ${idx === tempEtapas.length - 1 ? 'rounded-r-md' : ''}`}
+                                  title={etapa.nome}
+                                  style={{
+                                    clipPath: idx < tempEtapas.length - 1
+                                      ? 'polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%, 8px 50%)'
+                                      : idx > 0
+                                      ? 'polygon(0 0, 100% 0, 100% 100%, 0 100%, 8px 50%)'
+                                      : undefined,
+                                    marginLeft: idx > 0 ? '-4px' : undefined,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-2 pt-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setFunilEtapaPopoverOpen(false)}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveFunilEtapa}
+                              disabled={savingFunilEtapa}
+                            >
+                              Salvar
+                            </Button>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Proprietário selector */}
