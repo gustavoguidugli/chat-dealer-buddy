@@ -154,7 +154,7 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
             </div>
 
             {/* Activity indicator */}
-            <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+            <div data-activity-zone onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
               {atividade ? (
                 <Popover>
                   <PopoverTrigger asChild>
@@ -260,6 +260,7 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
       </div>
 
       {empresaId && (
+        <div data-activity-zone onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
         <ActivityModal
           leadId={lead.id}
           empresaId={empresaId}
@@ -267,7 +268,7 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
           isOpen={activityModalOpen}
           onClose={() => setActivityModalOpen(false)}
         />
+        </div>
       )}
-    </>
   );
 }
