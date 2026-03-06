@@ -1257,6 +1257,33 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
         </SheetContent>
       </Sheet>
 
+      {/* REABRIR DIALOG */}
+      <AlertDialog open={reabrirOpen} onOpenChange={setReabrirOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reabrir lead?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja reabrir &quot;{lead?.nome}&quot;? O lead voltará para o funil como aberto.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              if (!lead) return;
+              const isWon = lead.status === 'ganho';
+              await supabase.from('leads_crm').update(
+                isWon
+                  ? { status: 'aberto', data_ganho: null }
+                  : { status: 'aberto', data_perdido: null, motivo_perda: null }
+              ).eq('id', lead.id);
+              toast({ title: 'Lead reaberto' });
+              setReabrirOpen(false);
+              onLeadChanged?.();
+            }}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* DIALOGS */}
       <AlertDialog open={ganhoOpen} onOpenChange={setGanhoOpen}>
         <AlertDialogContent>
