@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
           userId = authData.user.id;
         }
 
-        const userId = authData.user.id;
+        // userId already set above
 
         // Insert user_empresa
         await adminClient.from("user_empresa").insert({
