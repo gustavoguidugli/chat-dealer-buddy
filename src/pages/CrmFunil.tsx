@@ -129,7 +129,7 @@ export default function CrmFunil() {
             .in('id_lead', leadIds),
           supabase
             .from('atividades')
-            .select('id, assunto, data_vencimento, concluida, atribuida_a, id_lead')
+            .select('id, assunto, data_vencimento, concluida, atribuida_a, id_lead, descricao, hora_inicio, hora_fim')
             .in('id_lead', leadIds)
             .eq('concluida', false)
             .order('data_vencimento', { ascending: true }),
