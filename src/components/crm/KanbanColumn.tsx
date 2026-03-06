@@ -46,7 +46,7 @@ export function KanbanColumn({ etapa, leads, totalValor, onLeadClick, onAddClick
       <ScrollArea className="flex-1 px-2.5 pb-2.5 pt-2">
         <div className="flex flex-col gap-2.5">
           {leads.map(lead => (
-            <div key={lead.id} onClick={() => onLeadClick?.(lead.id)}>
+            <div key={lead.id} onClick={(e) => { if ((e.target as HTMLElement).closest('[data-activity-zone]')) return; onLeadClick?.(lead.id); }}>
               <LeadCardComponent lead={lead} />
             </div>
           ))}
