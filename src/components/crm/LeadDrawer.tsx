@@ -771,13 +771,29 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                     const isCurrent = etapa.id === lead.id_etapa_atual;
                     const dias = isCurrent ? diasEntre(lead.data_entrada_etapa_atual) : 0;
                     return (
-                      <div key={etapa.id} className="flex-1 flex flex-col items-center">
+                      <div
+                        key={etapa.id}
+                        className={`flex-1 flex flex-col items-center cursor-pointer group`}
+                        onClick={async () => {
+                          if (etapa.id === lead.id_etapa_atual) return;
+                          const { error } = await supabase.from('leads_crm').update({
+                            id_etapa_atual: etapa.id,
+                            data_entrada_etapa_atual: new Date().toISOString(),
+                          }).eq('id', lead.id);
+                          if (error) {
+                            toast({ title: 'Erro ao mover lead', description: error.message, variant: 'destructive' });
+                          } else {
+                            toast({ title: `Movido para ${etapa.nome}` });
+                            onLeadChanged?.();
+                          }
+                        }}
+                      >
                         <div
-                          className={`h-2 w-full rounded-sm ${
-                            isPast || isCurrent ? 'bg-green-500' : 'bg-muted'
+                          className={`h-2 w-full rounded-sm transition-colors ${
+                            isPast || isCurrent ? 'bg-green-500' : 'bg-muted group-hover:bg-green-300'
                           } ${isCurrent ? 'bg-green-400' : ''} ${isPast ? 'bg-green-600' : ''}`}
                         />
-                        <span className="text-[10px] text-muted-foreground mt-1">
+                        <span className="text-[10px] text-muted-foreground mt-1 group-hover:text-foreground transition-colors">
                           {isCurrent ? `${dias} dias` : isPast ? `${dias} dias` : etapa.nome}
                         </span>
                       </div>
