@@ -175,7 +175,7 @@ export default function CrmFunil() {
       })));
     };
     enrichLeads();
-  }, [realtimeLeads, reloadKey, etiquetaVersion, proprietarios]);
+  }, [realtimeLeads, reloadKey, etiquetaVersion, atividadeVersion, proprietarios]);
 
   const loading = loadingFunis || loadingLeads;
 
