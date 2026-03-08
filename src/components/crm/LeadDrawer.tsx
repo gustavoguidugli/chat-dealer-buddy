@@ -1204,15 +1204,57 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           onChange={e => setNovaAnotacao(e.target.value)}
                           className="border-0 p-0 resize-none focus-visible:ring-0 min-h-[60px] text-sm"
                         />
+                        {/* File preview */}
+                        {selectedFiles.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {selectedFiles.map((file, idx) => (
+                              <div key={idx} className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs">
+                                {file.type.startsWith('image/') ? (
+                                  <img
+                                    src={URL.createObjectURL(file)}
+                                    alt={file.name}
+                                    className="h-8 w-8 rounded object-cover"
+                                  />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <span className="max-w-[120px] truncate text-foreground">{file.name}</span>
+                                <button
+                                  onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                                  className="text-muted-foreground hover:text-destructive"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-muted-foreground">{anotacoes.length}/100 notes</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">{anotacoes.length}/100 notes</span>
+                            <label className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                              <Paperclip className="h-4 w-4" />
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                                className="hidden"
+                                onChange={e => {
+                                  if (e.target.files) {
+                                    setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                                  }
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
                           <Button
                             size="sm"
-                            disabled={!novaAnotacao.trim() || savingAnotacao}
+                            disabled={(!novaAnotacao.trim() && selectedFiles.length === 0) || savingAnotacao}
                             onClick={handleSalvarAnotacao}
                             className="bg-accent hover:bg-accent/90 text-accent-foreground"
                           >
-                            Salvar
+                            {savingAnotacao ? 'Enviando...' : 'Salvar'}
                           </Button>
                         </div>
                       </div>
