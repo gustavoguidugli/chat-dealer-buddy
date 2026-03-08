@@ -31,6 +31,7 @@ import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
   Pencil, Pin, Plus, Trash2, GripVertical, UserCircle, DollarSign,
+  Paperclip, Download, Image, X,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
