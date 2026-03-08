@@ -32,6 +32,7 @@ export function useLeadRealtime(leadId: number | null) {
     interesse: null, cidade: null, tipo_uso: null,
     consumo_mensal: null, gasto_mensal: null, dias_semana: null, telefone: null,
   })
+  const [anexos, setAnexos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
