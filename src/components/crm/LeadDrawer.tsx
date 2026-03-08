@@ -630,7 +630,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h1 className="text-xl font-bold text-foreground">{lead.nome}</h1>
+                      <EditableLeadName leadId={lead.id} nome={lead.nome} onSaved={onLeadChanged} />
                       <EtiquetaSelector leadId={lead.id} empresaId={lead.id_empresa} onChange={onLeadChanged} />
                     </div>
                     <Popover open={funilEtapaPopoverOpen} onOpenChange={setFunilEtapaPopoverOpen}>
