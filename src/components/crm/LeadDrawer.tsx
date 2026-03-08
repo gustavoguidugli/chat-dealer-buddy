@@ -560,15 +560,51 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   };
 
   const handleSalvarAnotacao = async () => {
-    if (!lead || !novaAnotacao.trim()) return;
+    if (!lead || (!novaAnotacao.trim() && selectedFiles.length === 0)) return;
     setSavingAnotacao(true);
-    await supabase.from('anotacoes_lead').insert({
+    
+    const { data: anotacaoData, error: anotacaoError } = await supabase.from('anotacoes_lead').insert({
       id_lead: lead.id,
       id_empresa: empresaId!,
-      conteudo: novaAnotacao.trim(),
+      conteudo: novaAnotacao.trim() || (selectedFiles.length > 0 ? `📎 ${selectedFiles.length} arquivo(s)` : ''),
       criado_por: user?.id || null,
-    });
+    }).select('id').single();
+
+    if (anotacaoError || !anotacaoData) {
+      toast({ title: 'Erro ao salvar anotação', variant: 'destructive' });
+      setSavingAnotacao(false);
+      return;
+    }
+
+    // Upload files
+    if (selectedFiles.length > 0) {
+      for (const file of selectedFiles) {
+        const path = `${empresaId}/${lead.id}/${anotacaoData.id}/${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('anexos-lead')
+          .upload(path, file);
+
+        if (uploadError) {
+          toast({ title: `Erro ao enviar ${file.name}`, description: uploadError.message, variant: 'destructive' });
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage.from('anexos-lead').getPublicUrl(path);
+
+        await supabase.from('anexos_anotacao').insert({
+          id_anotacao: anotacaoData.id,
+          id_empresa: empresaId!,
+          nome_arquivo: file.name,
+          tipo_arquivo: file.type,
+          tamanho: file.size,
+          storage_path: path,
+          url_publica: urlData.publicUrl,
+        });
+      }
+    }
+
     setNovaAnotacao('');
+    setSelectedFiles([]);
     setSavingAnotacao(false);
   };
 
