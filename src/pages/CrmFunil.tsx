@@ -511,6 +511,8 @@ export default function CrmFunil() {
               onMoveLead={handleMoveLead}
               onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
               onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
+              onDropWon={(leadId) => setDragGanhoLeadId(leadId)}
+              onDropLost={(leadId) => setDragPerdidoLeadId(leadId)}
             />
           )}
         </div>
