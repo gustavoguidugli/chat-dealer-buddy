@@ -253,6 +253,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
   // UI state
   const [novaAnotacao, setNovaAnotacao] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [savingAnotacao, setSavingAnotacao] = useState(false);
   const [camposAbertos, setCamposAbertos] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
