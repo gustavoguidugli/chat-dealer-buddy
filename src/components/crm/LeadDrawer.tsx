@@ -195,6 +195,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     anotacoes: realtimeAnotacoes,
     atividades: realtimeAtividades,
     historico: realtimeHistorico,
+    dadosContato,
     loading: realtimeLoading,
   } = useLeadRealtime(open ? leadId : null);
 
