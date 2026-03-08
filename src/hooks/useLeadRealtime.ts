@@ -43,15 +43,33 @@ export function useLeadRealtime(leadId: number | null) {
     async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null) {
       let currentInteresse = interesse ?? null
 
-      // Busca interesse de contatos_geral (quando existir FK)
-      if (idContatoGeral) {
-        const { data: contatoGeral } = await supabase
-          .from('contatos_geral')
-          .select('interesse')
-          .eq('id', idContatoGeral)
-          .single()
+      // Busca interesse de contatos_geral (prioriza FK e faz fallback por whatsapp)
+      let contatoGeral: { id: number; interesse: string | null } | null = null
 
-        currentInteresse = currentInteresse ?? contatoGeral?.interesse ?? null
+      if (idContatoGeral) {
+        const { data: contatoGeralById } = await supabase
+          .from('contatos_geral')
+          .select('id, interesse')
+          .eq('id', idContatoGeral)
+          .maybeSingle()
+
+        contatoGeral = contatoGeralById
+      }
+
+      if (!contatoGeral && whatsapp) {
+        const { data: contatoGeralByWhatsapp } = await supabase
+          .from('contatos_geral')
+          .select('id, interesse')
+          .eq('whatsapp', whatsapp)
+          .limit(1)
+          .maybeSingle()
+
+        contatoGeral = contatoGeralByWhatsapp
+      }
+
+      if (contatoGeral) {
+        contatoGeralId = contatoGeral.id
+        currentInteresse = currentInteresse ?? contatoGeral.interesse ?? null
       }
 
       const dados: DadosContato = {
