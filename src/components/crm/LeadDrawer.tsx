@@ -1152,10 +1152,17 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                         </p>
                         {campos.map(campo => {
                           // Merge campos_extras com dadosContato (dados SDR têm prioridade quando preenchidos)
+                          const normalizeFieldIdentifier = (value: string) =>
+                            value
+                              .normalize('NFD')
+                              .replace(/[\u0300-\u036f]/g, '')
+                              .toLowerCase()
+                              .trim()
+                              .replace(/\s+/g, '_');
+
                           // Map campo slugs to dadosContato keys
                           // Handles both correct slugs and legacy/mismatched slugs from DB
                           const contatoFieldMap: Record<string, keyof typeof dadosContato> = {
-                            // Correct slugs
                             interesse: 'interesse',
                             cidade: 'cidade',
                             tipo_uso: 'tipo_uso',
@@ -1164,30 +1171,41 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             gasto_mensal: 'gasto_mensal',
                             dias_semana: 'dias_semana',
                             dias_por_semana: 'dias_semana',
-                            // Legacy/mismatched slugs (campo nome vs slug mismatch in DB)
-                            gasto: 'interesse',        // slug "gasto" is actually "Interesse" field
+                            // Legacy/mismatched slugs
+                            gasto: 'interesse',
                           };
-                          // Also map by campo.nome (lowercase) as fallback for mismatched slugs
+
+                          // Also map by campo.nome as fallback for mismatched slugs
                           const contatoNameMap: Record<string, keyof typeof dadosContato> = {
-                            'interesse': 'interesse',
-                            'cidade': 'cidade',
-                            'tipo de uso': 'tipo_uso',
-                            'consumo mensal': 'consumo_mensal',
-                            'gasto mensal': 'gasto_mensal',
-                            'dias por semana': 'dias_semana',
+                            interesse: 'interesse',
+                            cidade: 'cidade',
+                            tipo_de_uso: 'tipo_uso',
+                            consumo_mensal: 'consumo_mensal',
+                            gasto_mensal: 'gasto_mensal',
+                            dias_por_semana: 'dias_semana',
                           };
+
+                          const normalizedNome = normalizeFieldIdentifier(campo.nome);
+                          const normalizedSlug = normalizeFieldIdentifier(campo.slug);
+
                           // Prioriza nome do campo (mais confiável quando slugs são inconsistentes no DB)
-                          const contatoKeyByName = contatoNameMap[campo.nome.toLowerCase()];
-                          const contatoKeyBySlug = contatoFieldMap[campo.slug];
+                          const contatoKeyByName = contatoNameMap[normalizedNome];
+                          const contatoKeyBySlug = contatoFieldMap[normalizedSlug];
                           const contatoKey = contatoKeyByName ?? contatoKeyBySlug;
+                          const storageKey = contatoKey ?? campo.slug;
+
                           const contatoValue = contatoKey ? dadosContato[contatoKey] : null;
-                          // Treat empty strings as null so campos_extras fallback works
                           const contatoHasValue = contatoValue != null && String(contatoValue).trim() !== '';
-                          const value = contatoHasValue
-                            ? String(contatoValue)
-                            : (lead.campos_extras?.[campo.slug] ?? '');
+
+                          const extraValue =
+                            lead.campos_extras?.[storageKey] ??
+                            lead.campos_extras?.[campo.slug] ??
+                            '';
+
+                          const value = contatoHasValue ? String(contatoValue) : String(extraValue);
                           const isEditing = editingField === campo.slug;
-                          const isInteresseField = campo.slug === 'interesse' || campo.slug === 'gasto' || campo.nome.toLowerCase() === 'interesse';
+                          const isInteresseField = contatoKey === 'interesse' || normalizedNome === 'interesse';
+
                           return (
                             <div
                               key={campo.id}
@@ -1195,7 +1213,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                               onClick={() => {
                                 if (!isEditing && !isInteresseField) {
                                   setEditingField(campo.slug);
-                                  setEditingValue(value || '');
+                                  setEditingValue(value);
                                 }
                               }}
                             >
@@ -1207,7 +1225,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                   <Select
                                     value={value || ''}
                                     onValueChange={async (val) => {
-                                      const newExtras = { ...(lead.campos_extras || {}), [campo.slug]: val };
+                                      const newExtras = { ...(lead.campos_extras || {}), [storageKey]: val };
                                       await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
                                       setLead({ ...lead, campos_extras: newExtras });
                                     }}
@@ -1232,10 +1250,10 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                     className="h-7 text-xs flex-1"
                                     autoFocus
                                     onKeyDown={e => {
-                                      if (e.key === 'Enter') handleSaveField(campo.slug);
+                                      if (e.key === 'Enter') handleSaveField(storageKey);
                                       if (e.key === 'Escape') setEditingField(null);
                                     }}
-                                    onBlur={() => handleSaveField(campo.slug)}
+                                    onBlur={() => handleSaveField(storageKey)}
                                   />
                                 </div>
                               ) : (
