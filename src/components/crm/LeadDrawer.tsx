@@ -1441,6 +1441,24 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                           ))}
                                         </div>
                                       )}
+                                      {/* Images shown inline */}
+                                      {imageAnexos.length > 0 && (
+                                        <div className="flex flex-wrap gap-2">
+                                          {imageAnexos.map((anexo: any) => (
+                                            <button
+                                              key={anexo.id}
+                                              onClick={() => handleOpenFile(anexo.storage_path, anexo.tipo_arquivo, anexo.nome_arquivo)}
+                                              className="block"
+                                            >
+                                              <img
+                                                src={anexo.url_publica}
+                                                alt={anexo.nome_arquivo}
+                                                className="max-w-[280px] max-h-[200px] rounded-lg border object-contain hover:opacity-80 transition-opacity cursor-pointer"
+                                              />
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
                                       {/* Files shown as clickable cards */}
                                       {fileAnexos.map((anexo: any) => {
                                         const isPdf = anexo.tipo_arquivo === 'application/pdf';
@@ -1448,12 +1466,10 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                           ? `${(anexo.tamanho / (1024 * 1024)).toFixed(1)} MB`
                                           : `${Math.round(anexo.tamanho / 1024)} KB`;
                                         return (
-                                          <a
+                                          <button
                                             key={anexo.id}
-                                            href={anexo.url_publica}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/60 transition-colors group"
+                                            onClick={() => handleOpenFile(anexo.storage_path, anexo.tipo_arquivo, anexo.nome_arquivo)}
+                                            className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/60 transition-colors group w-full text-left"
                                           >
                                             <div className="shrink-0">
                                               <Paperclip className="h-5 w-5 text-muted-foreground" />
