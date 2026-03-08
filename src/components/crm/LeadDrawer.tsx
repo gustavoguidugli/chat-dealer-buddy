@@ -195,6 +195,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     anotacoes: realtimeAnotacoes,
     atividades: realtimeAtividades,
     historico: realtimeHistorico,
+    dadosContato,
     loading: realtimeLoading,
   } = useLeadRealtime(open ? leadId : null);
 
@@ -971,7 +972,18 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           Negócio
                         </p>
                         {campos.map(campo => {
-                          const value = lead.campos_extras?.[campo.slug];
+                          // Merge campos_extras com dadosContato (dados SDR têm prioridade quando preenchidos)
+                          const contatoFieldMap: Record<string, keyof typeof dadosContato> = {
+                            interesse: 'interesse',
+                            cidade: 'cidade',
+                            tipo_uso: 'tipo_uso',
+                            consumo_mensal: 'consumo_mensal',
+                            gasto_mensal: 'gasto_mensal',
+                            dias_semana: 'dias_semana',
+                          };
+                          const contatoKey = contatoFieldMap[campo.slug];
+                          const contatoValue = contatoKey ? dadosContato[contatoKey] : null;
+                          const value = contatoValue != null ? String(contatoValue) : (lead.campos_extras?.[campo.slug] ?? '');
                           const isEditing = editingField === campo.slug;
                           return (
                             <div
