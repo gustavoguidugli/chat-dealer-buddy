@@ -1181,7 +1181,9 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           const contatoKeyBySlug = contatoFieldMap[campo.slug];
                           const contatoKey = contatoKeyByName ?? contatoKeyBySlug;
                           const contatoValue = contatoKey ? dadosContato[contatoKey] : null;
-                          const value = contatoValue != null
+                          // Treat empty strings as null so campos_extras fallback works
+                          const contatoHasValue = contatoValue != null && String(contatoValue).trim() !== '';
+                          const value = contatoHasValue
                             ? String(contatoValue)
                             : (lead.campos_extras?.[campo.slug] ?? '');
                           const isEditing = editingField === campo.slug;
