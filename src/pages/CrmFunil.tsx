@@ -265,6 +265,36 @@ export default function CrmFunil() {
     setModalOpen(false);
   }, []);
 
+  const handleDragGanho = useCallback(async () => {
+    if (!dragGanhoLeadId) return;
+    const { error } = await supabase.from('leads_crm').update({
+      status: 'ganho',
+      data_ganho: new Date().toISOString(),
+    }).eq('id', dragGanhoLeadId);
+    if (error) {
+      toast({ title: 'Erro ao marcar como ganho', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Lead marcado como ganho! 🎉' });
+    }
+    setDragGanhoLeadId(null);
+  }, [dragGanhoLeadId, toast]);
+
+  const handleDragPerdido = useCallback(async () => {
+    if (!dragPerdidoLeadId || !dragMotivoPerda.trim()) return;
+    const { error } = await supabase.from('leads_crm').update({
+      status: 'perdido',
+      motivo_perda: dragMotivoPerda.trim(),
+      data_perdido: new Date().toISOString(),
+    }).eq('id', dragPerdidoLeadId);
+    if (error) {
+      toast({ title: 'Erro ao marcar como perdido', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Lead marcado como perdido' });
+    }
+    setDragPerdidoLeadId(null);
+    setDragMotivoPerda('');
+  }, [dragPerdidoLeadId, dragMotivoPerda, toast]);
+
   // totalNegocios computed after filteredLeads below
   const funilNome = funis.find(f => f.id === funilAtual)?.nome || '';
 
