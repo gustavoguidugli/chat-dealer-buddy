@@ -245,6 +245,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [funilNome, setFunilNome] = useState('');
   const [etapas, setEtapas] = useState<EtapaInfo[]>([]);
   const [campos, setCampos] = useState<CampoCustomizado[]>([]);
+  const [listaInteresses, setListaInteresses] = useState<{ nome: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Map realtime data to typed state
@@ -390,15 +391,17 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
         campos_extras: (l.campos_extras as Record<string, any>) || {},
       });
 
-      const [funilRes, etapasRes, camposRes] = await Promise.all([
+      const [funilRes, etapasRes, camposRes, interessesRes] = await Promise.all([
         supabase.from('funis').select('nome').eq('id', l.id_funil).single(),
         supabase.from('etapas_funil').select('id, nome, ordem').eq('id_funil', l.id_funil).eq('ativo', true).order('ordem'),
         supabase.from('campos_customizados').select('*').or(`id_funil.is.null,id_funil.eq.${l.id_funil}`).eq('id_empresa', l.id_empresa).eq('ativo', true).order('ordem'),
+        supabase.from('lista_interesses').select('nome, label').eq('empresa_id', l.id_empresa).order('ordem'),
       ]);
 
       setFunilNome(funilRes.data?.nome || '');
       setEtapas(etapasRes.data || []);
       setCampos((camposRes.data || []) as CampoCustomizado[]);
+      setListaInteresses(interessesRes.data || []);
     }
 
     setLoading(false);
