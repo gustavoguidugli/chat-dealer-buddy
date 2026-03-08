@@ -973,7 +973,10 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                         </p>
                         {campos.map(campo => {
                           // Merge campos_extras com dadosContato (dados SDR têm prioridade quando preenchidos)
+                          // Map campo slugs to dadosContato keys
+                          // Handles both correct slugs and legacy/mismatched slugs from DB
                           const contatoFieldMap: Record<string, keyof typeof dadosContato> = {
+                            // Correct slugs
                             interesse: 'interesse',
                             cidade: 'cidade',
                             tipo_uso: 'tipo_uso',
@@ -982,19 +985,23 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             gasto_mensal: 'gasto_mensal',
                             dias_semana: 'dias_semana',
                             dias_por_semana: 'dias_semana',
+                            // Legacy/mismatched slugs (campo nome vs slug mismatch in DB)
+                            gasto: 'interesse',        // slug "gasto" is actually "Interesse" field
                           };
-                          const contatoKey = contatoFieldMap[campo.slug];
+                          // Also map by campo.nome (lowercase) as fallback for mismatched slugs
+                          const contatoNameMap: Record<string, keyof typeof dadosContato> = {
+                            'interesse': 'interesse',
+                            'cidade': 'cidade',
+                            'tipo de uso': 'tipo_uso',
+                            'consumo mensal': 'consumo_mensal',
+                            'gasto mensal': 'gasto_mensal',
+                            'dias por semana': 'dias_semana',
+                          };
+                          const contatoKey = contatoFieldMap[campo.slug] ?? contatoNameMap[campo.nome.toLowerCase()];
                           const contatoValue = contatoKey ? dadosContato[contatoKey] : null;
-                          const extraAliasMap: Record<string, string> = {
-                            tipo_de_uso: 'tipo_uso',
-                            dias_por_semana: 'dias_semana',
-                          };
-                          const extraAliasValue = extraAliasMap[campo.slug]
-                            ? lead.campos_extras?.[extraAliasMap[campo.slug]]
-                            : undefined;
                           const value = contatoValue != null
                             ? String(contatoValue)
-                            : (lead.campos_extras?.[campo.slug] ?? extraAliasValue ?? '');
+                            : (lead.campos_extras?.[campo.slug] ?? '');
                           const isEditing = editingField === campo.slug;
                           return (
                             <div
