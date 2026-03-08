@@ -20,6 +20,7 @@ export interface DadosContato {
   consumo_mensal: number | null
   gasto_mensal: number | null
   dias_semana: number | null
+  telefone: string | null
 }
 
 export function useLeadRealtime(leadId: number | null) {
@@ -29,7 +30,7 @@ export function useLeadRealtime(leadId: number | null) {
   const [historico, setHistorico] = useState<any[]>([])
   const [dadosContato, setDadosContato] = useState<DadosContato>({
     interesse: null, cidade: null, tipo_uso: null,
-    consumo_mensal: null, gasto_mensal: null, dias_semana: null,
+    consumo_mensal: null, gasto_mensal: null, dias_semana: null, telefone: null,
   })
   const [loading, setLoading] = useState(true)
 
@@ -44,12 +45,12 @@ export function useLeadRealtime(leadId: number | null) {
       let currentInteresse = interesse ?? null
 
       // Busca interesse de contatos_geral (prioriza FK e faz fallback por whatsapp)
-      let contatoGeral: { id: number; interesse: string | null } | null = null
+      let contatoGeral: { id: number; interesse: string | null; whatsapp_padrao_pipedrive: string | null } | null = null
 
       if (idContatoGeral) {
         const { data: contatoGeralById } = await supabase
           .from('contatos_geral')
-          .select('id, interesse')
+          .select('id, interesse, whatsapp_padrao_pipedrive')
           .eq('id', idContatoGeral)
           .maybeSingle()
 
@@ -59,7 +60,7 @@ export function useLeadRealtime(leadId: number | null) {
       if (!contatoGeral && whatsapp) {
         const { data: contatoGeralByWhatsapp } = await supabase
           .from('contatos_geral')
-          .select('id, interesse')
+          .select('id, interesse, whatsapp_padrao_pipedrive')
           .eq('whatsapp', whatsapp)
           .limit(1)
           .maybeSingle()
@@ -76,6 +77,7 @@ export function useLeadRealtime(leadId: number | null) {
         interesse: currentInteresse,
         cidade: null, tipo_uso: null,
         consumo_mensal: null, gasto_mensal: null, dias_semana: null,
+        telefone: contatoGeral?.whatsapp_padrao_pipedrive ?? null,
       }
 
       // Busca dados SDR por whatsapp (independente da FK de contato_geral)
