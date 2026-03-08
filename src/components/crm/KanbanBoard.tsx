@@ -12,8 +12,8 @@ import {
 } from '@dnd-kit/core';
 import { useState } from 'react';
 import { KanbanColumn } from './KanbanColumn';
-import { StatusColumn } from './StatusColumn';
 import { LeadCardComponent } from './LeadCardComponent';
+import { DragBottomBar } from './DragBottomBar';
 import type { LeadCard } from '@/pages/CrmFunil';
 
 interface KanbanBoardProps {
@@ -113,25 +113,9 @@ export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveL
             />
           );
         })}
-
-        {/* Won column */}
-        <StatusColumn
-          title="Negócios Ganhos"
-          leads={wonLeads}
-          totalValor={wonTotal}
-          variant="won"
-          onLeadClick={onLeadClick}
-        />
-
-        {/* Lost column */}
-        <StatusColumn
-          title="Negócios Perdidos"
-          leads={lostLeads}
-          totalValor={lostTotal}
-          variant="lost"
-          onLeadClick={onLeadClick}
-        />
       </div>
+
+      <DragBottomBar visible={activeId !== null} />
 
       <DragOverlay>
         {activeLead ? (
