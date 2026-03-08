@@ -1206,10 +1206,28 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                       {/* Input anotação */}
                       <div className="border rounded-lg p-3 mt-3">
                         <Textarea
-                          placeholder="Escreva uma anotação, @nome..."
+                          placeholder="Escreva uma anotação, @nome... (cole imagens com Ctrl+V)"
                           value={novaAnotacao}
                           onChange={e => setNovaAnotacao(e.target.value)}
                           className="border-0 p-0 resize-none focus-visible:ring-0 min-h-[60px] text-sm"
+                          onPaste={e => {
+                            const items = e.clipboardData?.items;
+                            if (!items) return;
+                            const imageFiles: File[] = [];
+                            for (let i = 0; i < items.length; i++) {
+                              if (items[i].type.startsWith('image/')) {
+                                const file = items[i].getAsFile();
+                                if (file) {
+                                  const named = new File([file], `imagem-colada-${Date.now()}.png`, { type: file.type });
+                                  imageFiles.push(named);
+                                }
+                              }
+                            }
+                            if (imageFiles.length > 0) {
+                              e.preventDefault();
+                              setSelectedFiles(prev => [...prev, ...imageFiles]);
+                            }
+                          }}
                         />
                         {/* File preview */}
                         {selectedFiles.length > 0 && (
