@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { icons, LucideIcon } from 'lucide-react';
 import { Settings } from 'lucide-react';
@@ -36,19 +36,38 @@ function getIcon(iconeName: string): LucideIcon | null {
 export function ActivityIconBar({ empresaId, selectedName, onSelect, onManage }: ActivityIconBarProps) {
   const [icones, setIcones] = useState<IconeAtividade[]>([]);
 
+  const fetchIcones = useCallback(async () => {
+    if (!empresaId) return;
+    const { data } = await supabase
+      .from('icones_atividades')
+      .select('id, nome, icone, cor, ordem')
+      .eq('id_empresa', empresaId)
+      .eq('ativo', true)
+      .order('ordem');
+    setIcones(data || []);
+  }, [empresaId]);
+
+  useEffect(() => {
+    fetchIcones();
+  }, [fetchIcones]);
+
+  // Realtime subscription
   useEffect(() => {
     if (!empresaId) return;
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('icones_atividades')
-        .select('id, nome, icone, cor, ordem')
-        .eq('id_empresa', empresaId)
-        .eq('ativo', true)
-        .order('ordem');
-      setIcones(data || []);
-    };
-    fetch();
-  }, [empresaId]);
+    const channel = supabase
+      .channel(`icones-atividades-${empresaId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'icones_atividades',
+        filter: `id_empresa=eq.${empresaId}`,
+      }, () => {
+        fetchIcones();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [empresaId, fetchIcones]);
 
   if (icones.length === 0) return null;
 
