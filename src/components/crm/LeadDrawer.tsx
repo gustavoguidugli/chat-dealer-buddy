@@ -26,6 +26,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { EtiquetaSelector } from '@/components/crm/EtiquetaSelector';
+import { FilePreviewModal } from '@/components/crm/FilePreviewModal';
 import { ActivityModal } from '@/components/crm/ActivityModal';
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
@@ -256,6 +257,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [savingAnotacao, setSavingAnotacao] = useState(false);
   const [camposAbertos, setCamposAbertos] = useState(true);
+  const [previewFile, setPreviewFile] = useState<{ url: string | null; name: string; mime: string; loading: boolean; storagePath?: string } | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [historyFilter, setHistoryFilter] = useState<'todos' | 'anotacoes' | 'atividades'>('todos');
@@ -695,16 +697,32 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const histAnotCount = historico.filter(h => h.tipo_evento === 'anotacao').length;
   const histAtivCount = historico.filter(h => h.tipo_evento !== 'anotacao' && h.tipo_evento !== 'mudou_etapa' && h.tipo_evento !== 'ganho' && h.tipo_evento !== 'perdido').length;
 
-  // Open file via Supabase SDK download (bypasses ad blockers)
-  const handleOpenFile = async (storagePath: string, mimeType: string, fileName: string) => {
+
+
+
+  // Preview file in modal
+  const handlePreviewFile = async (storagePath: string, mimeType: string, fileName: string) => {
+    setPreviewFile({ url: null, name: fileName, mime: mimeType, loading: true });
     const { data, error } = await supabase.storage.from('anexos-lead').download(storagePath);
     if (error || !data) {
       toast({ title: 'Erro ao abrir arquivo', description: error?.message, variant: 'destructive' });
+      setPreviewFile(null);
       return;
     }
     const blob = new Blob([data], { type: mimeType });
     const url = URL.createObjectURL(blob);
-    // Use an <a> tag with download to force download instead of opening in new tab (avoids ERR_BLOCKED_BY_CLIENT)
+    setPreviewFile({ url, name: fileName, mime: mimeType, loading: false });
+  };
+
+  // Download file
+  const handleDownloadFile = async (storagePath: string, mimeType: string, fileName: string) => {
+    const { data, error } = await supabase.storage.from('anexos-lead').download(storagePath);
+    if (error || !data) {
+      toast({ title: 'Erro ao baixar arquivo', description: error?.message, variant: 'destructive' });
+      return;
+    }
+    const blob = new Blob([data], { type: mimeType });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
@@ -1440,7 +1458,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                           {imageAnexos.map((anexo: any) => (
                                             <button
                                               key={anexo.id}
-                                              onClick={() => handleOpenFile(anexo.storage_path, anexo.tipo_arquivo, anexo.nome_arquivo)}
+                                              onClick={() => handlePreviewFile(anexo.storage_path, anexo.tipo_arquivo, anexo.nome_arquivo)}
                                               className="block"
                                             >
                                               <img
@@ -1461,7 +1479,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                         return (
                                           <button
                                             key={anexo.id}
-                                            onClick={() => handleOpenFile(anexo.storage_path, anexo.tipo_arquivo, anexo.nome_arquivo)}
+                                            onClick={() => handlePreviewFile(anexo.storage_path, anexo.tipo_arquivo, anexo.nome_arquivo)}
                                             className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/60 transition-colors group w-full text-left"
                                           >
                                             <div className="shrink-0">
@@ -1794,6 +1812,31 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
           activity={editingActivity}
           isOpen={activityModalOpen}
           onClose={() => { setActivityModalOpen(false); setEditingActivity(null); }}
+        />
+      )}
+      {previewFile && (
+        <FilePreviewModal
+          open={!!previewFile}
+          onOpenChange={(open) => {
+            if (!open) {
+              if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
+              setPreviewFile(null);
+            }
+          }}
+          fileUrl={previewFile.url}
+          fileName={previewFile.name}
+          mimeType={previewFile.mime}
+          loading={previewFile.loading}
+          onDownload={() => {
+            if (previewFile?.url) {
+              const a = document.createElement('a');
+              a.href = previewFile.url;
+              a.download = previewFile.name;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }
+          }}
         />
       )}
     </>
