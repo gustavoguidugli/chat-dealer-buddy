@@ -995,6 +995,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           const value = contatoValue != null
                             ? String(contatoValue)
                             : (lead.campos_extras?.[campo.slug] ?? extraAliasValue ?? '');
+                          const isEditing = editingField === campo.slug;
                           return (
                             <div
                               key={campo.id}
