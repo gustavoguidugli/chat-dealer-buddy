@@ -1022,11 +1022,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             </div>
                           );
                         })}
-                        {campos.length === 0 && (
-                          <p className="text-xs text-muted-foreground py-2">Nenhum campo customizado</p>
-                        )}
-
-                        {/* Dados automáticos do contato (sempre visíveis quando preenchidos) */}
+                        {/* Campos automáticos do contato (integrados na seção Negócio) */}
                         {(() => {
                           const autoFields: { label: string; slug: string; key: keyof typeof dadosContato }[] = [
                             { label: 'Interesse', slug: 'interesse', key: 'interesse' },
@@ -1036,40 +1032,30 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             { label: 'Gasto Mensal', slug: 'gasto_mensal', key: 'gasto_mensal' },
                             { label: 'Dias/Semana', slug: 'dias_semana', key: 'dias_semana' },
                           ];
-                          // Only show fields not already covered by campos_customizados
                           const campoSlugs = new Set(campos.map(c => c.slug));
                           const visibleAutoFields = autoFields.filter(f => !campoSlugs.has(f.slug));
-                          const hasAnyValue = visibleAutoFields.some(f => dadosContato[f.key] != null);
                           
-                          if (!hasAnyValue && visibleAutoFields.length === 0) return null;
-                          
-                          return (
-                            <>
-                              {visibleAutoFields.length > 0 && (
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 mt-4">
-                                  Dados do Contato
-                                </p>
-                              )}
-                              {visibleAutoFields.map(f => {
-                                const val = dadosContato[f.key];
-                                const displayVal = val != null ? String(val) : (lead.campos_extras?.[f.slug] ?? '');
-                                return (
-                                  <div
-                                    key={f.slug}
-                                    className="flex items-center justify-between py-2 px-1 rounded-md"
-                                  >
-                                    <span className="text-xs text-muted-foreground font-medium shrink-0 w-[90px] text-right pr-3">
-                                      {f.label}
-                                    </span>
-                                    <div className="flex-1">
-                                      <span className="text-sm text-foreground">{displayVal || '-'}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </>
-                          );
+                          return visibleAutoFields.map(f => {
+                            const val = dadosContato[f.key];
+                            const displayVal = val != null ? String(val) : (lead.campos_extras?.[f.slug] ?? '');
+                            return (
+                              <div
+                                key={f.slug}
+                                className="flex items-center justify-between py-2 px-1 rounded-md"
+                              >
+                                <span className="text-xs text-muted-foreground font-medium shrink-0 w-[90px] text-right pr-3">
+                                  {f.label}
+                                </span>
+                                <div className="flex-1">
+                                  <span className="text-sm text-foreground">{displayVal || '-'}</span>
+                                </div>
+                              </div>
+                            );
+                          });
                         })()}
+                        {campos.length === 0 && !Object.values(dadosContato).some(v => v != null) && (
+                          <p className="text-xs text-muted-foreground py-2">Nenhum campo customizado</p>
+                        )}
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
