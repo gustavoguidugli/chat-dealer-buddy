@@ -153,6 +153,19 @@ export function useLeadRealtime(leadId: number | null) {
 
       setAnotacoes(anotacoesData || [])
 
+      // Anexos de anotações
+      const anotacaoIds = (anotacoesData || []).map((a: any) => a.id)
+      if (anotacaoIds.length > 0) {
+        const { data: anexosData } = await supabase
+          .from('anexos_anotacao')
+          .select('*')
+          .in('id_anotacao', anotacaoIds)
+          .order('created_at', { ascending: true })
+        setAnexos(anexosData || [])
+      } else {
+        setAnexos([])
+      }
+
       // Atividades
       const { data: atividadesData } = await supabase
         .from('atividades')
