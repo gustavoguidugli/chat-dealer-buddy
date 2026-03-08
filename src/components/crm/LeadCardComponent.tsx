@@ -13,6 +13,7 @@ import type { LeadCard } from '@/pages/CrmFunil';
 interface LeadCardProps {
   lead: LeadCard;
   isDragging?: boolean;
+  isOverlay?: boolean;
 }
 
 function formatDate(dateStr: string | null) {
@@ -59,7 +60,7 @@ function getActivityLabel(status: 'overdue' | 'today' | 'future', dataVencimento
   return `Vence em ${diffDays} dias`;
 }
 
-export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
+export function LeadCardComponent({ lead, isDragging, isOverlay }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: lead.id,
   });
@@ -69,9 +70,10 @@ export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<any>(null);
 
-  const style = transform
-    ? { transform: CSS.Translate.toString(transform) }
-    : undefined;
+  const style: React.CSSProperties = {
+    ...(transform ? { transform: CSS.Translate.toString(transform) } : {}),
+    ...(isDragging && !isOverlay ? { opacity: 0 } : {}),
+  };
 
   const topColor = lead.etiquetas.length > 0 ? lead.etiquetas[0].cor : null;
   const atividade = lead.proximaAtividade;
