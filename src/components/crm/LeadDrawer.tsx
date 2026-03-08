@@ -704,7 +704,14 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     }
     const blob = new Blob([data], { type: mimeType });
     const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    // Use an <a> tag with download to force download instead of opening in new tab (avoids ERR_BLOCKED_BY_CLIENT)
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   function getHistoricoIcon(tipo: string) {
