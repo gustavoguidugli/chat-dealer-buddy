@@ -1225,6 +1225,19 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                   <Select
                                     value={value || ''}
                                     onValueChange={async (val) => {
+                                      // Atualiza diretamente na tabela contatos_geral
+                                      if (lead.whatsapp) {
+                                        const { error } = await supabase
+                                          .from('contatos_geral')
+                                          .update({ interesse: val })
+                                          .eq('whatsapp', lead.whatsapp);
+                                        
+                                        if (error) {
+                                          toast({ title: 'Erro ao atualizar interesse', description: error.message, variant: 'destructive' });
+                                          return;
+                                        }
+                                      }
+                                      // Também atualiza campos_extras como fallback
                                       const newExtras = { ...(lead.campos_extras || {}), [storageKey]: val };
                                       await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
                                       setLead({ ...lead, campos_extras: newExtras });
