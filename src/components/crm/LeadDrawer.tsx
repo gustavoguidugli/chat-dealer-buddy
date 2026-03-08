@@ -31,6 +31,7 @@ import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
   Pencil, Pin, Plus, Trash2, GripVertical, UserCircle, DollarSign,
+  Paperclip, Download, Image, X,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -235,6 +236,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     atividades: realtimeAtividades,
     historico: realtimeHistorico,
     dadosContato,
+    anexos: realtimeAnexos,
     loading: realtimeLoading,
   } = useLeadRealtime(open ? leadId : null);
 
@@ -251,6 +253,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
   // UI state
   const [novaAnotacao, setNovaAnotacao] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [savingAnotacao, setSavingAnotacao] = useState(false);
   const [camposAbertos, setCamposAbertos] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -557,15 +560,51 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   };
 
   const handleSalvarAnotacao = async () => {
-    if (!lead || !novaAnotacao.trim()) return;
+    if (!lead || (!novaAnotacao.trim() && selectedFiles.length === 0)) return;
     setSavingAnotacao(true);
-    await supabase.from('anotacoes_lead').insert({
+    
+    const { data: anotacaoData, error: anotacaoError } = await supabase.from('anotacoes_lead').insert({
       id_lead: lead.id,
       id_empresa: empresaId!,
-      conteudo: novaAnotacao.trim(),
+      conteudo: novaAnotacao.trim() || (selectedFiles.length > 0 ? `📎 ${selectedFiles.length} arquivo(s)` : ''),
       criado_por: user?.id || null,
-    });
+    }).select('id').single();
+
+    if (anotacaoError || !anotacaoData) {
+      toast({ title: 'Erro ao salvar anotação', variant: 'destructive' });
+      setSavingAnotacao(false);
+      return;
+    }
+
+    // Upload files
+    if (selectedFiles.length > 0) {
+      for (const file of selectedFiles) {
+        const path = `${empresaId}/${lead.id}/${anotacaoData.id}/${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('anexos-lead')
+          .upload(path, file);
+
+        if (uploadError) {
+          toast({ title: `Erro ao enviar ${file.name}`, description: uploadError.message, variant: 'destructive' });
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage.from('anexos-lead').getPublicUrl(path);
+
+        await supabase.from('anexos_anotacao').insert({
+          id_anotacao: anotacaoData.id,
+          id_empresa: empresaId!,
+          nome_arquivo: file.name,
+          tipo_arquivo: file.type,
+          tamanho: file.size,
+          storage_path: path,
+          url_publica: urlData.publicUrl,
+        });
+      }
+    }
+
     setNovaAnotacao('');
+    setSelectedFiles([]);
     setSavingAnotacao(false);
   };
 
@@ -594,6 +633,13 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
   const handleExcluirAnotacao = async () => {
     if (!excluirAnotacaoId) return;
+    // Delete storage files first
+    const anexosToDelete = realtimeAnexos.filter((a: any) => a.id_anotacao === excluirAnotacaoId);
+    if (anexosToDelete.length > 0) {
+      await supabase.storage
+        .from('anexos-lead')
+        .remove(anexosToDelete.map((a: any) => a.storage_path));
+    }
     // Delete historico entry first (FK won't cascade here)
     await supabase.from('historico_lead')
       .delete()
@@ -1165,15 +1211,57 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           onChange={e => setNovaAnotacao(e.target.value)}
                           className="border-0 p-0 resize-none focus-visible:ring-0 min-h-[60px] text-sm"
                         />
+                        {/* File preview */}
+                        {selectedFiles.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {selectedFiles.map((file, idx) => (
+                              <div key={idx} className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs">
+                                {file.type.startsWith('image/') ? (
+                                  <img
+                                    src={URL.createObjectURL(file)}
+                                    alt={file.name}
+                                    className="h-8 w-8 rounded object-cover"
+                                  />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <span className="max-w-[120px] truncate text-foreground">{file.name}</span>
+                                <button
+                                  onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                                  className="text-muted-foreground hover:text-destructive"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-muted-foreground">{anotacoes.length}/100 notes</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">{anotacoes.length}/100 notes</span>
+                            <label className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                              <Paperclip className="h-4 w-4" />
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                                className="hidden"
+                                onChange={e => {
+                                  if (e.target.files) {
+                                    setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                                  }
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
                           <Button
                             size="sm"
-                            disabled={!novaAnotacao.trim() || savingAnotacao}
+                            disabled={(!novaAnotacao.trim() && selectedFiles.length === 0) || savingAnotacao}
                             onClick={handleSalvarAnotacao}
                             className="bg-accent hover:bg-accent/90 text-accent-foreground"
                           >
-                            Salvar
+                            {savingAnotacao ? 'Enviando...' : 'Salvar'}
                           </Button>
                         </div>
                       </div>
@@ -1295,11 +1383,42 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                 <p className="text-xs text-muted-foreground">
                                   {formatDateShort(h.created_at)}
                                 </p>
-                                <p className="text-sm text-foreground mt-0.5">
+                                <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap">
                                   {h.tipo_evento === 'anotacao'
                                     ? (h.metadados as any)?.conteudo_completo || h.descricao
                                     : h.descricao}
                                 </p>
+                                {/* Anexos da anotação */}
+                                {h.tipo_evento === 'anotacao' && (h.metadados as any)?.anotacao_id && (() => {
+                                  const anotacaoAnexos = realtimeAnexos.filter((a: any) => a.id_anotacao === (h.metadados as any).anotacao_id);
+                                  if (anotacaoAnexos.length === 0) return null;
+                                  return (
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                      {anotacaoAnexos.map((anexo: any) => (
+                                        anexo.tipo_arquivo?.startsWith('image/') ? (
+                                          <a key={anexo.id} href={anexo.url_publica} target="_blank" rel="noopener noreferrer">
+                                            <img
+                                              src={anexo.url_publica}
+                                              alt={anexo.nome_arquivo}
+                                              className="h-16 w-16 rounded-md object-cover border hover:opacity-80 transition-opacity cursor-pointer"
+                                            />
+                                          </a>
+                                        ) : (
+                                          <a
+                                            key={anexo.id}
+                                            href={anexo.url_publica}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1.5 text-xs hover:bg-muted/80 transition-colors"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span className="max-w-[140px] truncate text-foreground">{anexo.nome_arquivo}</span>
+                                          </a>
+                                        )
+                                      ))}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               {h.tipo_evento === 'anotacao' && (h.metadados as any)?.anotacao_id && (
                                 <div className="flex items-center gap-1 shrink-0">
