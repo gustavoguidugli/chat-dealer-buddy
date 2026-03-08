@@ -71,8 +71,7 @@ export function LeadCardComponent({ lead, isDragging, isOverlay }: LeadCardProps
   const [editingActivity, setEditingActivity] = useState<any>(null);
 
   const style: React.CSSProperties = {
-    ...(transform ? { transform: CSS.Translate.toString(transform) } : {}),
-    ...(isDragging && !isOverlay ? { opacity: 0 } : {}),
+    ...(isDraggingDnd && !isOverlay ? { opacity: 0 } : {}),
   };
 
   const topColor = lead.etiquetas.length > 0 ? lead.etiquetas[0].cor : null;
