@@ -120,7 +120,7 @@ export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveL
       <DragOverlay>
         {activeLead ? (
           <div className="rotate-2 opacity-90">
-            <LeadCardComponent lead={activeLead} isDragging />
+            <LeadCardComponent lead={activeLead} isDragging isOverlay />
           </div>
         ) : null}
       </DragOverlay>
