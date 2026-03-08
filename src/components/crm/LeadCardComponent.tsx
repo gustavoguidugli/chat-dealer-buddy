@@ -61,7 +61,7 @@ function getActivityLabel(status: 'overdue' | 'today' | 'future', dataVencimento
 }
 
 export function LeadCardComponent({ lead, isDragging, isOverlay }: LeadCardProps) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging: isDraggingDnd } = useDraggable({
     id: lead.id,
   });
   const { toast } = useToast();
