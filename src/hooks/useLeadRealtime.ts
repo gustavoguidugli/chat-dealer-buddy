@@ -41,51 +41,61 @@ export function useLeadRealtime(leadId: number | null) {
 
     // Busca dados do contato_geral e SDR baseado no interesse
     async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null) {
-      if (!idContatoGeral) return
+      let currentInteresse = interesse ?? null
 
-      // Busca interesse de contatos_geral
-      const { data: contatoGeral } = await supabase
-        .from('contatos_geral')
-        .select('interesse')
-        .eq('id', idContatoGeral)
-        .single()
+      // Busca interesse de contatos_geral (quando existir FK)
+      if (idContatoGeral) {
+        const { data: contatoGeral } = await supabase
+          .from('contatos_geral')
+          .select('interesse')
+          .eq('id', idContatoGeral)
+          .single()
 
-      const currentInteresse = interesse ?? contatoGeral?.interesse ?? null
+        currentInteresse = currentInteresse ?? contatoGeral?.interesse ?? null
+      }
+
       const dados: DadosContato = {
         interesse: currentInteresse,
         cidade: null, tipo_uso: null,
         consumo_mensal: null, gasto_mensal: null, dias_semana: null,
       }
 
-      // Busca dados SDR baseado no interesse
+      // Busca dados SDR por whatsapp (independente da FK de contato_geral)
       if (whatsapp) {
-        if (currentInteresse === 'maquina_gelo' || currentInteresse === 'maquina') {
-          const { data: sdrMaq } = await supabase
+        const [sdrMaqRes, sdrPurRes] = await Promise.all([
+          supabase
             .from('contatos_sdr_maquinagelo')
             .select('cidade, tipo_uso, consumo_mensal, gasto_mensal, dias_semana')
             .eq('whatsapp', whatsapp)
             .limit(1)
-            .maybeSingle()
-
-          if (sdrMaq) {
-            dados.cidade = sdrMaq.cidade || null
-            dados.tipo_uso = sdrMaq.tipo_uso || null
-            dados.consumo_mensal = sdrMaq.consumo_mensal
-            dados.gasto_mensal = sdrMaq.gasto_mensal
-            dados.dias_semana = sdrMaq.dias_semana
-          }
-        } else if (currentInteresse === 'purificador') {
-          const { data: sdrPur } = await supabase
+            .maybeSingle(),
+          supabase
             .from('contatos_sdr_purificador')
             .select('cidade, tipo_uso')
             .eq('whatsapp', whatsapp)
             .limit(1)
-            .maybeSingle()
+            .maybeSingle(),
+        ])
 
-          if (sdrPur) {
-            dados.cidade = sdrPur.cidade || null
-            dados.tipo_uso = sdrPur.tipo_uso || null
-          }
+        const sdrMaq = sdrMaqRes.data
+        const sdrPur = sdrPurRes.data
+
+        // Se interesse não veio do contato_geral, inferir pelo cadastro SDR existente
+        if (!currentInteresse) {
+          currentInteresse = sdrMaq ? 'maquina_gelo' : sdrPur ? 'purificador' : null
+          dados.interesse = currentInteresse
+        }
+
+        // Prioriza purificador apenas quando interesse indicar purificador, senão usa máquina
+        if (currentInteresse === 'purificador' && sdrPur) {
+          dados.cidade = sdrPur.cidade || null
+          dados.tipo_uso = sdrPur.tipo_uso || null
+        } else if (sdrMaq) {
+          dados.cidade = sdrMaq.cidade || null
+          dados.tipo_uso = sdrMaq.tipo_uso || null
+          dados.consumo_mensal = sdrMaq.consumo_mensal
+          dados.gasto_mensal = sdrMaq.gasto_mensal
+          dados.dias_semana = sdrMaq.dias_semana
         }
       }
 

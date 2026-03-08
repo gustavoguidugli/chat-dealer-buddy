@@ -985,7 +985,16 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                           };
                           const contatoKey = contatoFieldMap[campo.slug];
                           const contatoValue = contatoKey ? dadosContato[contatoKey] : null;
-                          const value = contatoValue != null ? String(contatoValue) : (lead.campos_extras?.[campo.slug] ?? '');
+                          const extraAliasMap: Record<string, string> = {
+                            tipo_de_uso: 'tipo_uso',
+                            dias_por_semana: 'dias_semana',
+                          };
+                          const extraAliasValue = extraAliasMap[campo.slug]
+                            ? lead.campos_extras?.[extraAliasMap[campo.slug]]
+                            : undefined;
+                          const value = contatoValue != null
+                            ? String(contatoValue)
+                            : (lead.campos_extras?.[campo.slug] ?? extraAliasValue ?? '');
                           const isEditing = editingField === campo.slug;
                           return (
                             <div
