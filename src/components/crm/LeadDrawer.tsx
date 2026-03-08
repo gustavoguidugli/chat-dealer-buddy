@@ -696,16 +696,32 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const histAnotCount = historico.filter(h => h.tipo_evento === 'anotacao').length;
   const histAtivCount = historico.filter(h => h.tipo_evento !== 'anotacao' && h.tipo_evento !== 'mudou_etapa' && h.tipo_evento !== 'ganho' && h.tipo_evento !== 'perdido').length;
 
-  // Open file via Supabase SDK download (bypasses ad blockers)
-  const handleOpenFile = async (storagePath: string, mimeType: string, fileName: string) => {
+  // File preview state
+  const [previewFile, setPreviewFile] = useState<{ url: string | null; name: string; mime: string; loading: boolean } | null>(null);
+
+  // Preview file in modal
+  const handlePreviewFile = async (storagePath: string, mimeType: string, fileName: string) => {
+    setPreviewFile({ url: null, name: fileName, mime: mimeType, loading: true });
     const { data, error } = await supabase.storage.from('anexos-lead').download(storagePath);
     if (error || !data) {
       toast({ title: 'Erro ao abrir arquivo', description: error?.message, variant: 'destructive' });
+      setPreviewFile(null);
       return;
     }
     const blob = new Blob([data], { type: mimeType });
     const url = URL.createObjectURL(blob);
-    // Use an <a> tag with download to force download instead of opening in new tab (avoids ERR_BLOCKED_BY_CLIENT)
+    setPreviewFile({ url, name: fileName, mime: mimeType, loading: false });
+  };
+
+  // Download file
+  const handleDownloadFile = async (storagePath: string, mimeType: string, fileName: string) => {
+    const { data, error } = await supabase.storage.from('anexos-lead').download(storagePath);
+    if (error || !data) {
+      toast({ title: 'Erro ao baixar arquivo', description: error?.message, variant: 'destructive' });
+      return;
+    }
+    const blob = new Blob([data], { type: mimeType });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
