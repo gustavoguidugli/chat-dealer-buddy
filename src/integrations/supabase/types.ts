@@ -1715,6 +1715,50 @@ export type Database = {
           },
         ]
       }
+      icones_atividades: {
+        Row: {
+          ativo: boolean | null
+          cor: string | null
+          created_at: string | null
+          icone: string
+          id: number
+          id_empresa: number
+          nome: string
+          ordem: number
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          icone: string
+          id?: number
+          id_empresa: number
+          nome: string
+          ordem?: number
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          icone?: string
+          id?: number
+          id_empresa?: number
+          nome?: string
+          ordem?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "icones_atividades_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       labels: {
         Row: {
           ativo: boolean | null
