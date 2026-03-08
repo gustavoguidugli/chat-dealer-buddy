@@ -633,6 +633,13 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
   const handleExcluirAnotacao = async () => {
     if (!excluirAnotacaoId) return;
+    // Delete storage files first
+    const anexosToDelete = realtimeAnexos.filter((a: any) => a.id_anotacao === excluirAnotacaoId);
+    if (anexosToDelete.length > 0) {
+      await supabase.storage
+        .from('anexos-lead')
+        .remove(anexosToDelete.map((a: any) => a.storage_path));
+    }
     // Delete historico entry first (FK won't cascade here)
     await supabase.from('historico_lead')
       .delete()
