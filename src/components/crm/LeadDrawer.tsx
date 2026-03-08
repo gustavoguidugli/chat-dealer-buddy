@@ -1022,38 +1022,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             </div>
                           );
                         })}
-                        {/* Campos automáticos do contato (integrados na seção Negócio) */}
-                        {(() => {
-                          const autoFields: { label: string; slug: string; key: keyof typeof dadosContato }[] = [
-                            { label: 'Interesse', slug: 'interesse', key: 'interesse' },
-                            { label: 'Cidade', slug: 'cidade', key: 'cidade' },
-                            { label: 'Tipo de Uso', slug: 'tipo_uso', key: 'tipo_uso' },
-                            { label: 'Consumo Mensal', slug: 'consumo_mensal', key: 'consumo_mensal' },
-                            { label: 'Gasto Mensal', slug: 'gasto_mensal', key: 'gasto_mensal' },
-                            { label: 'Dias/Semana', slug: 'dias_semana', key: 'dias_semana' },
-                          ];
-                          const campoSlugs = new Set(campos.map(c => c.slug));
-                          const visibleAutoFields = autoFields.filter(f => !campoSlugs.has(f.slug));
-                          
-                          return visibleAutoFields.map(f => {
-                            const val = dadosContato[f.key];
-                            const displayVal = val != null ? String(val) : (lead.campos_extras?.[f.slug] ?? '');
-                            return (
-                              <div
-                                key={f.slug}
-                                className="flex items-center justify-between py-2 px-1 rounded-md"
-                              >
-                                <span className="text-xs text-muted-foreground font-medium shrink-0 w-[90px] text-right pr-3">
-                                  {f.label}
-                                </span>
-                                <div className="flex-1">
-                                  <span className="text-sm text-foreground">{displayVal || '-'}</span>
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                        {campos.length === 0 && !Object.values(dadosContato).some(v => v != null) && (
+                        {campos.length === 0 && (
                           <p className="text-xs text-muted-foreground py-2">Nenhum campo customizado</p>
                         )}
                       </div>
