@@ -245,6 +245,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [funilNome, setFunilNome] = useState('');
   const [etapas, setEtapas] = useState<EtapaInfo[]>([]);
   const [campos, setCampos] = useState<CampoCustomizado[]>([]);
+  const [listaInteresses, setListaInteresses] = useState<{ nome: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Map realtime data to typed state
@@ -390,15 +391,17 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
         campos_extras: (l.campos_extras as Record<string, any>) || {},
       });
 
-      const [funilRes, etapasRes, camposRes] = await Promise.all([
+      const [funilRes, etapasRes, camposRes, interessesRes] = await Promise.all([
         supabase.from('funis').select('nome').eq('id', l.id_funil).single(),
         supabase.from('etapas_funil').select('id, nome, ordem').eq('id_funil', l.id_funil).eq('ativo', true).order('ordem'),
         supabase.from('campos_customizados').select('*').or(`id_funil.is.null,id_funil.eq.${l.id_funil}`).eq('id_empresa', l.id_empresa).eq('ativo', true).order('ordem'),
+        supabase.from('lista_interesses').select('nome, label').eq('empresa_id', l.id_empresa).order('ordem'),
       ]);
 
       setFunilNome(funilRes.data?.nome || '');
       setEtapas(etapasRes.data || []);
       setCampos((camposRes.data || []) as CampoCustomizado[]);
+      setListaInteresses(interessesRes.data || []);
     }
 
     setLoading(false);
@@ -1182,12 +1185,13 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             ? String(contatoValue)
                             : (lead.campos_extras?.[campo.slug] ?? '');
                           const isEditing = editingField === campo.slug;
+                          const isInteresseField = campo.slug === 'interesse' || campo.slug === 'gasto' || campo.nome.toLowerCase() === 'interesse';
                           return (
                             <div
                               key={campo.id}
                               className="flex items-center justify-between py-2 px-1 rounded-md group hover:bg-muted/50 cursor-pointer"
                               onClick={() => {
-                                if (!isEditing) {
+                                if (!isEditing && !isInteresseField) {
                                   setEditingField(campo.slug);
                                   setEditingValue(value || '');
                                 }
@@ -1196,7 +1200,29 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                               <span className="text-xs text-muted-foreground font-medium shrink-0 w-[90px] text-right pr-3">
                                 {campo.nome}
                               </span>
-                              {isEditing ? (
+                              {isInteresseField ? (
+                                <div className="flex-1">
+                                  <Select
+                                    value={value || ''}
+                                    onValueChange={async (val) => {
+                                      const newExtras = { ...(lead.campos_extras || {}), [campo.slug]: val };
+                                      await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
+                                      setLead({ ...lead, campos_extras: newExtras });
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs">
+                                      <SelectValue placeholder="Selecione..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {listaInteresses.map(int => (
+                                        <SelectItem key={int.nome} value={int.nome}>
+                                          {int.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              ) : isEditing ? (
                                 <div className="flex-1 flex items-center gap-1">
                                   <Input
                                     value={editingValue}
