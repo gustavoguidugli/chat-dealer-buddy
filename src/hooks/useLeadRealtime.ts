@@ -7,19 +7,90 @@ import { supabase } from '@/integrations/supabase/client'
  * O QUE FAZ:
  * - Quando alguém edita o lead, você vê a mudança instantaneamente
  * - Atualiza anotações, atividades, histórico automaticamente
+ * - Puxa dados de contatos_geral (interesse) e contatos_sdr (cidade, tipo_uso, etc.)
  * 
  * COMO USAR:
- * const { lead, anotacoes, atividades, historico } = useLeadRealtime(leadId)
+ * const { lead, anotacoes, atividades, historico, dadosContato } = useLeadRealtime(leadId)
  */
+
+export interface DadosContato {
+  interesse: string | null
+  cidade: string | null
+  tipo_uso: string | null
+  consumo_mensal: number | null
+  gasto_mensal: number | null
+  dias_semana: number | null
+}
+
 export function useLeadRealtime(leadId: number | null) {
   const [lead, setLead] = useState<any>(null)
   const [anotacoes, setAnotacoes] = useState<any[]>([])
   const [atividades, setAtividades] = useState<any[]>([])
   const [historico, setHistorico] = useState<any[]>([])
+  const [dadosContato, setDadosContato] = useState<DadosContato>({
+    interesse: null, cidade: null, tipo_uso: null,
+    consumo_mensal: null, gasto_mensal: null, dias_semana: null,
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!leadId) return
+
+    let contatoGeralId: number | null = null
+    let contatoWhatsapp: string | null = null
+
+    // Busca dados do contato_geral e SDR baseado no interesse
+    async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null) {
+      if (!idContatoGeral) return
+
+      // Busca interesse de contatos_geral
+      const { data: contatoGeral } = await supabase
+        .from('contatos_geral')
+        .select('interesse')
+        .eq('id', idContatoGeral)
+        .single()
+
+      const currentInteresse = interesse ?? contatoGeral?.interesse ?? null
+      const dados: DadosContato = {
+        interesse: currentInteresse,
+        cidade: null, tipo_uso: null,
+        consumo_mensal: null, gasto_mensal: null, dias_semana: null,
+      }
+
+      // Busca dados SDR baseado no interesse
+      if (whatsapp) {
+        if (currentInteresse === 'maquina_gelo' || currentInteresse === 'maquina') {
+          const { data: sdrMaq } = await supabase
+            .from('contatos_sdr_maquinagelo')
+            .select('cidade, tipo_uso, consumo_mensal, gasto_mensal, dias_semana')
+            .eq('whatsapp', whatsapp)
+            .limit(1)
+            .maybeSingle()
+
+          if (sdrMaq) {
+            dados.cidade = sdrMaq.cidade || null
+            dados.tipo_uso = sdrMaq.tipo_uso || null
+            dados.consumo_mensal = sdrMaq.consumo_mensal
+            dados.gasto_mensal = sdrMaq.gasto_mensal
+            dados.dias_semana = sdrMaq.dias_semana
+          }
+        } else if (currentInteresse === 'purificador') {
+          const { data: sdrPur } = await supabase
+            .from('contatos_sdr_purificador')
+            .select('cidade, tipo_uso')
+            .eq('whatsapp', whatsapp)
+            .limit(1)
+            .maybeSingle()
+
+          if (sdrPur) {
+            dados.cidade = sdrPur.cidade || null
+            dados.tipo_uso = sdrPur.tipo_uso || null
+          }
+        }
+      }
+
+      setDadosContato(dados)
+    }
 
     // 1. Busca dados iniciais
     async function fetchData() {
@@ -35,6 +106,12 @@ export function useLeadRealtime(leadId: number | null) {
         .single()
 
       setLead(leadData)
+
+      if (leadData) {
+        contatoGeralId = leadData.id_contato_geral
+        contatoWhatsapp = leadData.whatsapp
+        await fetchContatoData(contatoGeralId, contatoWhatsapp)
+      }
 
       // Anotações
       const { data: anotacoesData } = await supabase
@@ -83,7 +160,14 @@ export function useLeadRealtime(leadId: number | null) {
             setLead(null)
             return
           }
-          setLead((prev: any) => ({ ...prev, ...payload.new }))
+          const newData = payload.new as any
+          setLead((prev: any) => ({ ...prev, ...newData }))
+          // Se id_contato_geral ou whatsapp mudou, re-fetch contato data
+          if (newData.id_contato_geral || newData.whatsapp) {
+            contatoGeralId = newData.id_contato_geral ?? contatoGeralId
+            contatoWhatsapp = newData.whatsapp ?? contatoWhatsapp
+            fetchContatoData(contatoGeralId, contatoWhatsapp)
+          }
         }
       )
       .subscribe()
@@ -169,14 +253,56 @@ export function useLeadRealtime(leadId: number | null) {
       })
       .subscribe()
 
-    // 6. Cleanup
+    // 6. Realtime em contatos_geral (interesse)
+    const contatoGeralChannel = supabase
+      .channel(`contato-geral-${leadId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_geral' }, (payload) => {
+        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+          const updated = payload.new as any
+          if (contatoGeralId && updated.id === contatoGeralId) {
+            fetchContatoData(contatoGeralId, contatoWhatsapp, updated.interesse)
+          }
+        }
+      })
+      .subscribe()
+
+    // 7. Realtime em contatos_sdr_maquinagelo
+    const sdrMaqChannel = supabase
+      .channel(`sdr-maq-${leadId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_sdr_maquinagelo' }, (payload) => {
+        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+          const updated = payload.new as any
+          if (contatoWhatsapp && updated.whatsapp === contatoWhatsapp) {
+            fetchContatoData(contatoGeralId, contatoWhatsapp)
+          }
+        }
+      })
+      .subscribe()
+
+    // 8. Realtime em contatos_sdr_purificador
+    const sdrPurChannel = supabase
+      .channel(`sdr-pur-${leadId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_sdr_purificador' }, (payload) => {
+        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+          const updated = payload.new as any
+          if (contatoWhatsapp && updated.whatsapp === contatoWhatsapp) {
+            fetchContatoData(contatoGeralId, contatoWhatsapp)
+          }
+        }
+      })
+      .subscribe()
+
+    // 9. Cleanup
     return () => {
       supabase.removeChannel(leadChannel)
       supabase.removeChannel(anotacoesChannel)
       supabase.removeChannel(atividadesChannel)
       supabase.removeChannel(historicoChannel)
+      supabase.removeChannel(contatoGeralChannel)
+      supabase.removeChannel(sdrMaqChannel)
+      supabase.removeChannel(sdrPurChannel)
     }
   }, [leadId])
 
-  return { lead, setLead, anotacoes, setAnotacoes, atividades, setAtividades, historico, setHistorico, loading }
+  return { lead, setLead, anotacoes, setAnotacoes, atividades, setAtividades, historico, setHistorico, dadosContato, loading }
 }
