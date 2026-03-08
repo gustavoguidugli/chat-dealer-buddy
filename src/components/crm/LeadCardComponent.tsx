@@ -60,7 +60,7 @@ function getActivityLabel(status: 'overdue' | 'today' | 'future', dataVencimento
   return `Vence em ${diffDays} dias`;
 }
 
-export function LeadCardComponent({ lead, isDragging }: LeadCardProps) {
+export function LeadCardComponent({ lead, isDragging, isOverlay }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: lead.id,
   });
