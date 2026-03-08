@@ -147,7 +147,7 @@ function EditableLeadName({ leadId, nome, onSaved }: { leadId: number; nome: str
   );
 }
 
-
+function formatDateShort(dateStr: string | null) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   const now = new Date();
