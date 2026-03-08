@@ -113,25 +113,9 @@ export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveL
             />
           );
         })}
-
-        {/* Won column */}
-        <StatusColumn
-          title="Negócios Ganhos"
-          leads={wonLeads}
-          totalValor={wonTotal}
-          variant="won"
-          onLeadClick={onLeadClick}
-        />
-
-        {/* Lost column */}
-        <StatusColumn
-          title="Negócios Perdidos"
-          leads={lostLeads}
-          totalValor={lostTotal}
-          variant="lost"
-          onLeadClick={onLeadClick}
-        />
       </div>
+
+      <DragBottomBar visible={activeId !== null} />
 
       <DragOverlay>
         {activeLead ? (
