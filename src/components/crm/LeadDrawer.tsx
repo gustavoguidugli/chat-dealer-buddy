@@ -579,7 +579,8 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     // Upload files
     if (selectedFiles.length > 0) {
       for (const file of selectedFiles) {
-        const path = `${empresaId}/${lead.id}/${anotacaoData.id}/${file.name}`;
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${empresaId}/${lead.id}/${anotacaoData.id}/${safeName}`;
         const { error: uploadError } = await supabase.storage
           .from('anexos-lead')
           .upload(path, file);
