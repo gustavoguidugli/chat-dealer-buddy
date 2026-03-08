@@ -46,12 +46,17 @@ export function useLeadRealtime(leadId: number | null) {
       let currentInteresse = interesse ?? null
 
       // Busca interesse de contatos_geral (prioriza FK e faz fallback por whatsapp)
-      let contatoGeral: { id: number; interesse: string | null; whatsapp_padrao_pipedrive: string | null } | null = null
+      let contatoGeral: {
+        id: number
+        interesse: string | null
+        whatsapp: string | null
+        whatsapp_padrao_pipedrive: string | null
+      } | null = null
 
       if (idContatoGeral) {
         const { data: contatoGeralById } = await supabase
           .from('contatos_geral')
-          .select('id, interesse, whatsapp_padrao_pipedrive')
+          .select('id, interesse, whatsapp, whatsapp_padrao_pipedrive')
           .eq('id', idContatoGeral)
           .maybeSingle()
 
@@ -61,7 +66,7 @@ export function useLeadRealtime(leadId: number | null) {
       if (!contatoGeral && whatsapp) {
         const { data: contatoGeralByWhatsapp } = await supabase
           .from('contatos_geral')
-          .select('id, interesse, whatsapp_padrao_pipedrive')
+          .select('id, interesse, whatsapp, whatsapp_padrao_pipedrive')
           .eq('whatsapp', whatsapp)
           .limit(1)
           .maybeSingle()
@@ -71,8 +76,11 @@ export function useLeadRealtime(leadId: number | null) {
 
       if (contatoGeral) {
         contatoGeralId = contatoGeral.id
+        contatoWhatsapp = contatoWhatsapp ?? contatoGeral.whatsapp ?? null
         currentInteresse = currentInteresse ?? contatoGeral.interesse ?? null
       }
+
+      const whatsappLookup = contatoWhatsapp ?? whatsapp ?? contatoGeral?.whatsapp ?? null
 
       const dados: DadosContato = {
         interesse: currentInteresse,
@@ -82,18 +90,18 @@ export function useLeadRealtime(leadId: number | null) {
       }
 
       // Busca dados SDR por whatsapp (independente da FK de contato_geral)
-      if (whatsapp) {
+      if (whatsappLookup) {
         const [sdrMaqRes, sdrPurRes] = await Promise.all([
           supabase
             .from('contatos_sdr_maquinagelo')
             .select('cidade, tipo_uso, consumo_mensal, gasto_mensal, dias_semana')
-            .eq('whatsapp', whatsapp)
+            .eq('whatsapp', whatsappLookup)
             .limit(1)
             .maybeSingle(),
           supabase
             .from('contatos_sdr_purificador')
             .select('cidade, tipo_uso')
-            .eq('whatsapp', whatsapp)
+            .eq('whatsapp', whatsappLookup)
             .limit(1)
             .maybeSingle(),
         ])
