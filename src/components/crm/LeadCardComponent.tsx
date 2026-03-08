@@ -13,6 +13,7 @@ import type { LeadCard } from '@/pages/CrmFunil';
 interface LeadCardProps {
   lead: LeadCard;
   isDragging?: boolean;
+  isOverlay?: boolean;
 }
 
 function formatDate(dateStr: string | null) {
