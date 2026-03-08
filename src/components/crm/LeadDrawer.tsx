@@ -107,6 +107,45 @@ interface HistoricoItem {
   metadados: any;
   etapa_destino_id: number | null;
 }
+function EditableLeadName({ leadId, nome, onSaved }: { leadId: number; nome: string; onSaved?: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(nome);
+  const { toast } = useToast();
+
+  useEffect(() => { setValue(nome); }, [nome]);
+
+  const save = async () => {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === nome) { setEditing(false); setValue(nome); return; }
+    const { error } = await supabase.from('leads_crm').update({ nome: trimmed }).eq('id', leadId);
+    if (error) { toast({ title: 'Erro ao salvar nome', variant: 'destructive' }); setValue(nome); }
+    else { onSaved?.(); }
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        className="text-xl font-bold text-foreground bg-transparent border-b border-primary outline-none px-0 py-0"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setValue(nome); setEditing(false); } }}
+      />
+    );
+  }
+
+  return (
+    <h1
+      className="text-xl font-bold text-foreground cursor-pointer hover:text-primary/80 transition-colors"
+      onClick={() => setEditing(true)}
+      title="Clique para editar"
+    >
+      {nome}
+    </h1>
+  );
+}
 
 function formatDateShort(dateStr: string | null) {
   if (!dateStr) return '';
@@ -630,7 +669,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h1 className="text-xl font-bold text-foreground">{lead.nome}</h1>
+                      <EditableLeadName leadId={lead.id} nome={lead.nome} onSaved={onLeadChanged} />
                       <EtiquetaSelector leadId={lead.id} empresaId={lead.id_empresa} onChange={onLeadChanged} />
                     </div>
                     <Popover open={funilEtapaPopoverOpen} onOpenChange={setFunilEtapaPopoverOpen}>
