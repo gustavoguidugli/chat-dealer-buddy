@@ -357,7 +357,32 @@ export function useLeadRealtime(leadId: number | null) {
       })
       .subscribe()
 
-    // 9. Cleanup
+    // 9. Realtime nos anexos de anotação
+    const anexosChannel = supabase
+      .channel(`anexos-anotacao-${leadId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'anexos_anotacao' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newAnexo = payload.new as any
+          // Only add if it belongs to one of this lead's anotações
+          setAnexos((prev) => {
+            if (prev.some((a) => a.id === newAnexo.id)) return prev
+            return [...prev, newAnexo]
+          })
+          return
+        }
+        if (payload.eventType === 'DELETE') {
+          const oldAnexo = payload.old as any
+          setAnexos((prev) => prev.filter((a) => a.id !== oldAnexo.id))
+          return
+        }
+        if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as any
+          setAnexos((prev) => prev.map((a) => a.id === updated.id ? updated : a))
+        }
+      })
+      .subscribe()
+
+    // 10. Cleanup
     return () => {
       supabase.removeChannel(leadChannel)
       supabase.removeChannel(anotacoesChannel)
@@ -366,8 +391,9 @@ export function useLeadRealtime(leadId: number | null) {
       supabase.removeChannel(contatoGeralChannel)
       supabase.removeChannel(sdrMaqChannel)
       supabase.removeChannel(sdrPurChannel)
+      supabase.removeChannel(anexosChannel)
     }
   }, [leadId])
 
-  return { lead, setLead, anotacoes, setAnotacoes, atividades, setAtividades, historico, setHistorico, dadosContato, loading }
+  return { lead, setLead, anotacoes, setAnotacoes, atividades, setAtividades, historico, setHistorico, dadosContato, anexos, setAnexos, loading }
 }
