@@ -1,3 +1,4 @@
+import { useDroppable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trophy, XCircle } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,13 +22,20 @@ function getInitials(name: string) {
 
 export function StatusColumn({ title, leads, totalValor, variant, onLeadClick }: StatusColumnProps) {
   const isWon = variant === 'won';
+  const droppableId = isWon ? 'status-won' : 'status-lost';
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId });
 
   return (
     <div
+      ref={setNodeRef}
       className={`flex flex-col w-[280px] shrink-0 rounded-xl border-2 transition-colors ${
-        isWon
-          ? 'border-green-200 bg-green-50/50 dark:border-green-900/40 dark:bg-green-950/20'
-          : 'border-red-200 bg-red-50/50 dark:border-red-900/40 dark:bg-red-950/20'
+        isOver
+          ? isWon
+            ? 'border-green-400 bg-green-100/60 dark:border-green-500/60 dark:bg-green-950/40 ring-2 ring-green-300/50'
+            : 'border-red-400 bg-red-100/60 dark:border-red-500/60 dark:bg-red-950/40 ring-2 ring-red-300/50'
+          : isWon
+            ? 'border-green-200 bg-green-50/50 dark:border-green-900/40 dark:bg-green-950/20'
+            : 'border-red-200 bg-red-50/50 dark:border-red-900/40 dark:bg-red-950/20'
       }`}
     >
       {/* Column Header */}

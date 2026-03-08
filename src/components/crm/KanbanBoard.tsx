@@ -24,9 +24,11 @@ interface KanbanBoardProps {
   onMoveLead: (leadId: number, newEtapaId: number, newOrder: number) => void;
   onLeadClick?: (leadId: number) => void;
   onAddClick?: (etapaId: number) => void;
+  onDropWon?: (leadId: number) => void;
+  onDropLost?: (leadId: number) => void;
 }
 
-export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveLead, onLeadClick, onAddClick }: KanbanBoardProps) {
+export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveLead, onLeadClick, onAddClick, onDropWon, onDropLost }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<number | null>(null);
 
   const sensors = useSensors(
@@ -50,6 +52,17 @@ export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveL
 
     const leadId = Number(active.id);
     const overIdStr = String(over.id);
+
+    // Handle drop on status columns
+    if (overIdStr === 'status-won') {
+      onDropWon?.(leadId);
+      return;
+    }
+    if (overIdStr === 'status-lost') {
+      onDropLost?.(leadId);
+      return;
+    }
+
     let targetEtapaId: number;
 
     if (overIdStr.startsWith('etapa-')) {
@@ -72,7 +85,7 @@ export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveL
     if (currentEtapaId === targetEtapaId) return;
 
     onMoveLead(leadId, targetEtapaId, 0);
-  }, [leadsByEtapa, onMoveLead]);
+  }, [leadsByEtapa, onMoveLead, onDropWon, onDropLost]);
 
   const wonTotal = wonLeads.reduce((sum, l) => sum + (l.valor_final || l.valor_estimado || 0), 0);
   const lostTotal = lostLeads.reduce((sum, l) => sum + (l.valor_estimado || 0), 0);

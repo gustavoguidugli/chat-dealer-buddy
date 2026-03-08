@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X, UserCircle } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { NovoNegocioModal } from '@/components/crm/NovoNegocioModal';
@@ -79,6 +84,9 @@ export default function CrmFunil() {
   const [filterProprietarioId, setFilterProprietarioId] = useState<string | null>(null);
   const [proprietarios, setProprietarios] = useState<{id: string; nome: string}[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [dragGanhoLeadId, setDragGanhoLeadId] = useState<number | null>(null);
+  const [dragPerdidoLeadId, setDragPerdidoLeadId] = useState<number | null>(null);
+  const [dragMotivoPerda, setDragMotivoPerda] = useState('');
 
   // Close search on outside click
   useEffect(() => {
@@ -256,6 +264,36 @@ export default function CrmFunil() {
   const handleNewDeal = useCallback(() => {
     setModalOpen(false);
   }, []);
+
+  const handleDragGanho = useCallback(async () => {
+    if (!dragGanhoLeadId) return;
+    const { error } = await supabase.from('leads_crm').update({
+      status: 'ganho',
+      data_ganho: new Date().toISOString(),
+    }).eq('id', dragGanhoLeadId);
+    if (error) {
+      toast({ title: 'Erro ao marcar como ganho', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Lead marcado como ganho! 🎉' });
+    }
+    setDragGanhoLeadId(null);
+  }, [dragGanhoLeadId, toast]);
+
+  const handleDragPerdido = useCallback(async () => {
+    if (!dragPerdidoLeadId || !dragMotivoPerda.trim()) return;
+    const { error } = await supabase.from('leads_crm').update({
+      status: 'perdido',
+      motivo_perda: dragMotivoPerda.trim(),
+      data_perdido: new Date().toISOString(),
+    }).eq('id', dragPerdidoLeadId);
+    if (error) {
+      toast({ title: 'Erro ao marcar como perdido', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Lead marcado como perdido' });
+    }
+    setDragPerdidoLeadId(null);
+    setDragMotivoPerda('');
+  }, [dragPerdidoLeadId, dragMotivoPerda, toast]);
 
   // totalNegocios computed after filteredLeads below
   const funilNome = funis.find(f => f.id === funilAtual)?.nome || '';
@@ -473,6 +511,8 @@ export default function CrmFunil() {
               onMoveLead={handleMoveLead}
               onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
               onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
+              onDropWon={(leadId) => setDragGanhoLeadId(leadId)}
+              onDropLost={(leadId) => setDragPerdidoLeadId(leadId)}
             />
           )}
         </div>
@@ -514,6 +554,50 @@ export default function CrmFunil() {
         leadId={selectedLeadId}
         onLeadChanged={() => setReloadKey((k) => k + 1)}
       />
+
+      {/* Drag-to-Won Dialog */}
+      <AlertDialog open={dragGanhoLeadId !== null} onOpenChange={(v) => { if (!v) setDragGanhoLeadId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar como ganho?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja marcar este negócio como ganho?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-green-600 hover:bg-green-700 text-white" onClick={handleDragGanho}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Drag-to-Lost Dialog */}
+      <AlertDialog open={dragPerdidoLeadId !== null} onOpenChange={(v) => { if (!v) { setDragPerdidoLeadId(null); setDragMotivoPerda(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar como perdido?</AlertDialogTitle>
+            <AlertDialogDescription>Informe o motivo da perda.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Motivo da perda..."
+            value={dragMotivoPerda}
+            onChange={e => setDragMotivoPerda(e.target.value)}
+            className="my-2"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDragMotivoPerda('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={!dragMotivoPerda.trim()}
+              onClick={handleDragPerdido}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
