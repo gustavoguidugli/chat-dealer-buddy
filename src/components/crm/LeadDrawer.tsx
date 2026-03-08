@@ -695,6 +695,18 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const histAnotCount = historico.filter(h => h.tipo_evento === 'anotacao').length;
   const histAtivCount = historico.filter(h => h.tipo_evento !== 'anotacao' && h.tipo_evento !== 'mudou_etapa' && h.tipo_evento !== 'ganho' && h.tipo_evento !== 'perdido').length;
 
+  // Open file via Supabase SDK download (bypasses ad blockers)
+  const handleOpenFile = async (storagePath: string, mimeType: string, fileName: string) => {
+    const { data, error } = await supabase.storage.from('anexos-lead').download(storagePath);
+    if (error || !data) {
+      toast({ title: 'Erro ao abrir arquivo', description: error?.message, variant: 'destructive' });
+      return;
+    }
+    const blob = new Blob([data], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  };
+
   function getHistoricoIcon(tipo: string) {
     switch (tipo) {
       case 'anotacao': return <MessageSquare className="h-4 w-4 text-amber-600" />;
