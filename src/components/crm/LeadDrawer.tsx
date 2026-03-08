@@ -26,6 +26,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { EtiquetaSelector } from '@/components/crm/EtiquetaSelector';
+import { FilePreviewModal } from '@/components/crm/FilePreviewModal';
 import { ActivityModal } from '@/components/crm/ActivityModal';
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
