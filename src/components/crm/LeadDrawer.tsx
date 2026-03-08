@@ -1431,20 +1431,6 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                       {imageAnexos.length > 0 && (
                                         <div className="flex flex-wrap gap-2">
                                           {imageAnexos.map((anexo: any) => (
-                                            <a key={anexo.id} href={anexo.url_publica} target="_blank" rel="noopener noreferrer">
-                                              <img
-                                                src={anexo.url_publica}
-                                                alt={anexo.nome_arquivo}
-                                                className="max-w-[280px] max-h-[200px] rounded-lg border object-contain hover:opacity-80 transition-opacity cursor-pointer"
-                                              />
-                                            </a>
-                                          ))}
-                                        </div>
-                                      )}
-                                      {/* Images shown inline */}
-                                      {imageAnexos.length > 0 && (
-                                        <div className="flex flex-wrap gap-2">
-                                          {imageAnexos.map((anexo: any) => (
                                             <button
                                               key={anexo.id}
                                               onClick={() => handleOpenFile(anexo.storage_path, anexo.tipo_arquivo, anexo.nome_arquivo)}
@@ -1489,7 +1475,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                                 </p>
                                               </div>
                                             </div>
-                                          </a>
+                                          </button>
                                         );
                                       })}
                                     </div>
