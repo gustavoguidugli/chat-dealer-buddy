@@ -977,9 +977,11 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             interesse: 'interesse',
                             cidade: 'cidade',
                             tipo_uso: 'tipo_uso',
+                            tipo_de_uso: 'tipo_uso',
                             consumo_mensal: 'consumo_mensal',
                             gasto_mensal: 'gasto_mensal',
                             dias_semana: 'dias_semana',
+                            dias_por_semana: 'dias_semana',
                           };
                           const contatoKey = contatoFieldMap[campo.slug];
                           const contatoValue = contatoKey ? dadosContato[contatoKey] : null;
