@@ -321,7 +321,7 @@ export function useLeadRealtime(leadId: number | null) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_sdr_maquinagelo' }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          if (contatoWhatsapp && updated.whatsapp === contatoWhatsapp) {
+          if (contatoWhatsapp && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)) {
             fetchContatoData(contatoGeralId, contatoWhatsapp)
           }
         }
@@ -334,7 +334,7 @@ export function useLeadRealtime(leadId: number | null) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_sdr_purificador' }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          if (contatoWhatsapp && updated.whatsapp === contatoWhatsapp) {
+          if (contatoWhatsapp && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)) {
             fetchContatoData(contatoGeralId, contatoWhatsapp)
           }
         }
