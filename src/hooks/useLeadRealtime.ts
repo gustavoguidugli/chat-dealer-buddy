@@ -299,11 +299,16 @@ export function useLeadRealtime(leadId: number | null) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_geral' }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          const sameContatoGeralId = !!contatoGeralId && updated.id === contatoGeralId
-          const sameWhatsapp = !!contatoWhatsapp && updated.whatsapp === contatoWhatsapp
+          const sameContatoGeralId = !!contatoGeralId && isSameNumericId(updated.id, contatoGeralId)
+          const sameWhatsapp =
+            !!contatoWhatsapp &&
+            normalizeWhatsapp(updated.whatsapp) !== '' &&
+            normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)
 
           if (sameContatoGeralId || sameWhatsapp) {
-            contatoGeralId = updated.id ?? contatoGeralId
+            const parsedContatoId = Number(updated.id)
+            contatoGeralId = Number.isNaN(parsedContatoId) ? contatoGeralId : parsedContatoId
+            contatoWhatsapp = updated.whatsapp ?? contatoWhatsapp
             fetchContatoData(contatoGeralId, contatoWhatsapp, updated.interesse)
           }
         }
