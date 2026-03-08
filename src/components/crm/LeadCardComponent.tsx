@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 import { ChevronRight, AlertTriangle, Play, Plus } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -61,7 +60,7 @@ function getActivityLabel(status: 'overdue' | 'today' | 'future', dataVencimento
 }
 
 export function LeadCardComponent({ lead, isDragging, isOverlay }: LeadCardProps) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging: isDraggingDnd } = useDraggable({
     id: lead.id,
   });
   const { toast } = useToast();
@@ -71,8 +70,7 @@ export function LeadCardComponent({ lead, isDragging, isOverlay }: LeadCardProps
   const [editingActivity, setEditingActivity] = useState<any>(null);
 
   const style: React.CSSProperties = {
-    ...(transform ? { transform: CSS.Translate.toString(transform) } : {}),
-    ...(isDragging && !isOverlay ? { opacity: 0 } : {}),
+    ...(isDraggingDnd && !isOverlay ? { opacity: 0 } : {}),
   };
 
   const topColor = lead.etiquetas.length > 0 ? lead.etiquetas[0].cor : null;
