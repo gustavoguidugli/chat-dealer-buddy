@@ -869,6 +869,16 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
               <div className="flex flex-1 overflow-hidden">
                 {/* LEFT SIDEBAR - Campos */}
                 <div className="w-[260px] border-r bg-muted/30 shrink-0 overflow-y-auto">
+                  {/* Número de telefone */}
+                  <div className="px-4 py-3 border-b">
+                    <span className="text-xs font-medium text-muted-foreground">Número de telefone</span>
+                    <p className="text-sm font-semibold text-foreground mt-0.5">
+                      {dadosContato.telefone
+                        ? dadosContato.telefone
+                        : <span className="text-muted-foreground font-normal">Não definido</span>
+                      }
+                    </p>
+                  </div>
                   {/* Valor do negócio */}
                   <div className="px-4 py-3 border-b">
                     <div className="flex items-center justify-between">
