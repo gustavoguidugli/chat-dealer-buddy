@@ -20,6 +20,7 @@ export interface DadosContato {
   consumo_mensal: number | null
   gasto_mensal: number | null
   dias_semana: number | null
+  telefone: string | null
 }
 
 export function useLeadRealtime(leadId: number | null) {
