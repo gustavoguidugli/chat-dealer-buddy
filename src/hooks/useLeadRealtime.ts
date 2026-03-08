@@ -45,12 +45,12 @@ export function useLeadRealtime(leadId: number | null) {
       let currentInteresse = interesse ?? null
 
       // Busca interesse de contatos_geral (prioriza FK e faz fallback por whatsapp)
-      let contatoGeral: { id: number; interesse: string | null } | null = null
+      let contatoGeral: { id: number; interesse: string | null; whatsapp_padrao_pipedrive: string | null } | null = null
 
       if (idContatoGeral) {
         const { data: contatoGeralById } = await supabase
           .from('contatos_geral')
-          .select('id, interesse')
+          .select('id, interesse, whatsapp_padrao_pipedrive')
           .eq('id', idContatoGeral)
           .maybeSingle()
 
