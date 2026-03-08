@@ -12,8 +12,8 @@ import {
 } from '@dnd-kit/core';
 import { useState } from 'react';
 import { KanbanColumn } from './KanbanColumn';
-import { StatusColumn } from './StatusColumn';
 import { LeadCardComponent } from './LeadCardComponent';
+import { DragBottomBar } from './DragBottomBar';
 import type { LeadCard } from '@/pages/CrmFunil';
 
 interface KanbanBoardProps {
