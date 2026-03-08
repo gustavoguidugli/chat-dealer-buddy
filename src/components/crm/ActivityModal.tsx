@@ -42,6 +42,7 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
   const [marcarComoFeito, setMarcarComoFeito] = useState(false);
   const [saving, setSaving] = useState(false);
   const [usuarios, setUsuarios] = useState<{ id: string; nome: string }[]>([]);
+  const [showIconManager, setShowIconManager] = useState(false);
 
   const normalizeTime = (time?: string | null) => {
     if (!time) return '';
