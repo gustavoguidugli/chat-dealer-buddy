@@ -997,7 +997,10 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             'gasto mensal': 'gasto_mensal',
                             'dias por semana': 'dias_semana',
                           };
-                          const contatoKey = contatoFieldMap[campo.slug] ?? contatoNameMap[campo.nome.toLowerCase()];
+                          // Prioriza nome do campo (mais confiável quando slugs são inconsistentes no DB)
+                          const contatoKeyByName = contatoNameMap[campo.nome.toLowerCase()];
+                          const contatoKeyBySlug = contatoFieldMap[campo.slug];
+                          const contatoKey = contatoKeyByName ?? contatoKeyBySlug;
                           const contatoValue = contatoKey ? dadosContato[contatoKey] : null;
                           const value = contatoValue != null
                             ? String(contatoValue)
