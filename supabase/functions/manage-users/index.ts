@@ -29,12 +29,22 @@ Deno.serve(async (req) => {
     const anonClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user: caller } } = await anonClient.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    
+    // Use getClaims for token-based validation (doesn't require active session)
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      // Fallback to getUser if getClaims fails
+      const { data: { user: fallbackUser } } = await anonClient.auth.getUser();
+      if (!fallbackUser) {
+        return new Response(JSON.stringify({ error: "Não autorizado" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      var caller = { id: fallbackUser.id, email: fallbackUser.email };
+    } else {
+      var caller = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
