@@ -873,13 +873,54 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                 <div className="w-[260px] border-r bg-muted/30 shrink-0 overflow-y-auto">
                   {/* Número de telefone */}
                   <div className="px-4 py-3 border-b">
-                    <span className="text-xs font-medium text-muted-foreground">Número de telefone</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Número de telefone</span>
+                      {!editingTelefone && (
+                        <Pencil
+                          className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground"
+                          onClick={() => {
+                            setEditingTelefone(true);
+                            setTelefoneTemp(lead.whatsapp || '');
+                          }}
+                        />
+                      )}
+                    </div>
+                    {editingTelefone ? (
+                      <div className="mt-1.5">
+                        <Input
+                          value={telefoneTemp}
+                          onChange={e => setTelefoneTemp(e.target.value)}
+                          className="h-7 text-sm"
+                          placeholder="(00) 00000-0000"
+                          autoFocus
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                              const val = telefoneTemp.trim() || null;
+                              await supabase.from('leads_crm').update({ whatsapp: val }).eq('id', lead.id);
+                              setEditingTelefone(false);
+                              onLeadChanged?.();
+                            } else if (e.key === 'Escape') {
+                              setEditingTelefone(false);
+                            }
+                          }}
+                          onBlur={async () => {
+                            const val = telefoneTemp.trim() || null;
+                            await supabase.from('leads_crm').update({ whatsapp: val }).eq('id', lead.id);
+                            setEditingTelefone(false);
+                            onLeadChanged?.();
+                          }}
+                        />
+                      </div>
+                    ) : (
                     <p className="text-sm font-semibold text-foreground mt-0.5">
                       {dadosContato.telefone
                         ? dadosContato.telefone
-                        : <span className="text-muted-foreground font-normal">Não definido</span>
+                        : lead.whatsapp
+                          ? lead.whatsapp
+                          : <span className="text-muted-foreground font-normal">Não definido</span>
                       }
                     </p>
+                    )}
                   </div>
                   {/* Valor do negócio */}
                   <div className="px-4 py-3 border-b">
