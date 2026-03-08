@@ -60,7 +60,7 @@ export function useLeadRealtime(leadId: number | null) {
       if (!contatoGeral && whatsapp) {
         const { data: contatoGeralByWhatsapp } = await supabase
           .from('contatos_geral')
-          .select('id, interesse')
+          .select('id, interesse, whatsapp_padrao_pipedrive')
           .eq('whatsapp', whatsapp)
           .limit(1)
           .maybeSingle()
@@ -77,6 +77,7 @@ export function useLeadRealtime(leadId: number | null) {
         interesse: currentInteresse,
         cidade: null, tipo_uso: null,
         consumo_mensal: null, gasto_mensal: null, dias_semana: null,
+        telefone: contatoGeral?.whatsapp_padrao_pipedrive ?? null,
       }
 
       // Busca dados SDR por whatsapp (independente da FK de contato_geral)
