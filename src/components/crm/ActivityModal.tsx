@@ -15,6 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { ActivityIconBar } from './ActivityIconBar';
+import { IconeAtividadeManager } from './IconeAtividadeManager';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +42,7 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
   const [marcarComoFeito, setMarcarComoFeito] = useState(false);
   const [saving, setSaving] = useState(false);
   const [usuarios, setUsuarios] = useState<{ id: string; nome: string }[]>([]);
+  const [showIconManager, setShowIconManager] = useState(false);
 
   const normalizeTime = (time?: string | null) => {
     if (!time) return '';
@@ -193,6 +196,14 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
         </DialogHeader>
 
         <div className="space-y-5 py-2">
+          {/* Activity type icons */}
+          <ActivityIconBar
+            empresaId={empresaId}
+            selectedName={assunto}
+            onSelect={(nome) => setAssunto(nome)}
+            onManage={() => setShowIconManager(true)}
+          />
+
           {/* Title */}
           <Input
             placeholder="Follow-up"
@@ -200,8 +211,6 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
             onChange={e => setAssunto(e.target.value)}
             className="text-base font-medium"
           />
-
-          {/* Date & Time row */}
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             <Popover>
@@ -291,6 +300,12 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
           </div>
         </DialogFooter>
       </DialogContent>
+
+      <IconeAtividadeManager
+        empresaId={empresaId}
+        open={showIconManager}
+        onClose={() => setShowIconManager(false)}
+      />
     </Dialog>
   );
 }
