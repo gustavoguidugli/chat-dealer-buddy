@@ -1376,11 +1376,42 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                 <p className="text-xs text-muted-foreground">
                                   {formatDateShort(h.created_at)}
                                 </p>
-                                <p className="text-sm text-foreground mt-0.5">
+                                <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap">
                                   {h.tipo_evento === 'anotacao'
                                     ? (h.metadados as any)?.conteudo_completo || h.descricao
                                     : h.descricao}
                                 </p>
+                                {/* Anexos da anotação */}
+                                {h.tipo_evento === 'anotacao' && (h.metadados as any)?.anotacao_id && (() => {
+                                  const anotacaoAnexos = realtimeAnexos.filter((a: any) => a.id_anotacao === (h.metadados as any).anotacao_id);
+                                  if (anotacaoAnexos.length === 0) return null;
+                                  return (
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                      {anotacaoAnexos.map((anexo: any) => (
+                                        anexo.tipo_arquivo?.startsWith('image/') ? (
+                                          <a key={anexo.id} href={anexo.url_publica} target="_blank" rel="noopener noreferrer">
+                                            <img
+                                              src={anexo.url_publica}
+                                              alt={anexo.nome_arquivo}
+                                              className="h-16 w-16 rounded-md object-cover border hover:opacity-80 transition-opacity cursor-pointer"
+                                            />
+                                          </a>
+                                        ) : (
+                                          <a
+                                            key={anexo.id}
+                                            href={anexo.url_publica}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1.5 text-xs hover:bg-muted/80 transition-colors"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span className="max-w-[140px] truncate text-foreground">{anexo.nome_arquivo}</span>
+                                          </a>
+                                        )
+                                      ))}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               {h.tipo_evento === 'anotacao' && (h.metadados as any)?.anotacao_id && (
                                 <div className="flex items-center gap-1 shrink-0">
