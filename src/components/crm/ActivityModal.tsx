@@ -196,20 +196,20 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          {/* Activity type icons */}
-          <ActivityIconBar
-            empresaId={empresaId}
-            selectedName={assunto}
-            onSelect={(nome) => setAssunto(nome)}
-            onManage={() => setShowIconManager(true)}
-          />
-
           {/* Title */}
           <Input
             placeholder="Follow-up"
             value={assunto}
             onChange={e => setAssunto(e.target.value)}
             className="text-base font-medium"
+          />
+
+          {/* Activity type icons */}
+          <ActivityIconBar
+            empresaId={empresaId}
+            selectedName={assunto}
+            onSelect={(nome) => setAssunto(nome)}
+            onManage={() => setShowIconManager(true)}
           />
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
