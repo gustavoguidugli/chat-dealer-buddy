@@ -554,6 +554,50 @@ export default function CrmFunil() {
         leadId={selectedLeadId}
         onLeadChanged={() => setReloadKey((k) => k + 1)}
       />
+
+      {/* Drag-to-Won Dialog */}
+      <AlertDialog open={dragGanhoLeadId !== null} onOpenChange={(v) => { if (!v) setDragGanhoLeadId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar como ganho?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja marcar este negócio como ganho?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-green-600 hover:bg-green-700 text-white" onClick={handleDragGanho}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Drag-to-Lost Dialog */}
+      <AlertDialog open={dragPerdidoLeadId !== null} onOpenChange={(v) => { if (!v) { setDragPerdidoLeadId(null); setDragMotivoPerda(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar como perdido?</AlertDialogTitle>
+            <AlertDialogDescription>Informe o motivo da perda.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Motivo da perda..."
+            value={dragMotivoPerda}
+            onChange={e => setDragMotivoPerda(e.target.value)}
+            className="my-2"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDragMotivoPerda('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={!dragMotivoPerda.trim()}
+              onClick={handleDragPerdido}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
