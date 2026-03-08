@@ -1185,12 +1185,13 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             ? String(contatoValue)
                             : (lead.campos_extras?.[campo.slug] ?? '');
                           const isEditing = editingField === campo.slug;
+                          const isInteresseField = campo.slug === 'interesse' || campo.slug === 'gasto' || campo.nome.toLowerCase() === 'interesse';
                           return (
                             <div
                               key={campo.id}
                               className="flex items-center justify-between py-2 px-1 rounded-md group hover:bg-muted/50 cursor-pointer"
                               onClick={() => {
-                                if (!isEditing) {
+                                if (!isEditing && !isInteresseField) {
                                   setEditingField(campo.slug);
                                   setEditingValue(value || '');
                                 }
@@ -1199,7 +1200,29 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                               <span className="text-xs text-muted-foreground font-medium shrink-0 w-[90px] text-right pr-3">
                                 {campo.nome}
                               </span>
-                              {isEditing ? (
+                              {isInteresseField ? (
+                                <div className="flex-1">
+                                  <Select
+                                    value={value || ''}
+                                    onValueChange={async (val) => {
+                                      const newExtras = { ...(lead.campos_extras || {}), [campo.slug]: val };
+                                      await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
+                                      setLead({ ...lead, campos_extras: newExtras });
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs">
+                                      <SelectValue placeholder="Selecione..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {listaInteresses.map(int => (
+                                        <SelectItem key={int.nome} value={int.nome}>
+                                          {int.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              ) : isEditing ? (
                                 <div className="flex-1 flex items-center gap-1">
                                   <Input
                                     value={editingValue}
