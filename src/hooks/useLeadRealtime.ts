@@ -173,6 +173,13 @@ export function useLeadRealtime(leadId: number | null) {
     fetchData()
 
     const isCurrentLead = (value: unknown) => Number(value) === Number(leadId)
+    const isSameNumericId = (a: unknown, b: unknown) => {
+      const aNumber = Number(a)
+      const bNumber = Number(b)
+      if (Number.isNaN(aNumber) || Number.isNaN(bNumber)) return false
+      return aNumber === bNumber
+    }
+    const normalizeWhatsapp = (value: unknown) => String(value ?? '').replace(/\D/g, '')
     const sortAtividades = (items: any[]) => [...items].sort(
       (a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime()
     )
@@ -189,11 +196,16 @@ export function useLeadRealtime(leadId: number | null) {
             return
           }
           const newData = payload.new as any
+          const oldData = payload.old as any
           setLead((prev: any) => ({ ...prev, ...newData }))
-          // Se id_contato_geral ou whatsapp mudou, re-fetch contato data
-          if (newData.id_contato_geral || newData.whatsapp) {
-            contatoGeralId = newData.id_contato_geral ?? contatoGeralId
-            contatoWhatsapp = newData.whatsapp ?? contatoWhatsapp
+
+          const contatoChanged =
+            !isSameNumericId(newData.id_contato_geral, oldData?.id_contato_geral) ||
+            normalizeWhatsapp(newData.whatsapp) !== normalizeWhatsapp(oldData?.whatsapp)
+
+          if (contatoChanged) {
+            contatoGeralId = newData.id_contato_geral ?? null
+            contatoWhatsapp = newData.whatsapp ?? null
             fetchContatoData(contatoGeralId, contatoWhatsapp)
           }
         }
@@ -287,11 +299,16 @@ export function useLeadRealtime(leadId: number | null) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_geral' }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          const sameContatoGeralId = !!contatoGeralId && updated.id === contatoGeralId
-          const sameWhatsapp = !!contatoWhatsapp && updated.whatsapp === contatoWhatsapp
+          const sameContatoGeralId = !!contatoGeralId && isSameNumericId(updated.id, contatoGeralId)
+          const sameWhatsapp =
+            !!contatoWhatsapp &&
+            normalizeWhatsapp(updated.whatsapp) !== '' &&
+            normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)
 
           if (sameContatoGeralId || sameWhatsapp) {
-            contatoGeralId = updated.id ?? contatoGeralId
+            const parsedContatoId = Number(updated.id)
+            contatoGeralId = Number.isNaN(parsedContatoId) ? contatoGeralId : parsedContatoId
+            contatoWhatsapp = updated.whatsapp ?? contatoWhatsapp
             fetchContatoData(contatoGeralId, contatoWhatsapp, updated.interesse)
           }
         }

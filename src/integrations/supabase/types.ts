@@ -1818,7 +1818,6 @@ export type Database = {
           empresa_cliente: string | null
           id: number
           id_contato_geral: number | null
-          id_contato_sdr: string | null
           id_empresa: number
           id_etapa_atual: number
           id_funil: number
@@ -1855,7 +1854,6 @@ export type Database = {
           empresa_cliente?: string | null
           id?: number
           id_contato_geral?: number | null
-          id_contato_sdr?: string | null
           id_empresa: number
           id_etapa_atual: number
           id_funil: number
@@ -1892,7 +1890,6 @@ export type Database = {
           empresa_cliente?: string | null
           id?: number
           id_contato_geral?: number | null
-          id_contato_sdr?: string | null
           id_empresa?: number
           id_etapa_atual?: number
           id_funil?: number
