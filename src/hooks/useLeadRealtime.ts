@@ -287,7 +287,11 @@ export function useLeadRealtime(leadId: number | null) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_geral' }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          if (contatoGeralId && updated.id === contatoGeralId) {
+          const sameContatoGeralId = !!contatoGeralId && updated.id === contatoGeralId
+          const sameWhatsapp = !!contatoWhatsapp && updated.whatsapp === contatoWhatsapp
+
+          if (sameContatoGeralId || sameWhatsapp) {
+            contatoGeralId = updated.id ?? contatoGeralId
             fetchContatoData(contatoGeralId, contatoWhatsapp, updated.interesse)
           }
         }
