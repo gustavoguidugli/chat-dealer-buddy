@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X, UserCircle } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { NovoNegocioModal } from '@/components/crm/NovoNegocioModal';
@@ -79,6 +84,9 @@ export default function CrmFunil() {
   const [filterProprietarioId, setFilterProprietarioId] = useState<string | null>(null);
   const [proprietarios, setProprietarios] = useState<{id: string; nome: string}[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [dragGanhoLeadId, setDragGanhoLeadId] = useState<number | null>(null);
+  const [dragPerdidoLeadId, setDragPerdidoLeadId] = useState<number | null>(null);
+  const [dragMotivoPerda, setDragMotivoPerda] = useState('');
 
   // Close search on outside click
   useEffect(() => {
