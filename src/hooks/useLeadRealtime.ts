@@ -30,7 +30,7 @@ export function useLeadRealtime(leadId: number | null) {
   const [historico, setHistorico] = useState<any[]>([])
   const [dadosContato, setDadosContato] = useState<DadosContato>({
     interesse: null, cidade: null, tipo_uso: null,
-    consumo_mensal: null, gasto_mensal: null, dias_semana: null,
+    consumo_mensal: null, gasto_mensal: null, dias_semana: null, telefone: null,
   })
   const [loading, setLoading] = useState(true)
 
