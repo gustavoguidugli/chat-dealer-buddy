@@ -1410,30 +1410,59 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                 {h.tipo_evento === 'anotacao' && (h.metadados as any)?.anotacao_id && (() => {
                                   const anotacaoAnexos = realtimeAnexos.filter((a: any) => a.id_anotacao === (h.metadados as any).anotacao_id);
                                   if (anotacaoAnexos.length === 0) return null;
+                                  const imageAnexos = anotacaoAnexos.filter((a: any) => a.tipo_arquivo?.startsWith('image/'));
+                                  const fileAnexos = anotacaoAnexos.filter((a: any) => !a.tipo_arquivo?.startsWith('image/'));
                                   return (
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                      {anotacaoAnexos.map((anexo: any) => (
-                                        anexo.tipo_arquivo?.startsWith('image/') ? (
-                                          <a key={anexo.id} href={anexo.url_publica} target="_blank" rel="noopener noreferrer">
-                                            <img
-                                              src={anexo.url_publica}
-                                              alt={anexo.nome_arquivo}
-                                              className="h-16 w-16 rounded-md object-cover border hover:opacity-80 transition-opacity cursor-pointer"
-                                            />
-                                          </a>
-                                        ) : (
+                                    <div className="mt-2 space-y-2">
+                                      {/* Images shown inline */}
+                                      {imageAnexos.length > 0 && (
+                                        <div className="flex flex-wrap gap-2">
+                                          {imageAnexos.map((anexo: any) => (
+                                            <a key={anexo.id} href={anexo.url_publica} target="_blank" rel="noopener noreferrer">
+                                              <img
+                                                src={anexo.url_publica}
+                                                alt={anexo.nome_arquivo}
+                                                className="max-w-[280px] max-h-[200px] rounded-lg border object-contain hover:opacity-80 transition-opacity cursor-pointer"
+                                              />
+                                            </a>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {/* Files shown as clickable cards */}
+                                      {fileAnexos.map((anexo: any) => {
+                                        const isPdf = anexo.tipo_arquivo === 'application/pdf';
+                                        const sizeStr = anexo.tamanho >= 1024 * 1024
+                                          ? `${(anexo.tamanho / (1024 * 1024)).toFixed(1)} MB`
+                                          : `${Math.round(anexo.tamanho / 1024)} KB`;
+                                        return (
                                           <a
                                             key={anexo.id}
                                             href={anexo.url_publica}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1.5 text-xs hover:bg-muted/80 transition-colors"
+                                            className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/60 transition-colors group"
                                           >
-                                            <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span className="max-w-[140px] truncate text-foreground">{anexo.nome_arquivo}</span>
+                                            <div className="shrink-0">
+                                              <Paperclip className="h-5 w-5 text-muted-foreground" />
+                                            </div>
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                              {isPdf && (
+                                                <div className="shrink-0 h-8 w-8 rounded bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                                  <FileText className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                                </div>
+                                              )}
+                                              <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-medium text-primary truncate group-hover:underline">
+                                                  {anexo.nome_arquivo}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {formatDateShort(anexo.created_at)} · {sizeStr}
+                                                </p>
+                                              </div>
+                                            </div>
                                           </a>
-                                        )
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   );
                                 })()}
