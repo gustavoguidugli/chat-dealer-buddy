@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      anexos_anotacao: {
+        Row: {
+          created_at: string
+          id: number
+          id_anotacao: number
+          id_empresa: number
+          nome_arquivo: string
+          storage_path: string
+          tamanho: number
+          tipo_arquivo: string
+          url_publica: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          id_anotacao: number
+          id_empresa: number
+          nome_arquivo: string
+          storage_path: string
+          tamanho?: number
+          tipo_arquivo: string
+          url_publica: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          id_anotacao?: number
+          id_empresa?: number
+          nome_arquivo?: string
+          storage_path?: string
+          tamanho?: number
+          tipo_arquivo?: string
+          url_publica?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_anotacao_id_anotacao_fkey"
+            columns: ["id_anotacao"]
+            isOneToOne: false
+            referencedRelation: "anotacoes_lead"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_anotacao_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anotacoes_lead: {
         Row: {
           conteudo: string
