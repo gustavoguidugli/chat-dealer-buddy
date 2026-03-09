@@ -1237,54 +1237,48 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                       // Update UI immediately
                                       setInteresseOverride(val);
 
-                                      // Try to update contatos_geral by id first (most reliable)
-                                      let contatoGeralId = lead.id_contato_geral;
-                                      
-                                      // If no id_contato_geral, try to find by whatsapp
-                                      if (!contatoGeralId && lead.whatsapp) {
-                                        const normalizedWhatsapp = lead.whatsapp.replace(/\D/g, '');
-                                        const { data: contatoData } = await supabase
-                                          .from('contatos_geral')
-                                          .select('id')
-                                          .or(`whatsapp.eq.${lead.whatsapp},whatsapp.eq.${normalizedWhatsapp}`)
-                                          .limit(1)
-                                          .maybeSingle();
-                                        
-                                        if (contatoData) {
-                                          contatoGeralId = contatoData.id;
-                                          // Optionally save id_contato_geral to lead for future use
-                                          await supabase.from('leads_crm').update({ id_contato_geral: contatoGeralId }).eq('id', lead.id);
-                                        }
-                                      }
-
-                                      if (contatoGeralId) {
-                                        const { data: updateResult, error } = await supabase
-                                          .from('contatos_geral')
-                                          .update({ interesse: val })
-                                          .eq('id', contatoGeralId)
-                                          .select('id');
-                                        
-                                        if (error) {
-                                          toast({ title: 'Erro ao atualizar interesse', description: error.message, variant: 'destructive' });
-                                          setInteresseOverride(null);
-                                          return;
-                                        }
-                                        
-                                        if (!updateResult || updateResult.length === 0) {
-                                          toast({ title: 'Erro ao atualizar interesse', description: 'Nenhum registro atualizado', variant: 'destructive' });
-                                          setInteresseOverride(null);
-                                          return;
-                                        }
-                                      } else {
-                                        toast({ title: 'Contato não encontrado', description: 'Não foi possível atualizar o interesse', variant: 'destructive' });
-                                        setInteresseOverride(null);
-                                        return;
-                                      }
-
-                                      // Also update campos_extras as fallback
+                                      // 1. ALWAYS save to leads_crm.campos_extras first (primary storage)
                                       const newExtras = { ...(lead.campos_extras || {}), [storageKey]: val };
                                       await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
                                       setLead({ ...lead, campos_extras: newExtras });
+
+                                      // 2. Best-effort sync to contatos_geral (don't block on failure)
+                                      try {
+                                        let contatoGeralId = lead.id_contato_geral;
+                                        
+                                        // If no id_contato_geral, try to find by whatsapp with multiple variants
+                                        if (!contatoGeralId && lead.whatsapp) {
+                                          const raw = lead.whatsapp.replace(/\D/g, '');
+                                          const variants = [
+                                            lead.whatsapp,
+                                            raw,
+                                            raw.startsWith('55') ? raw : '55' + raw,
+                                            raw.startsWith('55') ? raw.slice(2) : raw,
+                                          ].filter(Boolean);
+                                          
+                                          const { data: contatoData } = await supabase
+                                            .from('contatos_geral')
+                                            .select('id')
+                                            .in('whatsapp', [...new Set(variants)])
+                                            .limit(1)
+                                            .maybeSingle();
+                                          
+                                          if (contatoData) {
+                                            contatoGeralId = contatoData.id;
+                                            // Save id_contato_geral to lead for future use
+                                            await supabase.from('leads_crm').update({ id_contato_geral: contatoGeralId }).eq('id', lead.id);
+                                          }
+                                        }
+
+                                        if (contatoGeralId) {
+                                          await supabase
+                                            .from('contatos_geral')
+                                            .update({ interesse: val })
+                                            .eq('id', contatoGeralId);
+                                        }
+                                      } catch (e) {
+                                        console.warn('Falha ao sincronizar interesse com contatos_geral:', e);
+                                      }
                                     }}
                                   >
                                     <SelectTrigger className="h-7 text-xs">
