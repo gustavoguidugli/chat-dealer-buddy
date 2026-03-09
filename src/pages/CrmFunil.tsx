@@ -5,12 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X, UserCircle } from 'lucide-react';
+import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X, UserCircle, Settings } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { NovoNegocioModal } from '@/components/crm/NovoNegocioModal';
@@ -18,7 +18,9 @@ import { KanbanBoard } from '@/components/crm/KanbanBoard';
 import { EditarFunilModal } from '@/components/crm/EditarFunilModal';
 import { CriarFunilModal } from '@/components/crm/CriarFunilModal';
 import { LeadDrawer } from '@/components/crm/LeadDrawer';
+import { ManageMotivosModal } from '@/components/crm/ManageMotivosModal';
 import { useFunilRealtime } from '@/hooks/useFunilRealtime';
+import { useMotivosPerda } from '@/hooks/useMotivosPerda';
 
 interface Funil {
   id: number;
@@ -86,7 +88,11 @@ export default function CrmFunil() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [dragGanhoLeadId, setDragGanhoLeadId] = useState<number | null>(null);
   const [dragPerdidoLeadId, setDragPerdidoLeadId] = useState<number | null>(null);
-  const [dragMotivoPerda, setDragMotivoPerda] = useState('');
+  const [dragMotivosSelecionados, setDragMotivosSelecionados] = useState<number[]>([]);
+  const [manageMotivosOpen, setManageMotivosOpen] = useState(false);
+
+  // Motivos de perda hook
+  const { motivos: motivosPerda } = useMotivosPerda(empresaId);
 
   // Close search on outside click
   useEffect(() => {
