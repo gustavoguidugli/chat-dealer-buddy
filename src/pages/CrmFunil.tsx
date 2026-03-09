@@ -5,12 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X, UserCircle } from 'lucide-react';
+import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X, UserCircle, Settings } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { NovoNegocioModal } from '@/components/crm/NovoNegocioModal';
@@ -18,7 +18,9 @@ import { KanbanBoard } from '@/components/crm/KanbanBoard';
 import { EditarFunilModal } from '@/components/crm/EditarFunilModal';
 import { CriarFunilModal } from '@/components/crm/CriarFunilModal';
 import { LeadDrawer } from '@/components/crm/LeadDrawer';
+import { ManageMotivosModal } from '@/components/crm/ManageMotivosModal';
 import { useFunilRealtime } from '@/hooks/useFunilRealtime';
+import { useMotivosPerda } from '@/hooks/useMotivosPerda';
 
 interface Funil {
   id: number;
@@ -86,7 +88,11 @@ export default function CrmFunil() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [dragGanhoLeadId, setDragGanhoLeadId] = useState<number | null>(null);
   const [dragPerdidoLeadId, setDragPerdidoLeadId] = useState<number | null>(null);
-  const [dragMotivoPerda, setDragMotivoPerda] = useState('');
+  const [dragMotivosSelecionados, setDragMotivosSelecionados] = useState<number[]>([]);
+  const [manageMotivosOpen, setManageMotivosOpen] = useState(false);
+
+  // Motivos de perda hook
+  const { motivos: motivosPerda } = useMotivosPerda(empresaId);
 
   // Close search on outside click
   useEffect(() => {
@@ -280,10 +286,14 @@ export default function CrmFunil() {
   }, [dragGanhoLeadId, toast]);
 
   const handleDragPerdido = useCallback(async () => {
-    if (!dragPerdidoLeadId || !dragMotivoPerda.trim()) return;
+    if (!dragPerdidoLeadId || dragMotivosSelecionados.length === 0) return;
+    const motivoTexto = motivosPerda
+      .filter(m => dragMotivosSelecionados.includes(m.id))
+      .map(m => m.nome)
+      .join(', ');
     const { error } = await supabase.from('leads_crm').update({
       status: 'perdido',
-      motivo_perda: dragMotivoPerda.trim(),
+      motivo_perda: motivoTexto,
       data_perdido: new Date().toISOString(),
     }).eq('id', dragPerdidoLeadId);
     if (error) {
@@ -292,8 +302,8 @@ export default function CrmFunil() {
       toast({ title: 'Lead marcado como perdido' });
     }
     setDragPerdidoLeadId(null);
-    setDragMotivoPerda('');
-  }, [dragPerdidoLeadId, dragMotivoPerda, toast]);
+    setDragMotivosSelecionados([]);
+  }, [dragPerdidoLeadId, dragMotivosSelecionados, motivosPerda, toast]);
 
   // totalNegocios computed after filteredLeads below
   const funilNome = funis.find(f => f.id === funilAtual)?.nome || '';
@@ -574,23 +584,46 @@ export default function CrmFunil() {
       </AlertDialog>
 
       {/* Drag-to-Lost Dialog */}
-      <AlertDialog open={dragPerdidoLeadId !== null} onOpenChange={(v) => { if (!v) { setDragPerdidoLeadId(null); setDragMotivoPerda(''); } }}>
+      <AlertDialog open={dragPerdidoLeadId !== null} onOpenChange={(v) => { if (!v) { setDragPerdidoLeadId(null); setDragMotivosSelecionados([]); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Marcar como perdido?</AlertDialogTitle>
-            <AlertDialogDescription>Informe o motivo da perda.</AlertDialogDescription>
+            <AlertDialogDescription>Selecione o(s) motivo(s) da perda.</AlertDialogDescription>
           </AlertDialogHeader>
-          <Textarea
-            placeholder="Motivo da perda..."
-            value={dragMotivoPerda}
-            onChange={e => setDragMotivoPerda(e.target.value)}
-            className="my-2"
-          />
+          <div className="space-y-2 my-2 max-h-[200px] overflow-y-auto">
+            {motivosPerda.map(motivo => (
+              <label 
+                key={motivo.id}
+                className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+              >
+                <Checkbox
+                  checked={dragMotivosSelecionados.includes(motivo.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setDragMotivosSelecionados(prev => [...prev, motivo.id]);
+                    } else {
+                      setDragMotivosSelecionados(prev => prev.filter(id => id !== motivo.id));
+                    }
+                  }}
+                />
+                <span className="text-sm">{motivo.nome}</span>
+              </label>
+            ))}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-muted-foreground"
+            onClick={() => setManageMotivosOpen(true)}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Gerenciar motivos
+          </Button>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDragMotivoPerda('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setDragMotivosSelecionados([])}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600 text-white"
-              disabled={!dragMotivoPerda.trim()}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              disabled={dragMotivosSelecionados.length === 0}
               onClick={handleDragPerdido}
             >
               Confirmar
@@ -598,6 +631,15 @@ export default function CrmFunil() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Manage Motivos Modal */}
+      {empresaId && (
+        <ManageMotivosModal
+          isOpen={manageMotivosOpen}
+          onClose={() => setManageMotivosOpen(false)}
+          empresaId={empresaId}
+        />
+      )}
     </AppLayout>
   );
 }
