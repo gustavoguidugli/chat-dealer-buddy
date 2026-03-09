@@ -113,6 +113,251 @@ export type Database = {
           },
         ]
       }
+      antigo_conversas: {
+        Row: {
+          anotacao_interna: string | null
+          assigned_user_id: string | null
+          atualizado_em: string | null
+          contato_nome: string | null
+          contato_whatsapp: string | null
+          criado_em: string | null
+          etapa: string | null
+          finalizado_em: string | null
+          foto_perfil: string | null
+          id: string
+          id_atendente: string | null
+          id_contato: string | null
+          id_empresa: number | null
+          status: Database["public"]["Enums"]["status_conversa"] | null
+          tags: string | null
+          ultima_mensagem: string | null
+          ultima_mensagem_em: string | null
+        }
+        Insert: {
+          anotacao_interna?: string | null
+          assigned_user_id?: string | null
+          atualizado_em?: string | null
+          contato_nome?: string | null
+          contato_whatsapp?: string | null
+          criado_em?: string | null
+          etapa?: string | null
+          finalizado_em?: string | null
+          foto_perfil?: string | null
+          id?: string
+          id_atendente?: string | null
+          id_contato?: string | null
+          id_empresa?: number | null
+          status?: Database["public"]["Enums"]["status_conversa"] | null
+          tags?: string | null
+          ultima_mensagem?: string | null
+          ultima_mensagem_em?: string | null
+        }
+        Update: {
+          anotacao_interna?: string | null
+          assigned_user_id?: string | null
+          atualizado_em?: string | null
+          contato_nome?: string | null
+          contato_whatsapp?: string | null
+          criado_em?: string | null
+          etapa?: string | null
+          finalizado_em?: string | null
+          foto_perfil?: string | null
+          id?: string
+          id_atendente?: string | null
+          id_contato?: string | null
+          id_empresa?: number | null
+          status?: Database["public"]["Enums"]["status_conversa"] | null
+          tags?: string | null
+          ultima_mensagem?: string | null
+          ultima_mensagem_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversas_id_atendente_fkey"
+            columns: ["id_atendente"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["uuid"]
+          },
+          {
+            foreignKeyName: "conversas_id_contato_fkey"
+            columns: ["id_contato"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id_cliente"]
+          },
+          {
+            foreignKeyName: "conversas_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      antigo_conversas_sdr_maquinagelo: {
+        Row: {
+          anotacao_interna: string | null
+          assigned_user_id: string | null
+          atualizado_em: string | null
+          contato_nome: string | null
+          contato_whatsapp: string | null
+          criado_em: string | null
+          etapa: string | null
+          finalizado_em: string | null
+          foto_perfil: string | null
+          id: string
+          id_atendente: string | null
+          id_contato: string | null
+          id_empresa: number | null
+          status: Database["public"]["Enums"]["status_conversa"] | null
+          tags: string | null
+          ultima_mensagem: string | null
+          ultima_mensagem_em: string | null
+        }
+        Insert: {
+          anotacao_interna?: string | null
+          assigned_user_id?: string | null
+          atualizado_em?: string | null
+          contato_nome?: string | null
+          contato_whatsapp?: string | null
+          criado_em?: string | null
+          etapa?: string | null
+          finalizado_em?: string | null
+          foto_perfil?: string | null
+          id?: string
+          id_atendente?: string | null
+          id_contato?: string | null
+          id_empresa?: number | null
+          status?: Database["public"]["Enums"]["status_conversa"] | null
+          tags?: string | null
+          ultima_mensagem?: string | null
+          ultima_mensagem_em?: string | null
+        }
+        Update: {
+          anotacao_interna?: string | null
+          assigned_user_id?: string | null
+          atualizado_em?: string | null
+          contato_nome?: string | null
+          contato_whatsapp?: string | null
+          criado_em?: string | null
+          etapa?: string | null
+          finalizado_em?: string | null
+          foto_perfil?: string | null
+          id?: string
+          id_atendente?: string | null
+          id_contato?: string | null
+          id_empresa?: number | null
+          status?: Database["public"]["Enums"]["status_conversa"] | null
+          tags?: string | null
+          ultima_mensagem?: string | null
+          ultima_mensagem_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversas_sdr_maquinagelo_id_atendente_fkey"
+            columns: ["id_atendente"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["uuid"]
+          },
+          {
+            foreignKeyName: "conversas_sdr_maquinagelo_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_sdr_maquinagelo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      antigo_mensagens: {
+        Row: {
+          autor: Database["public"]["Enums"]["autor_mensagem"] | null
+          conversa_id: string | null
+          created_at: string | null
+          document_title: string | null
+          empresa_id: number | null
+          enviado_para: string | null
+          enviado_por: string | null
+          enviado_recebido: string | null
+          fluxo: string | null
+          id: number
+          media_duration_ms: number | null
+          media_url: string | null
+          mensagem: string | null
+          message_id_zapi: string | null
+          mime_type: string | null
+          nome_empresa: string
+          read_at: string | null
+          tipo_mensagem: Database["public"]["Enums"]["tipo_mensagem"] | null
+          whatsapp: string | null
+        }
+        Insert: {
+          autor?: Database["public"]["Enums"]["autor_mensagem"] | null
+          conversa_id?: string | null
+          created_at?: string | null
+          document_title?: string | null
+          empresa_id?: number | null
+          enviado_para?: string | null
+          enviado_por?: string | null
+          enviado_recebido?: string | null
+          fluxo?: string | null
+          id?: number
+          media_duration_ms?: number | null
+          media_url?: string | null
+          mensagem?: string | null
+          message_id_zapi?: string | null
+          mime_type?: string | null
+          nome_empresa?: string
+          read_at?: string | null
+          tipo_mensagem?: Database["public"]["Enums"]["tipo_mensagem"] | null
+          whatsapp?: string | null
+        }
+        Update: {
+          autor?: Database["public"]["Enums"]["autor_mensagem"] | null
+          conversa_id?: string | null
+          created_at?: string | null
+          document_title?: string | null
+          empresa_id?: number | null
+          enviado_para?: string | null
+          enviado_por?: string | null
+          enviado_recebido?: string | null
+          fluxo?: string | null
+          id?: number
+          media_duration_ms?: number | null
+          media_url?: string | null
+          mensagem?: string | null
+          message_id_zapi?: string | null
+          mime_type?: string | null
+          nome_empresa?: string
+          read_at?: string | null
+          tipo_mensagem?: Database["public"]["Enums"]["tipo_mensagem"] | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas_sdr_maquinagelo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_fluxo_fkey"
+            columns: ["fluxo"]
+            isOneToOne: false
+            referencedRelation: "fluxos"
+            referencedColumns: ["nome_fluxo"]
+          },
+          {
+            foreignKeyName: "whatsapp_mensagens_cliente_final_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "antigo_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atividade_participantes: {
         Row: {
           created_at: string | null
@@ -701,159 +946,87 @@ export type Database = {
           },
         ]
       }
-      conversas: {
+      conversas_whatsapp: {
         Row: {
-          anotacao_interna: string | null
-          assigned_user_id: string | null
-          atualizado_em: string | null
-          contato_nome: string | null
-          contato_whatsapp: string | null
-          criado_em: string | null
-          etapa: string | null
-          finalizado_em: string | null
-          foto_perfil: string | null
-          id: string
-          id_atendente: string | null
-          id_contato: string | null
-          id_empresa: number | null
-          status: Database["public"]["Enums"]["status_conversa"] | null
-          tags: string | null
-          ultima_mensagem: string | null
+          anotacoes: string | null
+          atendente_id: string | null
+          ativo: boolean | null
+          created_at: string | null
+          etapa_fluxo: string | null
+          finalizada_em: string | null
+          foto_perfil_url: string | null
+          id: number
+          id_empresa: number
+          id_lead: number | null
+          nome_contato: string | null
+          primeira_mensagem_em: string | null
+          status: Database["public"]["Enums"]["status_conversa_whatsapp"] | null
+          tags: string[] | null
+          transferida_humano_em: string | null
           ultima_mensagem_em: string | null
+          updated_at: string | null
+          whatsapp: string
+          whatsapp_id: string | null
         }
         Insert: {
-          anotacao_interna?: string | null
-          assigned_user_id?: string | null
-          atualizado_em?: string | null
-          contato_nome?: string | null
-          contato_whatsapp?: string | null
-          criado_em?: string | null
-          etapa?: string | null
-          finalizado_em?: string | null
-          foto_perfil?: string | null
-          id?: string
-          id_atendente?: string | null
-          id_contato?: string | null
-          id_empresa?: number | null
-          status?: Database["public"]["Enums"]["status_conversa"] | null
-          tags?: string | null
-          ultima_mensagem?: string | null
+          anotacoes?: string | null
+          atendente_id?: string | null
+          ativo?: boolean | null
+          created_at?: string | null
+          etapa_fluxo?: string | null
+          finalizada_em?: string | null
+          foto_perfil_url?: string | null
+          id?: number
+          id_empresa: number
+          id_lead?: number | null
+          nome_contato?: string | null
+          primeira_mensagem_em?: string | null
+          status?:
+            | Database["public"]["Enums"]["status_conversa_whatsapp"]
+            | null
+          tags?: string[] | null
+          transferida_humano_em?: string | null
           ultima_mensagem_em?: string | null
+          updated_at?: string | null
+          whatsapp: string
+          whatsapp_id?: string | null
         }
         Update: {
-          anotacao_interna?: string | null
-          assigned_user_id?: string | null
-          atualizado_em?: string | null
-          contato_nome?: string | null
-          contato_whatsapp?: string | null
-          criado_em?: string | null
-          etapa?: string | null
-          finalizado_em?: string | null
-          foto_perfil?: string | null
-          id?: string
-          id_atendente?: string | null
-          id_contato?: string | null
-          id_empresa?: number | null
-          status?: Database["public"]["Enums"]["status_conversa"] | null
-          tags?: string | null
-          ultima_mensagem?: string | null
+          anotacoes?: string | null
+          atendente_id?: string | null
+          ativo?: boolean | null
+          created_at?: string | null
+          etapa_fluxo?: string | null
+          finalizada_em?: string | null
+          foto_perfil_url?: string | null
+          id?: number
+          id_empresa?: number
+          id_lead?: number | null
+          nome_contato?: string | null
+          primeira_mensagem_em?: string | null
+          status?:
+            | Database["public"]["Enums"]["status_conversa_whatsapp"]
+            | null
+          tags?: string[] | null
+          transferida_humano_em?: string | null
           ultima_mensagem_em?: string | null
+          updated_at?: string | null
+          whatsapp?: string
+          whatsapp_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "conversas_id_atendente_fkey"
-            columns: ["id_atendente"]
-            isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["uuid"]
-          },
-          {
-            foreignKeyName: "conversas_id_contato_fkey"
-            columns: ["id_contato"]
-            isOneToOne: false
-            referencedRelation: "contatos"
-            referencedColumns: ["id_cliente"]
-          },
-          {
-            foreignKeyName: "conversas_id_empresa_fkey"
+            foreignKeyName: "conversas_whatsapp_id_empresa_fkey"
             columns: ["id_empresa"]
             isOneToOne: false
-            referencedRelation: "empresas"
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      conversas_sdr_maquinagelo: {
-        Row: {
-          anotacao_interna: string | null
-          assigned_user_id: string | null
-          atualizado_em: string | null
-          contato_nome: string | null
-          contato_whatsapp: string | null
-          criado_em: string | null
-          etapa: string | null
-          finalizado_em: string | null
-          foto_perfil: string | null
-          id: string
-          id_atendente: string | null
-          id_contato: string | null
-          id_empresa: number | null
-          status: Database["public"]["Enums"]["status_conversa"] | null
-          tags: string | null
-          ultima_mensagem: string | null
-          ultima_mensagem_em: string | null
-        }
-        Insert: {
-          anotacao_interna?: string | null
-          assigned_user_id?: string | null
-          atualizado_em?: string | null
-          contato_nome?: string | null
-          contato_whatsapp?: string | null
-          criado_em?: string | null
-          etapa?: string | null
-          finalizado_em?: string | null
-          foto_perfil?: string | null
-          id?: string
-          id_atendente?: string | null
-          id_contato?: string | null
-          id_empresa?: number | null
-          status?: Database["public"]["Enums"]["status_conversa"] | null
-          tags?: string | null
-          ultima_mensagem?: string | null
-          ultima_mensagem_em?: string | null
-        }
-        Update: {
-          anotacao_interna?: string | null
-          assigned_user_id?: string | null
-          atualizado_em?: string | null
-          contato_nome?: string | null
-          contato_whatsapp?: string | null
-          criado_em?: string | null
-          etapa?: string | null
-          finalizado_em?: string | null
-          foto_perfil?: string | null
-          id?: string
-          id_atendente?: string | null
-          id_contato?: string | null
-          id_empresa?: number | null
-          status?: Database["public"]["Enums"]["status_conversa"] | null
-          tags?: string | null
-          ultima_mensagem?: string | null
-          ultima_mensagem_em?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "conversas_sdr_maquinagelo_id_atendente_fkey"
-            columns: ["id_atendente"]
+            foreignKeyName: "conversas_whatsapp_id_lead_fkey"
+            columns: ["id_lead"]
             isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["uuid"]
-          },
-          {
-            foreignKeyName: "conversas_sdr_maquinagelo_id_empresa_fkey"
-            columns: ["id_empresa"]
-            isOneToOne: false
-            referencedRelation: "empresas_sdr_maquinagelo"
+            referencedRelation: "leads_crm"
             referencedColumns: ["id"]
           },
         ]
@@ -1303,7 +1476,7 @@ export type Database = {
             foreignKeyName: "etiquestas_conversa_id_conversa_fkey"
             columns: ["id_conversa"]
             isOneToOne: false
-            referencedRelation: "conversas"
+            referencedRelation: "antigo_conversas"
             referencedColumns: ["id"]
           },
           {
@@ -2134,90 +2307,70 @@ export type Database = {
           },
         ]
       }
-      mensagens: {
+      mensagens_whatsapp: {
         Row: {
-          autor: Database["public"]["Enums"]["autor_mensagem"] | null
-          conversa_id: string | null
+          conteudo: string | null
           created_at: string | null
-          document_title: string | null
-          empresa_id: number | null
-          enviado_para: string | null
+          de_contato: boolean
           enviado_por: string | null
-          enviado_recebido: string | null
-          fluxo: string | null
           id: number
-          media_duration_ms: number | null
-          media_url: string | null
-          mensagem: string | null
-          message_id_zapi: string | null
-          mime_type: string | null
-          nome_empresa: string
-          read_at: string | null
-          tipo_mensagem: Database["public"]["Enums"]["tipo_mensagem"] | null
-          whatsapp: string | null
+          id_conversa: number
+          lida: boolean | null
+          lida_em: string | null
+          message_id_whatsapp: string | null
+          midia_altura: number | null
+          midia_duracao_segundos: number | null
+          midia_largura: number | null
+          midia_mime_type: string | null
+          midia_nome_arquivo: string | null
+          midia_tamanho_bytes: number | null
+          midia_url: string | null
+          tipo: Database["public"]["Enums"]["tipo_mensagem_whatsapp"]
         }
         Insert: {
-          autor?: Database["public"]["Enums"]["autor_mensagem"] | null
-          conversa_id?: string | null
+          conteudo?: string | null
           created_at?: string | null
-          document_title?: string | null
-          empresa_id?: number | null
-          enviado_para?: string | null
+          de_contato: boolean
           enviado_por?: string | null
-          enviado_recebido?: string | null
-          fluxo?: string | null
           id?: number
-          media_duration_ms?: number | null
-          media_url?: string | null
-          mensagem?: string | null
-          message_id_zapi?: string | null
-          mime_type?: string | null
-          nome_empresa?: string
-          read_at?: string | null
-          tipo_mensagem?: Database["public"]["Enums"]["tipo_mensagem"] | null
-          whatsapp?: string | null
+          id_conversa: number
+          lida?: boolean | null
+          lida_em?: string | null
+          message_id_whatsapp?: string | null
+          midia_altura?: number | null
+          midia_duracao_segundos?: number | null
+          midia_largura?: number | null
+          midia_mime_type?: string | null
+          midia_nome_arquivo?: string | null
+          midia_tamanho_bytes?: number | null
+          midia_url?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_mensagem_whatsapp"]
         }
         Update: {
-          autor?: Database["public"]["Enums"]["autor_mensagem"] | null
-          conversa_id?: string | null
+          conteudo?: string | null
           created_at?: string | null
-          document_title?: string | null
-          empresa_id?: number | null
-          enviado_para?: string | null
+          de_contato?: boolean
           enviado_por?: string | null
-          enviado_recebido?: string | null
-          fluxo?: string | null
           id?: number
-          media_duration_ms?: number | null
-          media_url?: string | null
-          mensagem?: string | null
-          message_id_zapi?: string | null
-          mime_type?: string | null
-          nome_empresa?: string
-          read_at?: string | null
-          tipo_mensagem?: Database["public"]["Enums"]["tipo_mensagem"] | null
-          whatsapp?: string | null
+          id_conversa?: number
+          lida?: boolean | null
+          lida_em?: string | null
+          message_id_whatsapp?: string | null
+          midia_altura?: number | null
+          midia_duracao_segundos?: number | null
+          midia_largura?: number | null
+          midia_mime_type?: string | null
+          midia_nome_arquivo?: string | null
+          midia_tamanho_bytes?: number | null
+          midia_url?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_mensagem_whatsapp"]
         }
         Relationships: [
           {
-            foreignKeyName: "mensagens_empresa_id_fkey"
-            columns: ["empresa_id"]
+            foreignKeyName: "mensagens_whatsapp_id_conversa_fkey"
+            columns: ["id_conversa"]
             isOneToOne: false
-            referencedRelation: "empresas_sdr_maquinagelo"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mensagens_fluxo_fkey"
-            columns: ["fluxo"]
-            isOneToOne: false
-            referencedRelation: "fluxos"
-            referencedColumns: ["nome_fluxo"]
-          },
-          {
-            foreignKeyName: "whatsapp_mensagens_cliente_final_conversa_id_fkey"
-            columns: ["conversa_id"]
-            isOneToOne: false
-            referencedRelation: "conversas"
+            referencedRelation: "conversas_whatsapp"
             referencedColumns: ["id"]
           },
         ]
@@ -2927,6 +3080,12 @@ export type Database = {
         | "admin"
         | "numero_automacao"
       status_conversa: "aberta" | "pendente" | "finalizada"
+      status_conversa_whatsapp:
+        | "ativa"
+        | "aguardando_resposta"
+        | "transferida_humano"
+        | "finalizada"
+        | "arquivada"
       status_usuario: "online" | "offline"
       tipo_contato: "lead" | "cliente" | "fornecedor" | "interno"
       tipo_mensagem:
@@ -2936,6 +3095,15 @@ export type Database = {
         | "audio"
         | "image"
         | "document"
+      tipo_mensagem_whatsapp:
+        | "texto"
+        | "imagem"
+        | "audio"
+        | "video"
+        | "documento"
+        | "sticker"
+        | "localizacao"
+        | "contato"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3083,6 +3251,13 @@ export const Constants = {
         "numero_automacao",
       ],
       status_conversa: ["aberta", "pendente", "finalizada"],
+      status_conversa_whatsapp: [
+        "ativa",
+        "aguardando_resposta",
+        "transferida_humano",
+        "finalizada",
+        "arquivada",
+      ],
       status_usuario: ["online", "offline"],
       tipo_contato: ["lead", "cliente", "fornecedor", "interno"],
       tipo_mensagem: [
@@ -3092,6 +3267,16 @@ export const Constants = {
         "audio",
         "image",
         "document",
+      ],
+      tipo_mensagem_whatsapp: [
+        "texto",
+        "imagem",
+        "audio",
+        "video",
+        "documento",
+        "sticker",
+        "localizacao",
+        "contato",
       ],
     },
   },
