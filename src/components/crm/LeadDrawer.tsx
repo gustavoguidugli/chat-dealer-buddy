@@ -231,6 +231,7 @@ function SortableFieldItem({ campo, index, editingCampos, setEditingCampos, onDe
 export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDrawerProps) {
   const { user, empresaId } = useAuth();
   const { toast } = useToast();
+  const { motivos: motivosPerda } = useMotivosPerda(empresaId);
 
   // Realtime data for lead, annotations, activities, history
   const {
@@ -534,15 +535,19 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   };
 
   const handlePerdido = async () => {
-    if (!lead || !motivoPerda.trim()) return;
+    if (!lead || motivosSelecionados.length === 0) return;
+    const motivoTexto = motivosPerda
+      .filter(m => motivosSelecionados.includes(m.id))
+      .map(m => m.nome)
+      .join(', ');
     await supabase.from('leads_crm').update({
       status: 'perdido',
-      motivo_perda: motivoPerda.trim(),
+      motivo_perda: motivoTexto,
       data_perdido: new Date().toISOString(),
     }).eq('id', lead.id);
     toast({ title: 'Lead marcado como perdido' });
     setPerdidoOpen(false);
-    setMotivoPerda('');
+    setMotivosSelecionados([]);
     onLeadChanged?.();
     onOpenChange(false);
   };
@@ -1762,19 +1767,42 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Marcar como perdido?</AlertDialogTitle>
-            <AlertDialogDescription>Informe o motivo da perda.</AlertDialogDescription>
+            <AlertDialogDescription>Selecione o(s) motivo(s) da perda.</AlertDialogDescription>
           </AlertDialogHeader>
-          <Textarea
-            placeholder="Motivo da perda..."
-            value={motivoPerda}
-            onChange={e => setMotivoPerda(e.target.value)}
-            className="my-2"
-          />
+          <div className="space-y-2 my-2 max-h-[200px] overflow-y-auto">
+            {motivosPerda.map(motivo => (
+              <label 
+                key={motivo.id}
+                className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+              >
+                <Checkbox
+                  checked={motivosSelecionados.includes(motivo.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setMotivosSelecionados(prev => [...prev, motivo.id]);
+                    } else {
+                      setMotivosSelecionados(prev => prev.filter(id => id !== motivo.id));
+                    }
+                  }}
+                />
+                <span className="text-sm">{motivo.nome}</span>
+              </label>
+            ))}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-muted-foreground"
+            onClick={() => setManageMotivosOpen(true)}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Gerenciar motivos
+          </Button>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setMotivoPerda('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setMotivosSelecionados([])}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600 text-white"
-              disabled={!motivoPerda.trim()}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              disabled={motivosSelecionados.length === 0}
               onClick={handlePerdido}
             >
               Confirmar
@@ -1782,6 +1810,15 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Manage Motivos Modal */}
+      {empresaId && (
+        <ManageMotivosModal
+          isOpen={manageMotivosOpen}
+          onClose={() => setManageMotivosOpen(false)}
+          empresaId={empresaId}
+        />
+      )}
 
       <AlertDialog open={excluirOpen} onOpenChange={setExcluirOpen}>
         <AlertDialogContent>
