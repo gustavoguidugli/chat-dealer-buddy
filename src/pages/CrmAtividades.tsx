@@ -43,7 +43,7 @@ const iconePorTipo: Record<string, React.ReactNode> = {
   identificar_problema: <AlertCircle className="h-4 w-4" />,
 };
 
-type QuickFilter = 'concluido' | 'para_fazer' | 'vencido' | 'hoje' | 'amanha' | 'esta_semana' | 'proxima_semana' | 'periodo';
+type QuickFilter = 'todas' | 'concluido' | 'para_fazer' | 'vencido' | 'hoje' | 'amanha' | 'esta_semana' | 'proxima_semana' | 'periodo';
 
 function getDateSP(dateStr: string) {
   return new Date(new Date(dateStr).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
@@ -139,6 +139,7 @@ export default function CrmAtividades() {
       d.setHours(0, 0, 0, 0);
 
       switch (quickFilter) {
+        case 'todas': return true;
         case 'concluido': return a.concluida;
         case 'para_fazer': return !a.concluida;
         case 'vencido': return !a.concluida && d < hoje;
@@ -262,6 +263,7 @@ export default function CrmAtividades() {
   };
 
   const quickFilters: { key: QuickFilter; label: string }[] = [
+    { key: 'todas', label: 'Todas atividades' },
     { key: 'concluido', label: 'Concluído' },
     { key: 'para_fazer', label: 'Para fazer' },
     { key: 'vencido', label: 'Vencido' },
