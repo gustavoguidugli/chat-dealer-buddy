@@ -1232,7 +1232,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                               {isInteresseField ? (
                                 <div className="flex-1">
                                   <Select
-                                    value={interesseOverride ?? value || ''}
+                                    value={(interesseOverride ?? value) || ''}
                                     onValueChange={async (val) => {
                                       // Update UI immediately
                                       setInteresseOverride(val);
