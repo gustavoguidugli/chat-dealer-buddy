@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, verticalListSortingStrategy, useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import {
@@ -19,7 +28,7 @@ interface MotivoPerda {
   nome: string;
   descricao: string | null;
   ordem: number;
-  _status?: 'new' | 'edited' | 'deleted';
+  _status?: 'new' | 'edited' | 'deleted' | 'reordered';
   _tempId?: string;
 }
 
@@ -27,6 +36,65 @@ interface ManageMotivosModalProps {
   isOpen: boolean;
   onClose: () => void;
   empresaId: number;
+}
+
+function SortableMotivoItem({ 
+  motivo, 
+  onEdit, 
+  onDelete 
+}: { 
+  motivo: MotivoPerda; 
+  onEdit: () => void; 
+  onDelete: () => void;
+}) {
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id: motivo._tempId || String(motivo.id) });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 ${
+        motivo._status ? 'bg-muted/30 border border-dashed border-primary/30' : ''
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <div>
+          <span className="text-sm font-medium">{motivo.nome}</span>
+          {motivo._status && (
+            <span className="ml-2 text-xs text-primary">
+              {motivo._status === 'new' ? '(novo)' : motivo._status === 'reordered' ? '(reordenado)' : '(editado)'}
+            </span>
+          )}
+          {motivo.descricao && (
+            <p className="text-xs text-muted-foreground">{motivo.descricao}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+          <Edit className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivosModalProps) {
@@ -39,12 +107,14 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
   const [editingMotivo, setEditingMotivo] = useState<MotivoPerda | null>(null);
   const [deletingMotivo, setDeletingMotivo] = useState<MotivoPerda | null>(null);
 
-  // Form state
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
 
-  // Track if there are unsaved changes
   const hasChanges = motivos.some(m => m._status);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   const fetchMotivos = useCallback(async () => {
     setLoading(true);
@@ -81,7 +151,6 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
     if (!nome.trim()) return;
 
     if (editingMotivo) {
-      // Edit existing (local)
       setMotivos(prev => prev.map(m => {
         if (m.id === editingMotivo.id || m._tempId === editingMotivo._tempId) {
           return {
@@ -94,10 +163,9 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
         return m;
       }));
     } else {
-      // Add new (local)
       const maxOrdem = motivos.length > 0 ? Math.max(...motivos.map(m => m.ordem ?? 0)) + 1 : 0;
       const newMotivo: MotivoPerda = {
-        id: 0, // temporary
+        id: 0,
         nome: nome.trim(),
         descricao: descricao.trim() || null,
         ordem: maxOrdem,
@@ -114,10 +182,8 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
     if (!deletingMotivo) return;
     
     if (deletingMotivo._status === 'new') {
-      // Remove from local list (never saved)
       setMotivos(prev => prev.filter(m => m._tempId !== deletingMotivo._tempId));
     } else {
-      // Mark as deleted
       setMotivos(prev => prev.map(m => 
         m.id === deletingMotivo.id ? { ...m, _status: 'deleted' as const } : m
       ));
@@ -125,11 +191,35 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
     setDeletingMotivo(null);
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const visibleIds = visibleMotivos.map(m => m._tempId || String(m.id));
+    const oldIndex = visibleIds.indexOf(String(active.id));
+    const newIndex = visibleIds.indexOf(String(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(visibleMotivos, oldIndex, newIndex);
+    
+    // Update ordem and mark as changed
+    const updatedVisible = reordered.map((m, i) => ({
+      ...m,
+      ordem: i,
+      _status: (m._status === 'new' ? 'new' : 
+                m._status === 'deleted' ? 'deleted' : 
+                'reordered') as MotivoPerda['_status'],
+    }));
+
+    // Merge back with deleted items
+    const deletedItems = motivos.filter(m => m._status === 'deleted');
+    setMotivos([...updatedVisible, ...deletedItems]);
+  };
+
   const handleSaveAll = async () => {
     setSaving(true);
     
     try {
-      // Process deletions
       const toDelete = motivos.filter(m => m._status === 'deleted');
       for (const motivo of toDelete) {
         await supabase
@@ -138,7 +228,6 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
           .eq('id', motivo.id);
       }
 
-      // Process new items
       const toInsert = motivos.filter(m => m._status === 'new');
       for (const motivo of toInsert) {
         await supabase
@@ -151,20 +240,20 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
           });
       }
 
-      // Process edits
-      const toUpdate = motivos.filter(m => m._status === 'edited');
+      const toUpdate = motivos.filter(m => m._status === 'edited' || m._status === 'reordered');
       for (const motivo of toUpdate) {
         await supabase
           .from('motivos_perda')
           .update({
             nome: motivo.nome,
-            descricao: motivo.descricao
+            descricao: motivo.descricao,
+            ordem: motivo.ordem,
           })
           .eq('id', motivo.id);
       }
 
       toast({ title: 'Alterações salvas!' });
-      await fetchMotivos(); // Reload fresh data
+      await fetchMotivos();
     } catch (error) {
       toast({ title: 'Erro ao salvar alterações', variant: 'destructive' });
     } finally {
@@ -174,14 +263,13 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
 
   const handleClose = () => {
     if (hasChanges) {
-      // Reset to original state
       setMotivos(JSON.parse(JSON.stringify(originalMotivos)));
     }
     onClose();
   };
 
-  // Filter out deleted items for display
   const visibleMotivos = motivos.filter(m => m._status !== 'deleted');
+  const sortableIds = visibleMotivos.map(m => m._tempId || String(m.id));
 
   return (
     <>
@@ -238,49 +326,24 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
                   Nenhum motivo criado
                 </p>
               ) : (
-                <div className="space-y-1 mt-2">
-                  {visibleMotivos.map(motivo => (
-                    <div 
-                      key={motivo._tempId || motivo.id} 
-                      className={`flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 ${
-                        motivo._status ? 'bg-muted/30 border border-dashed border-primary/30' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <span className="text-sm font-medium">{motivo.nome}</span>
-                          {motivo._status && (
-                            <span className="ml-2 text-xs text-primary">
-                              {motivo._status === 'new' ? '(novo)' : '(editado)'}
-                            </span>
-                          )}
-                          {motivo.descricao && (
-                            <p className="text-xs text-muted-foreground">{motivo.descricao}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7" 
-                          onClick={() => openForm(motivo)}
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7" 
-                          onClick={() => setDeletingMotivo(motivo)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-1 mt-2">
+                      {visibleMotivos.map(motivo => (
+                        <SortableMotivoItem
+                          key={motivo._tempId || motivo.id}
+                          motivo={motivo}
+                          onEdit={() => openForm(motivo)}
+                          onDelete={() => setDeletingMotivo(motivo)}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               )}
 
               {hasChanges && (
