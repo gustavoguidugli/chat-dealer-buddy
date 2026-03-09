@@ -56,6 +56,7 @@ interface LeadDetail {
   id_funil: number;
   id_empresa: number;
   id_etapa_atual: number;
+  id_contato_geral: number | null;
   proprietario_id: string | null;
   data_entrada_etapa_atual: string | null;
   data_criacao: string | null;
@@ -297,6 +298,14 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [tempEtapaId, setTempEtapaId] = useState<number | null>(null);
   const [tempEtapas, setTempEtapas] = useState<EtapaInfo[]>([]);
   const [savingFunilEtapa, setSavingFunilEtapa] = useState(false);
+  const [interesseOverride, setInteresseOverride] = useState<string | null>(null);
+
+  // Clear interesseOverride when realtime syncs the same value
+  useEffect(() => {
+    if (interesseOverride && dadosContato.interesse === interesseOverride) {
+      setInteresseOverride(null);
+    }
+  }, [dadosContato.interesse, interesseOverride]);
 
   const openManageFields = () => {
     setEditingCampos(campos.map(c => ({ ...c })));
@@ -1223,21 +1232,56 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                               {isInteresseField ? (
                                 <div className="flex-1">
                                   <Select
-                                    value={value || ''}
+                                    value={interesseOverride ?? value || ''}
                                     onValueChange={async (val) => {
-                                      // Atualiza diretamente na tabela contatos_geral
-                                      if (lead.whatsapp) {
-                                        const { error } = await supabase
+                                      // Update UI immediately
+                                      setInteresseOverride(val);
+
+                                      // Try to update contatos_geral by id first (most reliable)
+                                      let contatoGeralId = lead.id_contato_geral;
+                                      
+                                      // If no id_contato_geral, try to find by whatsapp
+                                      if (!contatoGeralId && lead.whatsapp) {
+                                        const normalizedWhatsapp = lead.whatsapp.replace(/\D/g, '');
+                                        const { data: contatoData } = await supabase
+                                          .from('contatos_geral')
+                                          .select('id')
+                                          .or(`whatsapp.eq.${lead.whatsapp},whatsapp.eq.${normalizedWhatsapp}`)
+                                          .limit(1)
+                                          .maybeSingle();
+                                        
+                                        if (contatoData) {
+                                          contatoGeralId = contatoData.id;
+                                          // Optionally save id_contato_geral to lead for future use
+                                          await supabase.from('leads_crm').update({ id_contato_geral: contatoGeralId }).eq('id', lead.id);
+                                        }
+                                      }
+
+                                      if (contatoGeralId) {
+                                        const { data: updateResult, error } = await supabase
                                           .from('contatos_geral')
                                           .update({ interesse: val })
-                                          .eq('whatsapp', lead.whatsapp);
+                                          .eq('id', contatoGeralId)
+                                          .select('id');
                                         
                                         if (error) {
                                           toast({ title: 'Erro ao atualizar interesse', description: error.message, variant: 'destructive' });
+                                          setInteresseOverride(null);
                                           return;
                                         }
+                                        
+                                        if (!updateResult || updateResult.length === 0) {
+                                          toast({ title: 'Erro ao atualizar interesse', description: 'Nenhum registro atualizado', variant: 'destructive' });
+                                          setInteresseOverride(null);
+                                          return;
+                                        }
+                                      } else {
+                                        toast({ title: 'Contato não encontrado', description: 'Não foi possível atualizar o interesse', variant: 'destructive' });
+                                        setInteresseOverride(null);
+                                        return;
                                       }
-                                      // Também atualiza campos_extras como fallback
+
+                                      // Also update campos_extras as fallback
                                       const newExtras = { ...(lead.campos_extras || {}), [storageKey]: val };
                                       await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
                                       setLead({ ...lead, campos_extras: newExtras });
