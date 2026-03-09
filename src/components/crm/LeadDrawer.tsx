@@ -1237,12 +1237,34 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                       // Update UI immediately
                                       setInteresseOverride(val);
 
+                                      // Get previous value for history
+                                      const previousValue = dadosContato.interesse || lead.campos_extras?.interesse || null;
+
                                       // 1. ALWAYS save to leads_crm.campos_extras first (primary storage)
                                       const newExtras = { ...(lead.campos_extras || {}), [storageKey]: val };
                                       await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
                                       setLead({ ...lead, campos_extras: newExtras });
 
-                                      // 2. Best-effort sync to contatos_geral (don't block on failure)
+                                      // 2. Register change in historico_lead
+                                      if (previousValue !== val) {
+                                        const interesseLabel = listaInteresses.find(i => i.nome === val)?.label || val;
+                                        const previousLabel = listaInteresses.find(i => i.nome === previousValue)?.label || previousValue || 'Não definido';
+                                        
+                                        await supabase.from('historico_lead').insert({
+                                          id_lead: lead.id,
+                                          id_empresa: lead.id_empresa,
+                                          tipo_evento: 'campo_alterado',
+                                          descricao: `Interesse alterado de "${previousLabel}" para "${interesseLabel}"`,
+                                          usuario_id: user?.id || null,
+                                          metadados: {
+                                            campo: 'interesse',
+                                            valor_anterior: previousValue,
+                                            valor_novo: val,
+                                          },
+                                        });
+                                      }
+
+                                      // 3. Best-effort sync to contatos_geral (don't block on failure)
                                       try {
                                         let contatoGeralId = lead.id_contato_geral;
                                         
@@ -1258,7 +1280,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                           
                                           const { data: contatoData } = await supabase
                                             .from('contatos_geral')
-                                            .select('id')
+                                            .select('id, empresa_id')
                                             .in('whatsapp', [...new Set(variants)])
                                             .limit(1)
                                             .maybeSingle();
@@ -1267,6 +1289,11 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                             contatoGeralId = contatoData.id;
                                             // Save id_contato_geral to lead for future use
                                             await supabase.from('leads_crm').update({ id_contato_geral: contatoGeralId }).eq('id', lead.id);
+                                            
+                                            // If contato_geral has no empresa_id, set it
+                                            if (!contatoData.empresa_id) {
+                                              await supabase.from('contatos_geral').update({ empresa_id: lead.id_empresa }).eq('id', contatoGeralId);
+                                            }
                                           }
                                         }
 
