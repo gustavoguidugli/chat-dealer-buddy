@@ -4,6 +4,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '@/integrations/supabase/client';
 import { useLeadRealtime } from '@/hooks/useLeadRealtime';
+import { useMotivosPerda } from '@/hooks/useMotivosPerda';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -28,11 +29,12 @@ import {
 import { EtiquetaSelector } from '@/components/crm/EtiquetaSelector';
 import { FilePreviewModal } from '@/components/crm/FilePreviewModal';
 import { ActivityModal } from '@/components/crm/ActivityModal';
+import { ManageMotivosModal } from '@/components/crm/ManageMotivosModal';
 import {
   ChevronDown, ChevronUp, MoreHorizontal, FileText, Calendar,
   CheckCircle2, MessageSquare, ArrowRightLeft, Trophy, XCircle,
   Pencil, Pin, Plus, Trash2, GripVertical, UserCircle, DollarSign,
-  Paperclip, Download, Image, X,
+  Paperclip, Download, Image, X, Settings,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -267,7 +269,8 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   // Dialogs
   const [ganhoOpen, setGanhoOpen] = useState(false);
   const [perdidoOpen, setPerdidoOpen] = useState(false);
-  const [motivoPerda, setMotivoPerda] = useState('');
+  const [motivosSelecionados, setMotivosSelecionados] = useState<number[]>([]);
+  const [manageMotivosOpen, setManageMotivosOpen] = useState(false);
   const [reabrirOpen, setReabrirOpen] = useState(false);
   const [excluirOpen, setExcluirOpen] = useState(false);
   const [duplicarOpen, setDuplicarOpen] = useState(false);
