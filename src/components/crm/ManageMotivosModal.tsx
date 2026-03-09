@@ -55,30 +55,6 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
     if (isOpen) fetchMotivos();
   }, [isOpen, fetchMotivos]);
 
-  // Realtime subscription
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const channel = supabase
-      .channel(`manage_motivos_perda_${empresaId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'motivos_perda',
-          filter: `empresa_id=eq.${empresaId}`,
-        },
-        () => {
-          fetchMotivos();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isOpen, empresaId, fetchMotivos]);
 
   const openForm = (motivo?: MotivoPerda) => {
     if (motivo) {
