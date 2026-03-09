@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, GripVertical, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +19,8 @@ interface MotivoPerda {
   nome: string;
   descricao: string | null;
   ordem: number;
+  _status?: 'new' | 'edited' | 'deleted';
+  _tempId?: string;
 }
 
 interface ManageMotivosModalProps {
@@ -30,7 +32,9 @@ interface ManageMotivosModalProps {
 export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivosModalProps) {
   const { toast } = useToast();
   const [motivos, setMotivos] = useState<MotivoPerda[]>([]);
+  const [originalMotivos, setOriginalMotivos] = useState<MotivoPerda[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingMotivo, setEditingMotivo] = useState<MotivoPerda | null>(null);
   const [deletingMotivo, setDeletingMotivo] = useState<MotivoPerda | null>(null);
@@ -38,6 +42,9 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
   // Form state
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
+
+  // Track if there are unsaved changes
+  const hasChanges = motivos.some(m => m._status);
 
   const fetchMotivos = useCallback(async () => {
     setLoading(true);
@@ -47,14 +54,15 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
       .eq('empresa_id', empresaId)
       .eq('ativo', true)
       .order('ordem', { ascending: true });
-    setMotivos((data as MotivoPerda[]) || []);
+    const fetchedMotivos = (data as MotivoPerda[]) || [];
+    setMotivos(fetchedMotivos);
+    setOriginalMotivos(JSON.parse(JSON.stringify(fetchedMotivos)));
     setLoading(false);
   }, [empresaId]);
 
   useEffect(() => {
     if (isOpen) fetchMotivos();
   }, [isOpen, fetchMotivos]);
-
 
   const openForm = (motivo?: MotivoPerda) => {
     if (motivo) {
@@ -69,59 +77,115 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
     setShowForm(true);
   };
 
-  const handleSave = async () => {
+  const handleFormSave = () => {
     if (!nome.trim()) return;
 
-    const payload = { 
-      nome: nome.trim(), 
-      descricao: descricao.trim() || null, 
-      empresa_id: empresaId 
-    };
-
     if (editingMotivo) {
-      const { error } = await supabase
-        .from('motivos_perda')
-        .update(payload)
-        .eq('id', editingMotivo.id);
-      if (error) {
-        toast({ title: 'Erro ao atualizar motivo', variant: 'destructive' });
-        return;
-      }
-      toast({ title: 'Motivo atualizado!' });
+      // Edit existing (local)
+      setMotivos(prev => prev.map(m => {
+        if (m.id === editingMotivo.id || m._tempId === editingMotivo._tempId) {
+          return {
+            ...m,
+            nome: nome.trim(),
+            descricao: descricao.trim() || null,
+            _status: m._status === 'new' ? 'new' : 'edited'
+          };
+        }
+        return m;
+      }));
     } else {
+      // Add new (local)
       const maxOrdem = motivos.length > 0 ? Math.max(...motivos.map(m => m.ordem ?? 0)) + 1 : 0;
-      const { error } = await supabase
-        .from('motivos_perda')
-        .insert({ ...payload, ordem: maxOrdem });
-      if (error) {
-        toast({ title: 'Erro ao criar motivo', variant: 'destructive' });
-        return;
-      }
-      toast({ title: 'Motivo criado!' });
+      const newMotivo: MotivoPerda = {
+        id: 0, // temporary
+        nome: nome.trim(),
+        descricao: descricao.trim() || null,
+        ordem: maxOrdem,
+        _status: 'new',
+        _tempId: `temp_${Date.now()}`
+      };
+      setMotivos(prev => [...prev, newMotivo]);
     }
 
     setShowForm(false);
-    fetchMotivos();
   };
 
-  const handleDelete = async () => {
+  const handleMarkDelete = () => {
     if (!deletingMotivo) return;
-    const { error } = await supabase
-      .from('motivos_perda')
-      .update({ ativo: false })
-      .eq('id', deletingMotivo.id);
-    if (error) {
-      toast({ title: 'Erro ao deletar motivo', variant: 'destructive' });
-      return;
+    
+    if (deletingMotivo._status === 'new') {
+      // Remove from local list (never saved)
+      setMotivos(prev => prev.filter(m => m._tempId !== deletingMotivo._tempId));
+    } else {
+      // Mark as deleted
+      setMotivos(prev => prev.map(m => 
+        m.id === deletingMotivo.id ? { ...m, _status: 'deleted' as const } : m
+      ));
     }
-    toast({ title: 'Motivo removido!' });
     setDeletingMotivo(null);
-    fetchMotivos();
   };
+
+  const handleSaveAll = async () => {
+    setSaving(true);
+    
+    try {
+      // Process deletions
+      const toDelete = motivos.filter(m => m._status === 'deleted');
+      for (const motivo of toDelete) {
+        await supabase
+          .from('motivos_perda')
+          .update({ ativo: false })
+          .eq('id', motivo.id);
+      }
+
+      // Process new items
+      const toInsert = motivos.filter(m => m._status === 'new');
+      for (const motivo of toInsert) {
+        await supabase
+          .from('motivos_perda')
+          .insert({
+            nome: motivo.nome,
+            descricao: motivo.descricao,
+            ordem: motivo.ordem,
+            empresa_id: empresaId
+          });
+      }
+
+      // Process edits
+      const toUpdate = motivos.filter(m => m._status === 'edited');
+      for (const motivo of toUpdate) {
+        await supabase
+          .from('motivos_perda')
+          .update({
+            nome: motivo.nome,
+            descricao: motivo.descricao
+          })
+          .eq('id', motivo.id);
+      }
+
+      toast({ title: 'Alterações salvas!' });
+      await fetchMotivos(); // Reload fresh data
+    } catch (error) {
+      toast({ title: 'Erro ao salvar alterações', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (hasChanges) {
+      // Reset to original state
+      setMotivos(JSON.parse(JSON.stringify(originalMotivos)));
+    }
+    onClose();
+  };
+
+  // Filter out deleted items for display
+  const visibleMotivos = motivos.filter(m => m._status !== 'deleted');
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Gerenciar Motivos de Perda</DialogTitle>
@@ -154,8 +218,8 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
                 <Button variant="outline" onClick={() => setShowForm(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleSave} disabled={!nome.trim()}>
-                  Salvar
+                <Button onClick={handleFormSave} disabled={!nome.trim()}>
+                  Confirmar
                 </Button>
               </div>
             </div>
@@ -169,21 +233,28 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Carregando...
                 </p>
-              ) : motivos.length === 0 ? (
+              ) : visibleMotivos.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Nenhum motivo criado
                 </p>
               ) : (
                 <div className="space-y-1 mt-2">
-                  {motivos.map(motivo => (
+                  {visibleMotivos.map(motivo => (
                     <div 
-                      key={motivo.id} 
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
+                      key={motivo._tempId || motivo.id} 
+                      className={`flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 ${
+                        motivo._status ? 'bg-muted/30 border border-dashed border-primary/30' : ''
+                      }`}
                     >
                       <div className="flex items-center gap-2">
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <span className="text-sm font-medium">{motivo.nome}</span>
+                          {motivo._status && (
+                            <span className="ml-2 text-xs text-primary">
+                              {motivo._status === 'new' ? '(novo)' : '(editado)'}
+                            </span>
+                          )}
                           {motivo.descricao && (
                             <p className="text-xs text-muted-foreground">{motivo.descricao}</p>
                           )}
@@ -211,6 +282,17 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
                   ))}
                 </div>
               )}
+
+              {hasChanges && (
+                <Button 
+                  className="w-full mt-4" 
+                  onClick={handleSaveAll}
+                  disabled={saving}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              )}
             </div>
           )}
         </DialogContent>
@@ -227,7 +309,7 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDelete} 
+              onClick={handleMarkDelete} 
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remover
