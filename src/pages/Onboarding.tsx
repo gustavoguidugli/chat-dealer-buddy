@@ -71,18 +71,8 @@ export default function Onboarding() {
         return;
       }
 
-      // Fetch convite role via edge function to bypass RLS (user is unauthenticated)
-      try {
-        const res = await supabase.functions.invoke('send-invitation-email', {
-          body: { convite_id: result.convite_id, action: 'get_role' },
-        });
-        if (res.data?.role) {
-          setConviteRole(res.data.role);
-        }
-      } catch {
-        // Fallback — role defaults to 'user'
-      }
-
+      // Role now comes directly from validar_convite
+      setConviteRole(result.role || 'user');
       setConviteData(result);
       setLoading(false);
     })();
