@@ -10,7 +10,7 @@ const SUPER_ADMIN_EMAILS = [
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  isAdmin: boolean;
+  isCompanyAdmin: boolean;
   isSuperAdmin: boolean;
   empresaId: number | null;
   empresaNome: string | null;
@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCompanyAdmin, setIsCompanyAdmin] = useState(false);
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [empresaNome, setEmpresaNome] = useState<string | null>(null);
   const [semEmpresa, setSemEmpresa] = useState(false);
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         if (!newSession?.user) {
-          setIsAdmin(false);
+          setIsCompanyAdmin(false);
           setEmpresaId(null);
           setEmpresaNome(null);
           setSemEmpresa(false);
@@ -51,25 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (currentUser: User) => {
     try {
-      // Check permissions
-      const { data: perm } = await supabase
-        .from('user_permissions')
-        .select('is_admin')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-
-      const admin = perm?.is_admin ?? false;
       const superAdmin = SUPER_ADMIN_EMAILS.includes(currentUser.email ?? '');
-      setIsAdmin(admin);
-
-      if (!perm) {
-        await supabase.from('user_permissions').insert({
-          user_id: currentUser.id,
-          is_admin: false
-        });
-      }
 
       if (superAdmin) {
+        // Super admins are always company admins
+        setIsCompanyAdmin(true);
         const savedId = localStorage.getItem('eco_empresa_id');
         const savedNome = localStorage.getItem('eco_empresa_nome');
         if (savedId) {
@@ -78,15 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setSemEmpresa(false);
       } else {
+        // Regular users: get empresa + role from user_empresa
         const { data: mapping } = await supabase
-          .from('user_empresa_geral')
-          .select('empresa_id')
+          .from('user_empresa')
+          .select('empresa_id, role')
           .eq('user_id', currentUser.id)
           .maybeSingle();
 
         if (mapping?.empresa_id) {
           setEmpresaId(mapping.empresa_id);
           setSemEmpresa(false);
+
+          // Determine admin from role
+          const role = mapping.role ?? 'member';
+          setIsCompanyAdmin(role === 'admin' || role === 'super_admin');
+
           const { data: emp } = await supabase
             .from('empresas_geral')
             .select('nome')
@@ -94,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .single();
           setEmpresaNome(emp?.nome ?? null);
         } else {
+          setIsCompanyAdmin(false);
           setSemEmpresa(true);
         }
       }
@@ -133,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, isAdmin, isSuperAdmin: SUPER_ADMIN_EMAILS.includes(user?.email ?? ''),
+      user, session, isCompanyAdmin, isSuperAdmin: SUPER_ADMIN_EMAILS.includes(user?.email ?? ''),
       empresaId, empresaNome, semEmpresa,
       setEmpresa, loading, signOut: handleSignOut,
       refreshUserData,

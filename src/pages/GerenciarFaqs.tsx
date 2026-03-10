@@ -44,7 +44,7 @@ const TABS = [
 
 export default function GerenciarFaqs() {
   const navigate = useNavigate();
-  const { empresaId, isAdmin, isSuperAdmin, user } = useAuth();
+  const { empresaId, isCompanyAdmin, isSuperAdmin, user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(TABS[0].value);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
@@ -398,7 +398,7 @@ export default function GerenciarFaqs() {
                     )}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    {isAdmin &&
+                    {isCompanyAdmin &&
                 <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" disabled={bulkActionLoading}>
@@ -481,7 +481,7 @@ export default function GerenciarFaqs() {
                               <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleDuplicate([faq])} title="Duplicar">
                                 <Copy className="h-4 w-4" />
                               </Button>
-                              {isAdmin &&
+                              {isCompanyAdmin &&
                         <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="icon" className="h-8 w-8" title="Mover para outra tab">
