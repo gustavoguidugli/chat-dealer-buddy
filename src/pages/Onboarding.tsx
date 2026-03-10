@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 interface ConviteData {
   valido: boolean;
   empresa_id: number;
-  convite_id: string;
+  id: string;
   erro: string | null;
   email_destino: string;
   role: string;
