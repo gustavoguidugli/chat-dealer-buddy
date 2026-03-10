@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { MoreHorizontal, UserPlus, Shield, ShieldAlert, RefreshCw, XCircle, Eye, RotateCcw } from 'lucide-react';
+import { MoreHorizontal, UserPlus, Shield, ShieldAlert, RefreshCw, XCircle, Eye, RotateCcw, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { InviteTeamModal } from '@/components/InviteTeamModal';
