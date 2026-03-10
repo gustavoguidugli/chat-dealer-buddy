@@ -229,7 +229,11 @@ export default function CrmFunil() {
         .order('ordem');
       if (data && data.length > 0) {
         setFunis(data);
-        setFunilAtual(data[0].id);
+        setFunilAtual((prev) => {
+          // Keep the user's selection if it still exists in the list
+          if (prev && data.some(f => f.id === prev)) return prev;
+          return data[0].id;
+        });
       }
       setLoadingFunis(false);
     };
