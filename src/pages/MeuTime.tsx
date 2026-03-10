@@ -293,6 +293,13 @@ export default function MeuTime() {
                       <TableCell>
                         {c.status_convite === 'pending' && (
                           <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Copiar link do convite" onClick={() => {
+                              const link = `${window.location.origin}/onboarding?token=${c.token}`;
+                              navigator.clipboard.writeText(link);
+                              toast({ title: 'Link copiado!' });
+                            }}>
+                              <Link2 className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8" title="Reenviar" onClick={() => handleResendConvite(c)}>
                               <RefreshCw className="h-4 w-4" />
                             </Button>
