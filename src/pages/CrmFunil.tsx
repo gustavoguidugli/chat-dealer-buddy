@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FunilSortableSelect } from '@/components/crm/FunilSortableSelect';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Plus, ChevronDown, Pencil, Filter, MoreHorizontal, ChevronRight, Search, X, UserCircle, Settings } from 'lucide-react';
 import {
@@ -444,19 +444,12 @@ export default function CrmFunil() {
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{totalNegocios} negócios</span>
 
-            <Select
-              value={funilAtual?.toString() || ''}
-              onValueChange={(v) => setFunilAtual(Number(v))}
-            >
-              <SelectTrigger className="w-[200px] h-9">
-                <SelectValue placeholder="Selecionar funil" />
-              </SelectTrigger>
-              <SelectContent>
-                {funis.map(f => (
-                  <SelectItem key={f.id} value={f.id.toString()}>{f.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FunilSortableSelect
+              funis={funis}
+              value={funilAtual}
+              onValueChange={(id) => setFunilAtual(id)}
+              onReorder={(reordered) => setFunis(reordered)}
+            />
 
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditarFunilOpen(true)}>
               <Pencil className="h-4 w-4" />
