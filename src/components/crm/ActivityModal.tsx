@@ -8,12 +8,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { ActivityIconBar } from './ActivityIconBar';
 import { IconeAtividadeManager } from './IconeAtividadeManager';
@@ -21,7 +20,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 interface ActivityModalProps {
-  leadId: number;
+  leadId?: number;
   empresaId: number;
   activity?: any;
   isOpen: boolean;
@@ -44,6 +43,16 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
   const [usuarios, setUsuarios] = useState<{ id: string; nome: string }[]>([]);
   const [showIconManager, setShowIconManager] = useState(false);
 
+  // Lead selection state (when leadId is not provided)
+  const [selectedLeadId, setSelectedLeadId] = useState<number | undefined>(leadId);
+  const [leadSearch, setLeadSearch] = useState('');
+  const [leadResults, setLeadResults] = useState<{ id: number; nome: string; empresa_cliente: string | null }[]>([]);
+  const [searchingLeads, setSearchingLeads] = useState(false);
+  const [leadSearchOpen, setLeadSearchOpen] = useState(false);
+  const [selectedLeadName, setSelectedLeadName] = useState('');
+
+  const hasExternalLeadId = leadId && leadId > 0;
+
   const normalizeTime = (time?: string | null) => {
     if (!time) return '';
     const [h = '', m = ''] = time.split(':');
@@ -58,42 +67,40 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
     return new Date(`${dateStr}T${normalized}:00-03:00`).toISOString();
   };
 
-  // Load users for the dropdown using RPC (with fallback)
+  // Load users
   useEffect(() => {
     if (!isOpen) return;
-
     const fetchUsers = async () => {
       const { data: rpcUsers } = await supabase.rpc('get_usuarios_empresa', {
         empresa_id_param: empresaId,
       });
-
       if (rpcUsers && rpcUsers.length > 0) {
         setUsuarios(rpcUsers.map((u: any) => ({ id: u.id, nome: u.nome || u.email || 'Sem nome' })));
-        return;
       }
-
-      // Fallback para bases antigas que usam user_empresa_geral + usuarios
-      const { data: links } = await supabase
-        .from('user_empresa_geral')
-        .select('user_id')
-        .eq('empresa_id', empresaId);
-
-      if (!links || links.length === 0) {
-        setUsuarios([]);
-        return;
-      }
-
-      const userIds = links.map((u: any) => u.user_id);
-      const { data: usersData } = await supabase
-        .from('usuarios')
-        .select('uuid, nome')
-        .in('uuid', userIds);
-
-      setUsuarios((usersData || []).map((u: any) => ({ id: u.uuid, nome: u.nome || 'Sem nome' })));
     };
-
     fetchUsers();
   }, [isOpen, empresaId]);
+
+  // Search leads when no leadId
+  useEffect(() => {
+    if (hasExternalLeadId || !leadSearch.trim()) {
+      setLeadResults([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      setSearchingLeads(true);
+      const { data } = await supabase
+        .from('leads_crm')
+        .select('id, nome, empresa_cliente')
+        .eq('id_empresa', empresaId)
+        .eq('ativo', true)
+        .ilike('nome', `%${leadSearch.trim()}%`)
+        .limit(10);
+      setLeadResults(data || []);
+      setSearchingLeads(false);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [leadSearch, empresaId, hasExternalLeadId]);
 
   // Populate form when editing
   useEffect(() => {
@@ -105,6 +112,7 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
       setHoraInicio(normalizeTime(activity.hora_inicio));
       setHoraFim(normalizeTime(activity.hora_fim));
       setMarcarComoFeito(activity.concluida || false);
+      setSelectedLeadId(activity.id_lead || leadId);
     } else if (isOpen) {
       setAssunto('');
       setDescricao('');
@@ -113,8 +121,11 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
       setHoraInicio('08:00');
       setHoraFim('');
       setMarcarComoFeito(false);
+      setSelectedLeadId(leadId);
+      setLeadSearch('');
+      setSelectedLeadName('');
     }
-  }, [isOpen, activity, user?.id]);
+  }, [isOpen, activity, user?.id, leadId]);
 
   const handleSave = async () => {
     if (!assunto.trim()) {
@@ -125,15 +136,17 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
       toast({ title: 'Data é obrigatória', variant: 'destructive' });
       return;
     }
-
     if (!horaInicio) {
       toast({ title: 'Hora de início é obrigatória', variant: 'destructive' });
+      return;
+    }
+    if (!selectedLeadId) {
+      toast({ title: 'Selecione um negócio (lead)', variant: 'destructive' });
       return;
     }
 
     setSaving(true);
 
-    // Converte horário de São Paulo para UTC antes de salvar
     const fullDate = buildUtcFromSaoPaulo(dataVencimento, horaInicio);
     if (!fullDate) {
       toast({ title: 'Horário inválido', variant: 'destructive' });
@@ -163,7 +176,7 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
     } else {
       const { error } = await supabase.from('atividades').insert({
         id_empresa: empresaId,
-        id_lead: leadId,
+        id_lead: selectedLeadId,
         tipo: 'follow_up',
         assunto: assunto.trim(),
         descricao: descricao.trim() || null,
@@ -196,6 +209,51 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
         </DialogHeader>
 
         <div className="space-y-5 py-2">
+          {/* Lead selector - only shown when no external leadId */}
+          {!hasExternalLeadId && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Negócio (lead) *</label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={selectedLeadName || 'Buscar negócio...'}
+                  value={leadSearch}
+                  onChange={(e) => { setLeadSearch(e.target.value); setLeadSearchOpen(true); }}
+                  onFocus={() => { if (leadSearch.trim()) setLeadSearchOpen(true); }}
+                  className="pl-9"
+                />
+                {leadSearchOpen && leadSearch.trim() && (
+                  <div className="absolute top-full left-0 mt-1 w-full bg-popover border border-border rounded-md shadow-lg z-50 max-h-[200px] overflow-y-auto">
+                    {searchingLeads ? (
+                      <div className="p-3 text-sm text-muted-foreground text-center">Buscando...</div>
+                    ) : leadResults.length === 0 ? (
+                      <div className="p-3 text-sm text-muted-foreground text-center">Nenhum negócio encontrado</div>
+                    ) : (
+                      leadResults.map((r) => (
+                        <button
+                          key={r.id}
+                          className="w-full text-left px-3 py-2 hover:bg-accent/50 text-sm border-b border-border last:border-0"
+                          onClick={() => {
+                            setSelectedLeadId(r.id);
+                            setSelectedLeadName(r.nome);
+                            setLeadSearch('');
+                            setLeadSearchOpen(false);
+                          }}
+                        >
+                          <span className="font-medium">{r.nome}</span>
+                          {r.empresa_cliente && <span className="text-muted-foreground ml-2 text-xs">{r.empresa_cliente}</span>}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              {selectedLeadName && (
+                <p className="text-xs text-muted-foreground">Selecionado: <span className="font-medium text-foreground">{selectedLeadName}</span></p>
+              )}
+            </div>
+          )}
+
           {/* Title */}
           <Input
             placeholder="Follow-up"
