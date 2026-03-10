@@ -19,6 +19,11 @@ import AdminEmpresas from "./pages/AdminEmpresas";
 import CrmFunil from "./pages/CrmFunil";
 import CrmAtividades from "./pages/CrmAtividades";
 import ConfigUsuarios from "./pages/ConfigUsuarios";
+import MeuTime from "./pages/MeuTime";
+import Onboarding from "./pages/Onboarding";
+import OnboardingInvalid from "./pages/OnboardingInvalid";
+import OnboardingExpired from "./pages/OnboardingExpired";
+import OnboardingUsed from "./pages/OnboardingUsed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +39,10 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/sem-empresa" element={<SemEmpresa />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/onboarding/invalid" element={<OnboardingInvalid />} />
+            <Route path="/onboarding/expired" element={<OnboardingExpired />} />
+            <Route path="/onboarding/used" element={<OnboardingUsed />} />
             <Route path="/aceitar-convite" element={
               <ProtectedRoute><AceitarConvite /></ProtectedRoute>
             } />
@@ -66,6 +75,9 @@ const App = () => (
             } />
             <Route path="/configuracoes/usuarios" element={
               <ProtectedRoute><ConfigUsuarios /></ProtectedRoute>
+            } />
+            <Route path="/meu-time" element={
+              <ProtectedRoute><MeuTime /></ProtectedRoute>
             } />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
