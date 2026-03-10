@@ -94,7 +94,7 @@ export default function MeuTime() {
 
     const { data, error } = await supabase
       .from('convites')
-      .select('id, email_destino, status_convite, expira_em, role, created_at, accepted_by_user_id')
+      .select('id, email_destino, status_convite, expira_em, role, created_at, accepted_by_user_id, token')
       .eq('empresa_id', empresaId)
       .order('created_at', { ascending: false });
 
