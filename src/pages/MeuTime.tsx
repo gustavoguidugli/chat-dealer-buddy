@@ -163,20 +163,46 @@ export default function MeuTime() {
   };
 
   const handleResendConvite = async (c: Convite) => {
-    const newExpiry = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+    if (!empresaId || !user) return;
+
+    // Cancel the old invite
     await supabase.from('convites').update({
-      expira_em: newExpiry,
-      resent_at: new Date().toISOString(),
-      status_convite: 'pending',
-      ativo: true,
+      status_convite: 'canceled',
+      canceled_at: new Date().toISOString(),
     }).eq('id', c.id);
 
-    // Call edge function (silently)
-    try {
-      await supabase.functions.invoke('send-invitation-email', { body: { convite_id: c.id } });
-    } catch { /* stub - ignore */ }
+    // Create a new invite
+    const newExpiry = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+    const { data: newConvite, error } = await supabase.from('convites').insert({
+      empresa_id: empresaId,
+      email_destino: c.email_destino,
+      role: c.role,
+      tipo: 'email',
+      expira_em: newExpiry,
+      criado_por: user.id,
+      status_convite: 'pending',
+      ativo: true,
+      max_usos: 1,
+    }).select('id').single();
 
-    await logAudit('invite_resent', 'convites', c.id);
+    if (error || !newConvite) {
+      toast({ title: 'Erro ao reenviar convite', variant: 'destructive' });
+      return;
+    }
+
+    // Send email
+    try {
+      await supabase.functions.invoke('send-invitation-email', {
+        body: {
+          convite_id: newConvite.id,
+          email_destino: c.email_destino,
+          empresa_nome: empresaNome ?? 'Eco Ice',
+          role: c.role,
+        },
+      });
+    } catch { /* ignore */ }
+
+    await logAudit('invite_resent', 'convites', newConvite.id);
     toast({ title: 'Convite reenviado' });
     fetchConvites();
   };
