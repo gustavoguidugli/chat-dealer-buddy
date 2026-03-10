@@ -80,6 +80,9 @@ const App = () => (
             <Route path="/meu-time" element={
               <ProtectedRoute><MeuTime /></ProtectedRoute>
             } />
+            <Route path="/configuracoes/perfil" element={
+              <ProtectedRoute><ConfigPerfil /></ProtectedRoute>
+            } />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
