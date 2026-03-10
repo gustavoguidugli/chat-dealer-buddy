@@ -267,9 +267,12 @@ export default function CrmFunil() {
     }
   }, [toast, setLeads]);
 
-  const handleNewDeal = useCallback(() => {
+  const handleNewDeal = useCallback((lead: any) => {
+    if (lead) {
+      setLeads((prev: any[]) => [...prev, lead]);
+    }
     setModalOpen(false);
-  }, []);
+  }, [setLeads]);
 
   const handleDragGanho = useCallback(async () => {
     if (!dragGanhoLeadId) return;
