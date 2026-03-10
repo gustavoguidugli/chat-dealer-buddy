@@ -95,7 +95,7 @@ export default function Onboarding() {
       // 2. Accept invite via RPC FIRST — inserts into user_empresa + user_permissions
       //    Must happen before any RLS-gated inserts (usuario_time, etc.)
       const { data: acceptResult, error: acceptError } = await supabase.rpc('aceitar_convite', {
-        p_convite_id: conviteData.convite_id,
+        p_convite_id: conviteData.id,
         p_user_id: newUserId,
       });
       if (acceptError) {
