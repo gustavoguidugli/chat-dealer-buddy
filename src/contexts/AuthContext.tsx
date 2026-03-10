@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -18,6 +18,7 @@ interface AuthContextType {
   setEmpresa: (id: number, nome: string) => void;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,71 +49,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const fetchUserData = useCallback(async (currentUser: User) => {
+    try {
+      // Check permissions
+      const { data: perm } = await supabase
+        .from('user_permissions')
+        .select('is_admin')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      const admin = perm?.is_admin ?? false;
+      const superAdmin = SUPER_ADMIN_EMAILS.includes(currentUser.email ?? '');
+      setIsAdmin(admin);
+
+      if (!perm) {
+        await supabase.from('user_permissions').insert({
+          user_id: currentUser.id,
+          is_admin: false
+        });
+      }
+
+      if (superAdmin) {
+        const savedId = localStorage.getItem('eco_empresa_id');
+        const savedNome = localStorage.getItem('eco_empresa_nome');
+        if (savedId) {
+          setEmpresaId(Number(savedId));
+          setEmpresaNome(savedNome);
+        }
+        setSemEmpresa(false);
+      } else {
+        const { data: mapping } = await supabase
+          .from('user_empresa_geral')
+          .select('empresa_id')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (mapping?.empresa_id) {
+          setEmpresaId(mapping.empresa_id);
+          setSemEmpresa(false);
+          const { data: emp } = await supabase
+            .from('empresas_geral')
+            .select('nome')
+            .eq('id', mapping.empresa_id)
+            .single();
+          setEmpresaNome(emp?.nome ?? null);
+        } else {
+          setSemEmpresa(true);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) return;
     setLoading(true);
+    fetchUserData(user);
+  }, [user?.id, fetchUserData]);
 
-    const fetchUserData = async () => {
-      try {
-        // Check permissions
-        const { data: perm } = await supabase
-          .from('user_permissions')
-          .select('is_admin')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        const admin = perm?.is_admin ?? false;
-        const superAdmin = SUPER_ADMIN_EMAILS.includes(user.email ?? '');
-        setIsAdmin(admin);
-
-        if (!perm) {
-          await supabase.from('user_permissions').insert({
-            user_id: user.id,
-            is_admin: false
-          });
-        }
-
-        if (superAdmin) {
-          const savedId = localStorage.getItem('eco_empresa_id');
-          const savedNome = localStorage.getItem('eco_empresa_nome');
-          if (savedId) {
-            setEmpresaId(Number(savedId));
-            setEmpresaNome(savedNome);
-          }
-          setSemEmpresa(false);
-        } else {
-          const { data: mapping } = await supabase
-            .from('user_empresa_geral')
-            .select('empresa_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (mapping?.empresa_id) {
-            setEmpresaId(mapping.empresa_id);
-            setSemEmpresa(false);
-            const { data: emp } = await supabase
-              .from('empresas_geral')
-              .select('nome')
-              .eq('id', mapping.empresa_id)
-              .single();
-            setEmpresaNome(emp?.nome ?? null);
-          } else {
-            setSemEmpresa(true);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [user?.id]);
+  const refreshUserData = useCallback(async () => {
+    if (user) {
+      setLoading(true);
+      await fetchUserData(user);
+    }
+  }, [user, fetchUserData]);
 
   const setEmpresa = (id: number, nome: string) => {
     setEmpresaId(id);
     setEmpresaNome(nome);
+    setSemEmpresa(false);
     localStorage.setItem('eco_empresa_id', String(id));
     localStorage.setItem('eco_empresa_nome', nome);
   };
@@ -127,7 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, session, isAdmin, isSuperAdmin: SUPER_ADMIN_EMAILS.includes(user?.email ?? ''),
       empresaId, empresaNome, semEmpresa,
-      setEmpresa, loading, signOut: handleSignOut
+      setEmpresa, loading, signOut: handleSignOut,
+      refreshUserData,
     }}>
       {children}
     </AuthContext.Provider>
