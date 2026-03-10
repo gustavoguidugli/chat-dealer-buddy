@@ -134,7 +134,7 @@ export default function Onboarding() {
         status_convite: 'accepted',
         accepted_at: new Date().toISOString(),
         accepted_by_user_id: newUserId,
-      }).eq('id', conviteData.convite_id);
+      }).eq('id', conviteData.id);
 
       // 6. Audit log
       await supabase.from('audit_logs').insert([{
