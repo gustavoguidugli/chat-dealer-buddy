@@ -13,6 +13,7 @@ interface ConviteData {
   convite_id: string;
   erro: string | null;
   email_destino: string;
+  role: string;
 }
 
 export default function Onboarding() {
