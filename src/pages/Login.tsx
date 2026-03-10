@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -15,18 +15,28 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const navigate = useNavigate();
-  const { user, isAdmin, empresaId, loading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, isSuperAdmin, empresaId, semEmpresa, loading } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && user) {
-      if (isAdmin && !empresaId) {
+      // Check for redirect param (e.g. from invite acceptance)
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        navigate(redirect, { replace: true });
+        return;
+      }
+
+      if (semEmpresa) {
+        navigate('/sem-empresa', { replace: true });
+      } else if (isSuperAdmin && !empresaId) {
         navigate('/selecionar-empresa', { replace: true });
       } else {
         navigate('/home', { replace: true });
       }
     }
-  }, [user, isAdmin, empresaId, loading, navigate]);
+  }, [user, isSuperAdmin, empresaId, semEmpresa, loading, navigate, searchParams]);
 
   if (loading) {
     return (
