@@ -1,29 +1,12 @@
 
 
-# Fix: Duplicate Leads on Creation
+## Plan: Vincular usuário à Empresa 1 como super_admin
 
-## Root Cause
+Three data inserts are needed using the Supabase insert tool:
 
-Double insertion into state:
-1. `handleNewDeal` in `CrmFunil.tsx` (line 276) adds the lead to `leads` state immediately
-2. The realtime INSERT handler in `useFunilRealtime.ts` (line 88) receives the Postgres event and adds it again
+1. **user_empresa** - Insert `user_id`, `empresa_id: 1`, `role: 'super_admin'`
+2. **user_empresa_geral** - Insert `user_id`, `empresa_id: 1` (defines which company loads in AuthContext)
+3. **user_permissions** - Insert `user_id`, `is_admin: true` (grants admin-level access for RLS policies)
 
-When moved to another stage, the UPDATE handler removes all instances first (`filter`) then adds one back, which "fixes" the duplicate.
-
-## Solution
-
-In `useFunilRealtime.ts`, on INSERT, check if the lead already exists in state before adding. Change line 88 from:
-```ts
-setLeads((prev) => [...prev, enriched])
-```
-to:
-```ts
-setLeads((prev) =>
-  prev.some(l => l.id === enriched.id)
-    ? prev.map(l => l.id === enriched.id ? enriched : l)
-    : [...prev, enriched]
-)
-```
-
-This is a one-line change in `useFunilRealtime.ts`. The same dedup pattern is already used in the UPDATE handler (line 103). No other files need changes.
+All three use the user UUID `89a6ca88-181a-40dd-b4e4-262eff0b7460`. No schema changes needed -- purely data operations.
 
