@@ -2867,10 +2867,11 @@ export type Database = {
       validar_convite: {
         Args: { p_token: string }
         Returns: {
-          convite_id: string
           email_destino: string
           empresa_id: number
           erro: string
+          id: string
+          role: string
           valido: boolean
         }[]
       }
