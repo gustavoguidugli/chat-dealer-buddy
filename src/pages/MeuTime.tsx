@@ -37,6 +37,7 @@ interface Convite {
   role: string;
   created_at: string;
   accepted_by_user_id: string | null;
+  token: string;
 }
 
 const roleLabel: Record<string, string> = { admin: 'Admin', user: 'Usuário', member: 'Membro' };
