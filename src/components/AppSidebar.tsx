@@ -13,7 +13,7 @@ const navItems = [
 ];
 
 function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
-  const { user, isAdmin, isSuperAdmin, empresaNome, signOut } = useAuth();
+  const { user, isCompanyAdmin, isSuperAdmin, empresaNome, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');

@@ -44,7 +44,7 @@ const TABS = [
 
 export default function GerenciarFaqs() {
   const navigate = useNavigate();
-  const { empresaId, isAdmin, isSuperAdmin, user } = useAuth();
+  const { empresaId, isCompanyAdmin, isSuperAdmin, user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(TABS[0].value);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);

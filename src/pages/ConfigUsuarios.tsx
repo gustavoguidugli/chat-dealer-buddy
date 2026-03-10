@@ -41,7 +41,7 @@ async function callManageUsers(body: any) {
 }
 
 export default function ConfigUsuarios() {
-  const { user, empresaId, empresaNome, isAdmin, isSuperAdmin } = useAuth();
+  const { user, empresaId, empresaNome, isCompanyAdmin, isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<UsuarioEmpresa[]>([]);
   const [loading, setLoading] = useState(true);
