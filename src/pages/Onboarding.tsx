@@ -83,7 +83,7 @@ export default function Onboarding() {
     setSubmitting(true);
 
     try {
-      // 1. Sign up — this creates the auth user and logs them in
+      // 1. Sign up — creates auth user and logs them in
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: conviteData.email_destino,
         password,
@@ -92,14 +92,19 @@ export default function Onboarding() {
       const newUserId = signUpData.user?.id;
       if (!newUserId) throw new Error('Não foi possível criar a conta');
 
-      // 2. Accept invite via RPC FIRST — this creates user_empresa entry
-      //    (needed before any RLS-gated inserts)
+      // 2. Accept invite via RPC FIRST — inserts into user_empresa + user_permissions
+      //    Must happen before any RLS-gated inserts (usuario_time, etc.)
       const { data: acceptResult, error: acceptError } = await supabase.rpc('aceitar_convite', {
         p_convite_id: conviteData.convite_id,
         p_user_id: newUserId,
       });
       if (acceptError) {
         console.error('aceitar_convite error:', acceptError);
+        throw new Error('Erro ao vincular conta à empresa');
+      }
+      const acceptData = acceptResult as unknown as { ok: boolean; erro?: string };
+      if (!acceptData?.ok) {
+        throw new Error(acceptData?.erro || 'Erro ao aceitar convite');
       }
 
       // 3. Upsert usuarios (RLS: uuid = auth.uid() — works after signUp)
@@ -115,7 +120,7 @@ export default function Onboarding() {
       }, { onConflict: 'uuid' });
       if (usuarioError) console.error('usuarios upsert error:', usuarioError);
 
-      // 4. Insert usuario_time (RLS: id_empresa IN get_empresas_usuario() — works after aceitar_convite)
+      // 4. Insert usuario_time (RLS works now because user_empresa exists)
       const { error: timeError } = await supabase.from('usuario_time').insert({
         id_usuario: newUserId,
         id_empresa: conviteData.empresa_id,
@@ -124,28 +129,14 @@ export default function Onboarding() {
       });
       if (timeError) console.error('usuario_time insert error:', timeError);
 
-      // 5. Upsert user_empresa_geral (AuthContext needs this to load empresa)
-      //    aceitar_convite doesn't do this — do it via edge function
-      try {
-        await supabase.functions.invoke('manage-users', {
-          body: {
-            action: 'aceitar_convite_pos_login',
-            convite_id: conviteData.convite_id,
-          },
-        });
-      } catch {
-        // Fallback: try direct insert (may fail on RLS)
-        console.warn('manage-users fallback for user_empresa_geral');
-      }
-
-      // 6. Update convite status
+      // 5. Update convite status
       await supabase.from('convites').update({
         status_convite: 'accepted',
         accepted_at: new Date().toISOString(),
         accepted_by_user_id: newUserId,
       }).eq('id', conviteData.convite_id);
 
-      // 7. Audit log (RLS: WITH CHECK(true) for authenticated — works)
+      // 6. Audit log
       await supabase.from('audit_logs').insert([{
         actor_user_id: newUserId,
         action: 'onboarding_completed',
@@ -153,7 +144,7 @@ export default function Onboarding() {
         entity_id: conviteData.convite_id,
       }]);
 
-      // 8. Re-login to refresh session with updated claims
+      // 7. Re-login to refresh session with updated claims
       await supabase.auth.signInWithPassword({
         email: conviteData.email_destino,
         password,
