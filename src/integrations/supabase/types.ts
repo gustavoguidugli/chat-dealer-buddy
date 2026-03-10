@@ -1859,6 +1859,7 @@ export type Database = {
           valor_estimado: number | null
           valor_final: number | null
           whatsapp: string | null
+          whatsapp_contato_geral: string | null
         }
         Insert: {
           anotacoes?: string | null
@@ -1895,6 +1896,7 @@ export type Database = {
           valor_estimado?: number | null
           valor_final?: number | null
           whatsapp?: string | null
+          whatsapp_contato_geral?: string | null
         }
         Update: {
           anotacoes?: string | null
@@ -1931,6 +1933,7 @@ export type Database = {
           valor_estimado?: number | null
           valor_final?: number | null
           whatsapp?: string | null
+          whatsapp_contato_geral?: string | null
         }
         Relationships: [
           {
