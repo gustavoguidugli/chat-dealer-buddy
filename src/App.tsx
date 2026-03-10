@@ -20,6 +20,7 @@ import CrmFunil from "./pages/CrmFunil";
 import CrmAtividades from "./pages/CrmAtividades";
 import ConfigUsuarios from "./pages/ConfigUsuarios";
 import MeuTime from "./pages/MeuTime";
+import ConfigPerfil from "./pages/ConfigPerfil";
 import Onboarding from "./pages/Onboarding";
 import OnboardingInvalid from "./pages/OnboardingInvalid";
 import OnboardingExpired from "./pages/OnboardingExpired";
@@ -78,6 +79,9 @@ const App = () => (
             } />
             <Route path="/meu-time" element={
               <ProtectedRoute><MeuTime /></ProtectedRoute>
+            } />
+            <Route path="/configuracoes/perfil" element={
+              <ProtectedRoute><ConfigPerfil /></ProtectedRoute>
             } />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
