@@ -33,7 +33,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Convite não encontrado' }), { status: 404, headers: corsHeaders });
     }
 
-    // Action: get_role — return the role without sending email
+    // Action: get_role — no longer needed (validar_convite now returns role directly)
+    // Kept for backward compatibility
     if (action === 'get_role') {
       return new Response(
         JSON.stringify({ role: convite.role || 'user' }),
