@@ -1,18 +1,12 @@
 
 
-## Problem: Field Name Mismatch Breaks Onboarding
+## Plan: Vincular usuário à Empresa 1 como super_admin
 
-The `validar_convite` database function returns a column called **`id`** (the convite UUID), but the `ConviteData` interface in `Onboarding.tsx` maps it as **`convite_id`**.
+Three data inserts are needed using the Supabase insert tool:
 
-This means `conviteData.convite_id` is always `undefined`, which causes `aceitar_convite` to fail silently or throw an error — blocking the entire onboarding completion.
+1. **user_empresa** - Insert `user_id`, `empresa_id: 1`, `role: 'super_admin'`
+2. **user_empresa_geral** - Insert `user_id`, `empresa_id: 1` (defines which company loads in AuthContext)
+3. **user_permissions** - Insert `user_id`, `is_admin: true` (grants admin-level access for RLS policies)
 
-## Fix
-
-**File: `src/pages/Onboarding.tsx`**
-
-1. Update the `ConviteData` interface: rename `convite_id` to `id` to match the RPC return columns (`valido`, `empresa_id`, `id`, `erro`, `email_destino`, `role`).
-
-2. Update all references from `conviteData.convite_id` to `conviteData.id` (used in `aceitar_convite`, convite status update, and audit log).
-
-No database changes needed — this is purely a frontend mapping fix.
+All three use the user UUID `89a6ca88-181a-40dd-b4e4-262eff0b7460`. No schema changes needed -- purely data operations.
 

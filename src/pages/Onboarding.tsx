@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 interface ConviteData {
   valido: boolean;
   empresa_id: number;
-  convite_id: string;
+  id: string;
   erro: string | null;
   email_destino: string;
   role: string;
@@ -95,7 +95,7 @@ export default function Onboarding() {
       // 2. Accept invite via RPC FIRST — inserts into user_empresa + user_permissions
       //    Must happen before any RLS-gated inserts (usuario_time, etc.)
       const { data: acceptResult, error: acceptError } = await supabase.rpc('aceitar_convite', {
-        p_convite_id: conviteData.convite_id,
+        p_convite_id: conviteData.id,
         p_user_id: newUserId,
       });
       if (acceptError) {
@@ -134,14 +134,14 @@ export default function Onboarding() {
         status_convite: 'accepted',
         accepted_at: new Date().toISOString(),
         accepted_by_user_id: newUserId,
-      }).eq('id', conviteData.convite_id);
+      }).eq('id', conviteData.id);
 
       // 6. Audit log
       await supabase.from('audit_logs').insert([{
         actor_user_id: newUserId,
         action: 'onboarding_completed',
         entity_type: 'convites',
-        entity_id: conviteData.convite_id,
+        entity_id: conviteData.id,
       }]);
 
       // 7. Re-login to refresh session with updated claims
