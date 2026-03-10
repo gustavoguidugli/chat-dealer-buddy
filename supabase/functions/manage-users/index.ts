@@ -364,9 +364,10 @@ Deno.serve(async (req) => {
       case "aceitar_convite_pos_login": {
         const { convite_id } = body;
 
-        // Use the DB function to accept the invite
+        // Use the DB function to accept the invite, passing the caller's user ID
         const { data: result, error: rpcError } = await adminClient.rpc("aceitar_convite", {
           p_convite_id: convite_id,
+          p_user_id: caller.id,
         });
 
         if (rpcError) {
