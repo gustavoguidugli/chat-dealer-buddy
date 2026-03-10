@@ -2537,7 +2537,7 @@ export type Database = {
             foreignKeyName: "usuario_time_id_empresa_fkey"
             columns: ["id_empresa"]
             isOneToOne: false
-            referencedRelation: "empresas"
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
           {
@@ -2561,6 +2561,7 @@ export type Database = {
           cargo: string | null
           data_criacao: string
           email: string
+          email_secundario: string | null
           id_empresa: number | null
           last_login_at: string | null
           nivel_acesso: string | null
@@ -2578,6 +2579,7 @@ export type Database = {
           cargo?: string | null
           data_criacao?: string
           email: string
+          email_secundario?: string | null
           id_empresa?: number | null
           last_login_at?: string | null
           nivel_acesso?: string | null
@@ -2595,6 +2597,7 @@ export type Database = {
           cargo?: string | null
           data_criacao?: string
           email?: string
+          email_secundario?: string | null
           id_empresa?: number | null
           last_login_at?: string | null
           nivel_acesso?: string | null
@@ -2608,15 +2611,7 @@ export type Database = {
           uuid?: string
           whatsapp?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "usuarios_id_empresa_fkey"
-            columns: ["id_empresa"]
-            isOneToOne: false
-            referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
