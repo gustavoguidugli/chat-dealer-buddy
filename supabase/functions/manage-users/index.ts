@@ -306,7 +306,8 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Create invite record
+        // Create invite record with 72h expiration
+        const expiry = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
         const { data: convite, error: conviteError } = await adminClient
           .from("convites")
           .insert({
@@ -316,6 +317,7 @@ Deno.serve(async (req) => {
             email_destino: email.toLowerCase(),
             role: role || "member",
             criado_por: caller.id,
+            expira_em: expiry,
           })
           .select("id, token")
           .single();

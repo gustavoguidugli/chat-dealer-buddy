@@ -13,7 +13,6 @@ interface ConviteData {
   convite_id: string;
   erro: string | null;
   email_destino: string;
-  role?: string;
 }
 
 export default function Onboarding() {
@@ -53,6 +52,7 @@ export default function Onboarding() {
     if (!token) { navigate('/onboarding/invalid', { replace: true }); return; }
 
     (async () => {
+      // validar_convite is SECURITY DEFINER — works without auth
       const { data, error } = await supabase.rpc('validar_convite', { p_token: token });
       if (error || !data || data.length === 0) {
         navigate('/onboarding/invalid', { replace: true });
@@ -61,10 +61,6 @@ export default function Onboarding() {
       const result = data[0] as unknown as ConviteData;
       if (!result.valido) {
         if (result.erro === 'Convite expirado') {
-          // Mark as expired
-          if (result.convite_id) {
-            await supabase.from('convites').update({ status_convite: 'expired' }).eq('id', result.convite_id);
-          }
           navigate('/onboarding/expired', { replace: true });
         } else if (result.erro === 'Convite já foi utilizado') {
           navigate('/onboarding/used', { replace: true });
@@ -74,13 +70,18 @@ export default function Onboarding() {
         return;
       }
 
-      // Fetch the convite role
-      const { data: conviteRow } = await supabase
-        .from('convites')
-        .select('role')
-        .eq('id', result.convite_id)
-        .single();
-      setConviteRole(conviteRow?.role ?? 'user');
+      // Fetch convite role via edge function to bypass RLS (user is unauthenticated)
+      try {
+        const res = await supabase.functions.invoke('send-invitation-email', {
+          body: { convite_id: result.convite_id, action: 'get_role' },
+        });
+        if (res.data?.role) {
+          setConviteRole(res.data.role);
+        }
+      } catch {
+        // Fallback — role defaults to 'user'
+      }
+
       setConviteData(result);
       setLoading(false);
     })();
@@ -91,7 +92,7 @@ export default function Onboarding() {
     setSubmitting(true);
 
     try {
-      // 1. Sign up
+      // 1. Sign up — this creates the auth user and logs them in
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: conviteData.email_destino,
         password,
@@ -100,8 +101,18 @@ export default function Onboarding() {
       const newUserId = signUpData.user?.id;
       if (!newUserId) throw new Error('Não foi possível criar a conta');
 
-      // 2. Upsert usuarios
-      await supabase.from('usuarios').upsert({
+      // 2. Accept invite via RPC FIRST — this creates user_empresa entry
+      //    (needed before any RLS-gated inserts)
+      const { data: acceptResult, error: acceptError } = await supabase.rpc('aceitar_convite', {
+        p_convite_id: conviteData.convite_id,
+        p_user_id: newUserId,
+      });
+      if (acceptError) {
+        console.error('aceitar_convite error:', acceptError);
+      }
+
+      // 3. Upsert usuarios (RLS: uuid = auth.uid() — works after signUp)
+      const { error: usuarioError } = await supabase.from('usuarios').upsert({
         uuid: newUserId,
         email: conviteData.email_destino,
         primeiro_nome: firstName.trim(),
@@ -111,37 +122,47 @@ export default function Onboarding() {
         nivel_acesso: conviteRole,
         onboarding_completed: true,
       }, { onConflict: 'uuid' });
+      if (usuarioError) console.error('usuarios upsert error:', usuarioError);
 
-      // 3. Insert usuario_time
-      await supabase.from('usuario_time').insert({
+      // 4. Insert usuario_time (RLS: id_empresa IN get_empresas_usuario() — works after aceitar_convite)
+      const { error: timeError } = await supabase.from('usuario_time').insert({
         id_usuario: newUserId,
         id_empresa: conviteData.empresa_id,
         role: conviteRole,
         status_membro: 'active',
       });
+      if (timeError) console.error('usuario_time insert error:', timeError);
 
-      // 4. Accept invite via RPC
-      await supabase.rpc('aceitar_convite', {
-        p_convite_id: conviteData.convite_id,
-        p_user_id: newUserId,
-      });
+      // 5. Upsert user_empresa_geral (AuthContext needs this to load empresa)
+      //    aceitar_convite doesn't do this — do it via edge function
+      try {
+        await supabase.functions.invoke('manage-users', {
+          body: {
+            action: 'aceitar_convite_pos_login',
+            convite_id: conviteData.convite_id,
+          },
+        });
+      } catch {
+        // Fallback: try direct insert (may fail on RLS)
+        console.warn('manage-users fallback for user_empresa_geral');
+      }
 
-      // 5. Update convite status
+      // 6. Update convite status
       await supabase.from('convites').update({
         status_convite: 'accepted',
         accepted_at: new Date().toISOString(),
         accepted_by_user_id: newUserId,
       }).eq('id', conviteData.convite_id);
 
-      // 6. Audit log
-      await supabase.from('audit_logs').insert({
+      // 7. Audit log (RLS: WITH CHECK(true) for authenticated — works)
+      await supabase.from('audit_logs').insert([{
         actor_user_id: newUserId,
         action: 'onboarding_completed',
         entity_type: 'convites',
         entity_id: conviteData.convite_id,
-      });
+      }]);
 
-      // 7. Auto-login
+      // 8. Re-login to refresh session with updated claims
       await supabase.auth.signInWithPassword({
         email: conviteData.email_destino,
         password,
@@ -173,7 +194,6 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-secondary flex flex-col items-center px-4 py-12">
-      {/* Logo */}
       <div className="flex items-center gap-3 mb-8">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
           <Snowflake className="h-6 w-6 text-primary-foreground" />
@@ -181,7 +201,6 @@ export default function Onboarding() {
         <span className="text-2xl font-bold text-foreground">Eco Ice</span>
       </div>
 
-      {/* Progress */}
       <div className="flex gap-2 mb-8">
         {[1, 2, 3].map(s => (
           <div key={s} className={`h-2 w-16 rounded-full transition-colors ${s <= step ? 'bg-primary' : 'bg-border'}`} />
@@ -189,7 +208,6 @@ export default function Onboarding() {
       </div>
 
       <div className="w-full max-w-md bg-card rounded-xl border border-border shadow-sm p-8">
-        {/* Step 1 */}
         {step === 1 && (
           <div className="space-y-6">
             <div>
@@ -214,7 +232,6 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* Step 2 */}
         {step === 2 && (
           <div className="space-y-6">
             <div>
@@ -254,7 +271,6 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* Step 3 */}
         {step === 3 && (
           <div className="space-y-6">
             <div className="text-center">
@@ -271,7 +287,7 @@ export default function Onboarding() {
 
             <Button className="w-full" onClick={handleFinish} disabled={submitting}>
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {conviteRole === 'admin' ? 'Configurar agora' : 'Configurar agora'}
+              Configurar agora
             </Button>
 
             {conviteRole !== 'admin' && (

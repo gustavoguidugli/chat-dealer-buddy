@@ -11,7 +11,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { convite_id } = await req.json();
+    const body = await req.json();
+    const { convite_id, action } = body;
+
     if (!convite_id) {
       return new Response(JSON.stringify({ error: 'convite_id required' }), { status: 400, headers: corsHeaders });
     }
@@ -31,6 +33,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Convite não encontrado' }), { status: 404, headers: corsHeaders });
     }
 
+    // Action: get_role — return the role without sending email
+    if (action === 'get_role') {
+      return new Response(
+        JSON.stringify({ role: convite.role || 'user' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Default action: send email
     if (convite.status_convite !== 'pending') {
       return new Response(JSON.stringify({ error: 'Convite não está pendente' }), { status: 400, headers: corsHeaders });
     }
@@ -74,6 +85,6 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error('Error:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500, headers: corsHeaders });
   }
 });
