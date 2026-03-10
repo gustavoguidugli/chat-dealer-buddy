@@ -115,12 +115,9 @@ function SortableEtapaCard({
   );
 }
 
-let counter = 0;
-function nextTempId() {
-  return `temp-${++counter}`;
-}
-
 export function CriarFunilModal({ open, onOpenChange, empresaId, onCreated }: Props) {
+  const counterRef = useRef(0);
+  const nextTempId = () => `temp-${++counterRef.current}`;
   const { toast } = useToast();
   const [nome, setNome] = useState('');
   const [etapas, setEtapas] = useState<EtapaNova[]>([
