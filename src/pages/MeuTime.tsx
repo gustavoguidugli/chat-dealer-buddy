@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { MoreHorizontal, UserPlus, Shield, ShieldAlert, RefreshCw, XCircle, Eye, RotateCcw } from 'lucide-react';
+import { MoreHorizontal, UserPlus, Shield, ShieldAlert, RefreshCw, XCircle, Eye, RotateCcw, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { InviteTeamModal } from '@/components/InviteTeamModal';
@@ -37,6 +37,7 @@ interface Convite {
   role: string;
   created_at: string;
   accepted_by_user_id: string | null;
+  token: string;
 }
 
 const roleLabel: Record<string, string> = { admin: 'Admin', user: 'Usuário', member: 'Membro' };
@@ -93,7 +94,7 @@ export default function MeuTime() {
 
     const { data, error } = await supabase
       .from('convites')
-      .select('id, email_destino, status_convite, expira_em, role, created_at, accepted_by_user_id')
+      .select('id, email_destino, status_convite, expira_em, role, created_at, accepted_by_user_id, token')
       .eq('empresa_id', empresaId)
       .order('created_at', { ascending: false });
 
@@ -292,6 +293,13 @@ export default function MeuTime() {
                       <TableCell>
                         {c.status_convite === 'pending' && (
                           <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Copiar link do convite" onClick={() => {
+                              const link = `${window.location.origin}/onboarding?token=${c.token}`;
+                              navigator.clipboard.writeText(link);
+                              toast({ title: 'Link copiado!' });
+                            }}>
+                              <Link2 className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8" title="Reenviar" onClick={() => handleResendConvite(c)}>
                               <RefreshCw className="h-4 w-4" />
                             </Button>
