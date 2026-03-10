@@ -325,7 +325,7 @@ export default function CrmFunil() {
         .eq('id_empresa', empresaId)
         .eq('ativo', true)
         .eq('status', 'aberto')
-        .or(`nome.ilike.%${searchQuery.trim()}%,empresa_cliente.ilike.%${searchQuery.trim()}%,whatsapp.ilike.%${searchQuery.trim()}%`)
+        .or(`nome.ilike.%${escapePostgrest(searchQuery.trim())}%,empresa_cliente.ilike.%${escapePostgrest(searchQuery.trim())}%,whatsapp.ilike.%${escapePostgrest(searchQuery.trim())}%`)
         .limit(10);
       setSearchResults(data || []);
       setSearching(false);
