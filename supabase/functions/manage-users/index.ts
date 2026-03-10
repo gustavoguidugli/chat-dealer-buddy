@@ -327,18 +327,33 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Send invite email via Supabase Auth (inviteUserByEmail creates user if not exists)
-        const siteUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".supabase.co") || "";
-        const redirectUrl = siteUrl.replace("https://", "https://").replace(".supabase.co", "") || "";
+        const baseUrl = body.redirect_base_url || "https://chat-dealer-buddy.lovable.app";
+        const acceptUrl = `${baseUrl}/aceitar-convite?convite_id=${convite.id}`;
 
-        // Try to send a magic link / invite
-        const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-          redirectTo: `${body.redirect_base_url || "https://chat-dealer-buddy.lovable.app"}/aceitar-convite?convite_id=${convite.id}`,
-        });
+        // Check if user already exists
+        const { data: listData } = await adminClient.auth.admin.listUsers();
+        const existingUser = listData?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
 
-        if (inviteError && !inviteError.message.includes("already been registered")) {
-          console.error("Invite email error:", inviteError.message);
-          // Don't fail - invite record was created, user can still be sent the link manually
+        if (existingUser) {
+          // For existing users, send a password reset email as a "notification"
+          // They already have an account, just need to accept the invite
+          await adminClient.auth.admin.generateLink({
+            type: "magiclink",
+            email: email.toLowerCase(),
+            options: {
+              redirectTo: acceptUrl,
+            },
+          });
+        } else {
+          // New user — invite creates the account and sends email
+          const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+            redirectTo: acceptUrl,
+          });
+
+          if (inviteError) {
+            console.error("Invite email error:", inviteError.message);
+            // Don't fail - invite record was created
+          }
         }
 
         return new Response(JSON.stringify({ success: true, convite_id: convite.id }), {
@@ -349,9 +364,10 @@ Deno.serve(async (req) => {
       case "aceitar_convite_pos_login": {
         const { convite_id } = body;
 
-        // Use the DB function to accept the invite
+        // Use the DB function to accept the invite, passing the caller's user ID
         const { data: result, error: rpcError } = await adminClient.rpc("aceitar_convite", {
           p_convite_id: convite_id,
+          p_user_id: caller.id,
         });
 
         if (rpcError) {

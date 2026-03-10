@@ -19,6 +19,9 @@ export default function SemEmpresa() {
           <p className="text-sm text-muted-foreground">
             Sua conta ainda não está vinculada a nenhuma empresa. Verifique se recebeu um convite por email ou entre em contato com o administrador.
           </p>
+          <p className="text-xs text-muted-foreground">
+            Se você acabou de aceitar um convite, tente fazer login novamente.
+          </p>
           <Button onClick={signOut} variant="outline" className="w-full gap-2">
             <LogOut className="h-4 w-4" />
             Sair

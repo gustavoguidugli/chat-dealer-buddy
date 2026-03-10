@@ -11,13 +11,14 @@ export default function AceitarConvite() {
   const [searchParams] = useSearchParams();
   const conviteId = searchParams.get('convite_id');
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || done) return;
 
     if (!user) {
       // Redirect to login with return URL
@@ -45,6 +46,11 @@ export default function AceitarConvite() {
           return;
         }
 
+        setDone(true);
+
+        // Refresh auth context so empresaId/semEmpresa update
+        await refreshUserData();
+
         toast({ title: 'Bem-vindo à empresa! 🎉' });
         navigate('/home', { replace: true });
       } catch (err: any) {
@@ -55,7 +61,7 @@ export default function AceitarConvite() {
     };
 
     acceptInvite();
-  }, [user, authLoading, conviteId, navigate, toast]);
+  }, [user, authLoading, conviteId, navigate, toast, done, refreshUserData]);
 
   if (authLoading || processing) {
     return (
@@ -87,8 +93,8 @@ export default function AceitarConvite() {
             <p className="text-sm text-muted-foreground text-center mt-2">{error}</p>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" onClick={() => navigate('/home')}>
-              Ir para a página inicial
+            <Button className="w-full" onClick={() => navigate('/login')}>
+              Ir para o login
             </Button>
           </CardContent>
         </Card>
