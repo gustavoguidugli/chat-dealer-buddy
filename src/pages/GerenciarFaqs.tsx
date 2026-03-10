@@ -398,7 +398,7 @@ export default function GerenciarFaqs() {
                     )}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    {isAdmin &&
+                    {isCompanyAdmin &&
                 <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" disabled={bulkActionLoading}>
