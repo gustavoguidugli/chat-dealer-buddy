@@ -107,13 +107,13 @@ export default function MeuTime() {
   }, [fetchMembers, fetchConvites]);
 
   const logAudit = async (action: string, entityType: string, entityId: string, metadata?: Record<string, unknown>) => {
-    await supabase.from('audit_logs').insert({
+    await supabase.from('audit_logs').insert([{
       actor_user_id: user?.id,
       action,
       entity_type: entityType,
       entity_id: entityId,
       metadata: metadata ?? null,
-    });
+    }]);
   };
 
   const getMemberName = (m: TeamMember) => {
