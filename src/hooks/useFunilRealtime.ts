@@ -3,14 +3,6 @@ import { supabase } from '@/integrations/supabase/client'
 
 /**
  * Hook para sincronizar o funil em tempo real
- * 
- * O QUE FAZ:
- * - Quando alguém move um card, TODOS veem a mudança instantaneamente
- * - Quando alguém cria um lead novo, aparece para todos
- * - Quando alguém deleta/marca como ganho/perdido, remove para todos
- * 
- * COMO USAR:
- * const leads = useFunilRealtime(funilId, etapaId)
  */
 export function useFunilRealtime(funilId: number, etapaId?: number) {
   const [leads, setLeads] = useState<any[]>([])
@@ -26,19 +18,20 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
       return
     }
 
-    // 1. Busca os leads iniciais (primeira vez)
+    const selectWithJoins = `*, funis(nome), etapas_funil(nome, ordem, cor)`
+
     async function fetchLeads() {
       const [openRes, wonRes, lostRes] = await Promise.all([
         supabase
           .from('leads_crm')
-          .select(`*, funis(nome), etapas_funil(nome, ordem, cor)`)
+          .select(selectWithJoins)
           .eq('id_funil', funilId)
           .eq('status', 'aberto')
           .eq('ativo', true)
           .order('ordem_no_funil'),
         supabase
           .from('leads_crm')
-          .select(`*, funis(nome), etapas_funil(nome, ordem, cor)`)
+          .select(selectWithJoins)
           .eq('id_funil', funilId)
           .eq('status', 'ganho')
           .eq('ativo', true)
@@ -46,7 +39,7 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
           .limit(50),
         supabase
           .from('leads_crm')
-          .select(`*, funis(nome), etapas_funil(nome, ordem, cor)`)
+          .select(selectWithJoins)
           .eq('id_funil', funilId)
           .eq('status', 'perdido')
           .eq('ativo', true)
@@ -62,7 +55,16 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
 
     fetchLeads()
 
-    // 2. Escuta mudanças em tempo real nos leads (sem filtro para capturar mudanças de funil)
+    // Re-fetch a single lead with joins
+    async function fetchEnrichedLead(leadId: number) {
+      const { data } = await supabase
+        .from('leads_crm')
+        .select(selectWithJoins)
+        .eq('id', leadId)
+        .single()
+      return data
+    }
+
     const channel = supabase
       .channel(`funil-${funilId}`)
       .on(
@@ -72,16 +74,18 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
           schema: 'public',
           table: 'leads_crm',
         },
-        (payload) => {
+        async (payload) => {
           if (payload.eventType === 'INSERT') {
             const newData = payload.new as any
             if (newData.id_funil === funilId && newData.ativo !== false) {
-              if (newData.status === 'ganho') {
-                setWonLeads((prev) => [newData, ...prev])
-              } else if (newData.status === 'perdido') {
-                setLostLeads((prev) => [newData, ...prev])
+              const enriched = await fetchEnrichedLead(newData.id)
+              if (!enriched) return
+              if (enriched.status === 'ganho') {
+                setWonLeads((prev) => [enriched, ...prev])
+              } else if (enriched.status === 'perdido') {
+                setLostLeads((prev) => [enriched, ...prev])
               } else {
-                setLeads((prev) => [...prev, newData])
+                setLeads((prev) => [...prev, enriched])
               }
             }
           }
@@ -96,15 +100,18 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
             // Only add back if belongs to current funil and is active
             if (newData.id_funil !== funilId || newData.ativo === false) return
 
-            if (newData.status === 'ganho') {
-              setWonLeads((prev) => [newData, ...prev])
-            } else if (newData.status === 'perdido') {
-              setLostLeads((prev) => [newData, ...prev])
-            } else if (newData.status === 'aberto') {
+            const enriched = await fetchEnrichedLead(newData.id)
+            if (!enriched) return
+
+            if (enriched.status === 'ganho') {
+              setWonLeads((prev) => [enriched, ...prev])
+            } else if (enriched.status === 'perdido') {
+              setLostLeads((prev) => [enriched, ...prev])
+            } else if (enriched.status === 'aberto') {
               setLeads((prev) =>
-                prev.some(l => l.id === newData.id)
-                  ? prev.map(l => l.id === newData.id ? { ...l, ...newData } : l)
-                  : [...prev, newData]
+                prev.some(l => l.id === enriched.id)
+                  ? prev.map(l => l.id === enriched.id ? enriched : l)
+                  : [...prev, enriched]
               )
             }
           }
@@ -119,7 +126,6 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
       )
       .subscribe()
 
-    // 3. Escuta mudanças em tempo real nas etiquetas dos leads
     const etiquetaChannel = supabase
       .channel(`funil-etiquetas-${funilId}`)
       .on(
@@ -135,7 +141,6 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
       )
       .subscribe()
 
-    // 4. Escuta mudanças em tempo real nas atividades dos leads
     const atividadeChannel = supabase
       .channel(`funil-atividades-${funilId}`)
       .on(
@@ -151,7 +156,6 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
       )
       .subscribe()
 
-    // 5. Cleanup
     return () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(etiquetaChannel)

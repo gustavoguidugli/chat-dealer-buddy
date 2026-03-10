@@ -206,9 +206,7 @@ export default function CrmAtividades() {
 
   const handleBulkExcluir = async () => {
     const ids = Array.from(selectedIds);
-    for (const id of ids) {
-      await supabase.from('atividades').delete().eq('id', id);
-    }
+    await supabase.from('atividades').delete().in('id', ids);
     setSelectedIds(new Set());
     setBulkExcluirOpen(false);
     toast({ title: `${ids.length} atividade(s) excluída(s)` });
@@ -216,13 +214,11 @@ export default function CrmAtividades() {
 
   const handleBulkConcluir = async () => {
     const ids = Array.from(selectedIds);
-    for (const id of ids) {
-      await supabase.from('atividades').update({
-        concluida: true,
-        concluida_em: new Date().toISOString(),
-        concluida_por: user?.id || null,
-      }).eq('id', id);
-    }
+    await supabase.from('atividades').update({
+      concluida: true,
+      concluida_em: new Date().toISOString(),
+      concluida_por: user?.id || null,
+    }).in('id', ids);
     setSelectedIds(new Set());
     setBulkConcluirOpen(false);
     toast({ title: `${ids.length} atividade(s) concluída(s)` });

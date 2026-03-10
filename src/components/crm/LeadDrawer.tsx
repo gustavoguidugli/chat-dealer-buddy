@@ -497,7 +497,6 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     const { error } = await supabase.from('leads_crm').update({
       id_funil: tempFunilId,
       id_etapa_atual: tempEtapaId,
-      data_entrada_etapa_atual: new Date().toISOString(),
     }).eq('id', lead.id);
     setSavingFunilEtapa(false);
     if (error) {

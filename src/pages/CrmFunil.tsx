@@ -63,6 +63,10 @@ export interface LeadCard {
   valor_final?: number | null;
 }
 
+function escapePostgrest(str: string): string {
+  return str.replace(/[(),.]/g, '\\$&');
+}
+
 export default function CrmFunil() {
   const { empresaId } = useAuth();
   const { toast } = useToast();
