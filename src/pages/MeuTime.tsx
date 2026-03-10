@@ -112,7 +112,7 @@ export default function MeuTime() {
       action,
       entity_type: entityType,
       entity_id: entityId,
-      metadata: metadata ?? null,
+      metadata: (metadata as any) ?? null,
     }]);
   };
 
