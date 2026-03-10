@@ -294,7 +294,8 @@ export default function MeuTime() {
                         {c.status_convite === 'pending' && (
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" className="h-8 w-8" title="Copiar link do convite" onClick={() => {
-                              const link = `${window.location.origin}/onboarding?token=${c.token}`;
+                              const publishedUrl = 'https://chat-dealer-buddy.lovable.app';
+                              const link = `${publishedUrl}/onboarding?token=${c.token}`;
                               navigator.clipboard.writeText(link);
                               toast({ title: 'Link copiado!' });
                             }}>
