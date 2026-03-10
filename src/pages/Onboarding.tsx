@@ -141,7 +141,7 @@ export default function Onboarding() {
         actor_user_id: newUserId,
         action: 'onboarding_completed',
         entity_type: 'convites',
-        entity_id: conviteData.convite_id,
+        entity_id: conviteData.id,
       }]);
 
       // 7. Re-login to refresh session with updated claims
