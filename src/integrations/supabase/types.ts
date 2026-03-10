@@ -230,6 +230,36 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
       buffer_supabase: {
         Row: {
           created_at: string | null
@@ -788,7 +818,10 @@ export type Database = {
       }
       convites: {
         Row: {
+          accepted_at: string | null
+          accepted_by_user_id: string | null
           ativo: boolean | null
+          canceled_at: string | null
           codigo: string | null
           created_at: string | null
           criado_por: string | null
@@ -797,14 +830,19 @@ export type Database = {
           expira_em: string | null
           id: string
           max_usos: number | null
+          resent_at: string | null
           role: string
+          status_convite: string
           tipo: string
           token: string
           updated_at: string | null
           usos_atuais: number | null
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
           ativo?: boolean | null
+          canceled_at?: string | null
           codigo?: string | null
           created_at?: string | null
           criado_por?: string | null
@@ -813,14 +851,19 @@ export type Database = {
           expira_em?: string | null
           id?: string
           max_usos?: number | null
+          resent_at?: string | null
           role?: string
+          status_convite?: string
           tipo: string
           token?: string
           updated_at?: string | null
           usos_atuais?: number | null
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
           ativo?: boolean | null
+          canceled_at?: string | null
           codigo?: string | null
           created_at?: string | null
           criado_por?: string | null
@@ -829,7 +872,9 @@ export type Database = {
           expira_em?: string | null
           id?: string
           max_usos?: number | null
+          resent_at?: string | null
           role?: string
+          status_convite?: string
           tipo?: string
           token?: string
           updated_at?: string | null
@@ -2460,6 +2505,9 @@ export type Database = {
           id_empresa: number | null
           id_time: number | null
           id_usuario: string | null
+          joined_at: string | null
+          role: string
+          status_membro: string
         }
         Insert: {
           created_at?: string
@@ -2467,6 +2515,9 @@ export type Database = {
           id_empresa?: number | null
           id_time?: number | null
           id_usuario?: string | null
+          joined_at?: string | null
+          role?: string
+          status_membro?: string
         }
         Update: {
           created_at?: string
@@ -2474,6 +2525,9 @@ export type Database = {
           id_empresa?: number | null
           id_time?: number | null
           id_usuario?: string | null
+          joined_at?: string | null
+          role?: string
+          status_membro?: string
         }
         Relationships: [
           {
@@ -2505,9 +2559,14 @@ export type Database = {
           data_criacao: string
           email: string
           id_empresa: number | null
+          last_login_at: string | null
           nivel_acesso: string | null
           nome: string | null
+          onboarding_completed: boolean | null
+          primeiro_nome: string | null
+          sobrenome: string | null
           status: Database["public"]["Enums"]["status_usuario"] | null
+          two_factor_enabled: boolean | null
           ultima_roleta: string | null
           uuid: string
           whatsapp: string | null
@@ -2517,9 +2576,14 @@ export type Database = {
           data_criacao?: string
           email: string
           id_empresa?: number | null
+          last_login_at?: string | null
           nivel_acesso?: string | null
           nome?: string | null
+          onboarding_completed?: boolean | null
+          primeiro_nome?: string | null
+          sobrenome?: string | null
           status?: Database["public"]["Enums"]["status_usuario"] | null
+          two_factor_enabled?: boolean | null
           ultima_roleta?: string | null
           uuid?: string
           whatsapp?: string | null
@@ -2529,9 +2593,14 @@ export type Database = {
           data_criacao?: string
           email?: string
           id_empresa?: number | null
+          last_login_at?: string | null
           nivel_acesso?: string | null
           nome?: string | null
+          onboarding_completed?: boolean | null
+          primeiro_nome?: string | null
+          sobrenome?: string | null
           status?: Database["public"]["Enums"]["status_usuario"] | null
+          two_factor_enabled?: boolean | null
           ultima_roleta?: string | null
           uuid?: string
           whatsapp?: string | null
