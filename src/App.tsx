@@ -76,6 +76,9 @@ const App = () => (
             <Route path="/configuracoes/usuarios" element={
               <ProtectedRoute><ConfigUsuarios /></ProtectedRoute>
             } />
+            <Route path="/meu-time" element={
+              <ProtectedRoute><MeuTime /></ProtectedRoute>
+            } />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
