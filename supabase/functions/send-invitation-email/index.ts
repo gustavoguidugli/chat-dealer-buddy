@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { convite_id, action } = body;
+    const { convite_id, email_destino, empresa_nome, role } = body;
 
     if (!convite_id) {
       return new Response(JSON.stringify({ error: 'convite_id required' }), { status: 400, headers: corsHeaders });
@@ -23,9 +23,10 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    // Fetch token from convite
     const { data: convite, error } = await supabaseAdmin
       .from('convites')
-      .select('*')
+      .select('token, email_destino, role')
       .eq('id', convite_id)
       .single();
 
@@ -33,55 +34,76 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Convite não encontrado' }), { status: 404, headers: corsHeaders });
     }
 
-    // Action: get_role — no longer needed (validar_convite now returns role directly)
-    // Kept for backward compatibility
-    if (action === 'get_role') {
-      return new Response(
-        JSON.stringify({ role: convite.role || 'user' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
+    const recipientEmail = email_destino || convite.email_destino;
+    const recipientRole = role || convite.role || 'user';
+    const companyName = empresa_nome || 'Eco Ice';
+    const link = `https://eco-ice.app.br/onboarding?token=${convite.token}`;
 
-    // Default action: send email
-    if (convite.status_convite !== 'pending') {
-      return new Response(JSON.stringify({ error: 'Convite não está pendente' }), { status: 400, headers: corsHeaders });
-    }
-
-    const link = `https://chat-dealer-buddy.lovable.app/onboarding?token=${convite.token}`;
-
-    const emailPayload = {
-      to: convite.email_destino,
-      subject: 'Você foi convidado para o Ecoice',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #1e3a5f;">❄️ Eco Ice</h1>
-          </div>
-          <h2 style="color: #333;">Bem-vindo ao Ecoice!</h2>
-          <p>Você foi convidado para participar de um time no Ecoice.</p>
-          <p>Este convite é válido por <strong>72 horas</strong>.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${link}" style="background-color: #3b82f6; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr><td style="padding-bottom:32px;">
+          <a href="https://eco-ice.app.br" style="color:#1e3a5f;font-size:22px;font-weight:bold;text-decoration:none;">❄️ Eco Ice</a>
+        </td></tr>
+        <tr><td>
+          <h1 style="margin:0 0 16px;font-size:28px;font-weight:700;color:#000000;">Seu convite</h1>
+          <p style="margin:0 0 8px;font-size:16px;color:#374151;line-height:1.6;">
+            ${companyName} convidou você para fazer parte da plataforma <a href="https://eco-ice.app.br" style="color:#3b82f6;text-decoration:none;">Eco Ice</a>.
+          </p>
+          <p style="margin:0 0 32px;font-size:16px;color:#374151;line-height:1.6;">
+            Este convite expira em <strong>72 horas</strong>.
+          </p>
+          <table cellpadding="0" cellspacing="0"><tr><td>
+            <a href="${link}" style="display:inline-block;background:#3b82f6;color:#ffffff;font-size:16px;font-weight:600;padding:14px 32px;border-radius:8px;text-decoration:none;">
               Aceitar convite
             </a>
-          </div>
-          <p style="color: #666; font-size: 14px;">Caso o botão não funcione, copie e cole este link no navegador:</p>
-          <p style="color: #3b82f6; font-size: 14px; word-break: break-all;">${link}</p>
-        </div>
-      `,
-    };
+          </td></tr></table>
+          <p style="margin:32px 0 0;font-size:14px;color:#6b7280;line-height:1.6;">
+            Se o botão não funcionar, <a href="${link}" style="color:#3b82f6;text-decoration:underline;">clique aqui</a>.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 
-    // TODO: Resend não configurado — descomentar quando conta estiver ativa
-    // const resendRes = await fetch('https://api.resend.com/emails', {
-    //   method: 'POST',
-    //   headers: { Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ from: 'noreply@ecoice.com.br', ...emailPayload }),
-    // });
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY not configured');
+      return new Response(JSON.stringify({ error: 'Email service not configured' }), { status: 500, headers: corsHeaders });
+    }
 
-    console.log('Email que seria enviado:', JSON.stringify(emailPayload, null, 2));
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Eco Ice <invitations@eco-ice.app.br>',
+        to: [recipientEmail],
+        subject: 'Você foi convidado para o Eco Ice',
+        html,
+      }),
+    });
+
+    if (!resendRes.ok) {
+      const errBody = await resendRes.text();
+      console.error('Resend error:', errBody);
+      return new Response(JSON.stringify({ error: 'Falha ao enviar e-mail', details: errBody }), { status: 500, headers: corsHeaders });
+    }
+
+    const resendData = await resendRes.json();
+    console.log('Email sent successfully:', resendData);
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Email stub - Resend não configurado' }),
+      JSON.stringify({ success: true, id: resendData.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {

@@ -23,7 +23,7 @@ interface InviteTeamModalProps {
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamModalProps) {
-  const { user, empresaId } = useAuth();
+  const { user, empresaId, empresaNome } = useAuth();
   const { toast } = useToast();
   const [rows, setRows] = useState<InviteRow[]>([{ email: '', role: 'user', error: '' }]);
   const [sending, setSending] = useState(false);
@@ -103,12 +103,20 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
       const { data: inserted, error } = await supabase.from('convites').insert(inserts).select('id');
       if (error) throw error;
 
-      // Call edge function for each invite (silently)
+      // Call edge function for each invite
       if (inserted) {
         for (const inv of inserted) {
+          const row = validRows[inserted.indexOf(inv)];
           try {
-            await supabase.functions.invoke('send-invitation-email', { body: { convite_id: inv.id } });
-          } catch { /* stub */ }
+            await supabase.functions.invoke('send-invitation-email', {
+              body: {
+                convite_id: inv.id,
+                email_destino: row?.email.trim().toLowerCase(),
+                empresa_nome: empresaNome ?? 'Eco Ice',
+                role: row?.role,
+              },
+            });
+          } catch { /* ignore */ }
         }
       }
 

@@ -137,19 +137,6 @@ function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onC
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-8 space-y-0.5 mt-0.5">
             <NavLink
-              to="/configuracoes/usuarios"
-              onClick={onNavigate}
-              className={({ isActive }) => cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                isActive
-                  ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
-              )}
-            >
-              <Users className="h-4 w-4" />
-              Usuários
-            </NavLink>
-            <NavLink
               to="/meu-time"
               onClick={onNavigate}
               className={({ isActive }) => cn(
