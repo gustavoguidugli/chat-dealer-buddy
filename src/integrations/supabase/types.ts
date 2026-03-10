@@ -113,251 +113,6 @@ export type Database = {
           },
         ]
       }
-      antigo_conversas: {
-        Row: {
-          anotacao_interna: string | null
-          assigned_user_id: string | null
-          atualizado_em: string | null
-          contato_nome: string | null
-          contato_whatsapp: string | null
-          criado_em: string | null
-          etapa: string | null
-          finalizado_em: string | null
-          foto_perfil: string | null
-          id: string
-          id_atendente: string | null
-          id_contato: string | null
-          id_empresa: number | null
-          status: Database["public"]["Enums"]["status_conversa"] | null
-          tags: string | null
-          ultima_mensagem: string | null
-          ultima_mensagem_em: string | null
-        }
-        Insert: {
-          anotacao_interna?: string | null
-          assigned_user_id?: string | null
-          atualizado_em?: string | null
-          contato_nome?: string | null
-          contato_whatsapp?: string | null
-          criado_em?: string | null
-          etapa?: string | null
-          finalizado_em?: string | null
-          foto_perfil?: string | null
-          id?: string
-          id_atendente?: string | null
-          id_contato?: string | null
-          id_empresa?: number | null
-          status?: Database["public"]["Enums"]["status_conversa"] | null
-          tags?: string | null
-          ultima_mensagem?: string | null
-          ultima_mensagem_em?: string | null
-        }
-        Update: {
-          anotacao_interna?: string | null
-          assigned_user_id?: string | null
-          atualizado_em?: string | null
-          contato_nome?: string | null
-          contato_whatsapp?: string | null
-          criado_em?: string | null
-          etapa?: string | null
-          finalizado_em?: string | null
-          foto_perfil?: string | null
-          id?: string
-          id_atendente?: string | null
-          id_contato?: string | null
-          id_empresa?: number | null
-          status?: Database["public"]["Enums"]["status_conversa"] | null
-          tags?: string | null
-          ultima_mensagem?: string | null
-          ultima_mensagem_em?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversas_id_atendente_fkey"
-            columns: ["id_atendente"]
-            isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["uuid"]
-          },
-          {
-            foreignKeyName: "conversas_id_contato_fkey"
-            columns: ["id_contato"]
-            isOneToOne: false
-            referencedRelation: "contatos"
-            referencedColumns: ["id_cliente"]
-          },
-          {
-            foreignKeyName: "conversas_id_empresa_fkey"
-            columns: ["id_empresa"]
-            isOneToOne: false
-            referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      antigo_conversas_sdr_maquinagelo: {
-        Row: {
-          anotacao_interna: string | null
-          assigned_user_id: string | null
-          atualizado_em: string | null
-          contato_nome: string | null
-          contato_whatsapp: string | null
-          criado_em: string | null
-          etapa: string | null
-          finalizado_em: string | null
-          foto_perfil: string | null
-          id: string
-          id_atendente: string | null
-          id_contato: string | null
-          id_empresa: number | null
-          status: Database["public"]["Enums"]["status_conversa"] | null
-          tags: string | null
-          ultima_mensagem: string | null
-          ultima_mensagem_em: string | null
-        }
-        Insert: {
-          anotacao_interna?: string | null
-          assigned_user_id?: string | null
-          atualizado_em?: string | null
-          contato_nome?: string | null
-          contato_whatsapp?: string | null
-          criado_em?: string | null
-          etapa?: string | null
-          finalizado_em?: string | null
-          foto_perfil?: string | null
-          id?: string
-          id_atendente?: string | null
-          id_contato?: string | null
-          id_empresa?: number | null
-          status?: Database["public"]["Enums"]["status_conversa"] | null
-          tags?: string | null
-          ultima_mensagem?: string | null
-          ultima_mensagem_em?: string | null
-        }
-        Update: {
-          anotacao_interna?: string | null
-          assigned_user_id?: string | null
-          atualizado_em?: string | null
-          contato_nome?: string | null
-          contato_whatsapp?: string | null
-          criado_em?: string | null
-          etapa?: string | null
-          finalizado_em?: string | null
-          foto_perfil?: string | null
-          id?: string
-          id_atendente?: string | null
-          id_contato?: string | null
-          id_empresa?: number | null
-          status?: Database["public"]["Enums"]["status_conversa"] | null
-          tags?: string | null
-          ultima_mensagem?: string | null
-          ultima_mensagem_em?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversas_sdr_maquinagelo_id_atendente_fkey"
-            columns: ["id_atendente"]
-            isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["uuid"]
-          },
-          {
-            foreignKeyName: "conversas_sdr_maquinagelo_id_empresa_fkey"
-            columns: ["id_empresa"]
-            isOneToOne: false
-            referencedRelation: "empresas_sdr_maquinagelo"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      antigo_mensagens: {
-        Row: {
-          autor: Database["public"]["Enums"]["autor_mensagem"] | null
-          conversa_id: string | null
-          created_at: string | null
-          document_title: string | null
-          empresa_id: number | null
-          enviado_para: string | null
-          enviado_por: string | null
-          enviado_recebido: string | null
-          fluxo: string | null
-          id: number
-          media_duration_ms: number | null
-          media_url: string | null
-          mensagem: string | null
-          message_id_zapi: string | null
-          mime_type: string | null
-          nome_empresa: string
-          read_at: string | null
-          tipo_mensagem: Database["public"]["Enums"]["tipo_mensagem"] | null
-          whatsapp: string | null
-        }
-        Insert: {
-          autor?: Database["public"]["Enums"]["autor_mensagem"] | null
-          conversa_id?: string | null
-          created_at?: string | null
-          document_title?: string | null
-          empresa_id?: number | null
-          enviado_para?: string | null
-          enviado_por?: string | null
-          enviado_recebido?: string | null
-          fluxo?: string | null
-          id?: number
-          media_duration_ms?: number | null
-          media_url?: string | null
-          mensagem?: string | null
-          message_id_zapi?: string | null
-          mime_type?: string | null
-          nome_empresa?: string
-          read_at?: string | null
-          tipo_mensagem?: Database["public"]["Enums"]["tipo_mensagem"] | null
-          whatsapp?: string | null
-        }
-        Update: {
-          autor?: Database["public"]["Enums"]["autor_mensagem"] | null
-          conversa_id?: string | null
-          created_at?: string | null
-          document_title?: string | null
-          empresa_id?: number | null
-          enviado_para?: string | null
-          enviado_por?: string | null
-          enviado_recebido?: string | null
-          fluxo?: string | null
-          id?: number
-          media_duration_ms?: number | null
-          media_url?: string | null
-          mensagem?: string | null
-          message_id_zapi?: string | null
-          mime_type?: string | null
-          nome_empresa?: string
-          read_at?: string | null
-          tipo_mensagem?: Database["public"]["Enums"]["tipo_mensagem"] | null
-          whatsapp?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mensagens_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas_sdr_maquinagelo"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mensagens_fluxo_fkey"
-            columns: ["fluxo"]
-            isOneToOne: false
-            referencedRelation: "fluxos"
-            referencedColumns: ["nome_fluxo"]
-          },
-          {
-            foreignKeyName: "whatsapp_mensagens_cliente_final_conversa_id_fkey"
-            columns: ["conversa_id"]
-            isOneToOne: false
-            referencedRelation: "antigo_conversas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       atividade_participantes: {
         Row: {
           created_at: string | null
@@ -1042,6 +797,7 @@ export type Database = {
           expira_em: string | null
           id: string
           max_usos: number | null
+          role: string
           tipo: string
           token: string
           updated_at: string | null
@@ -1057,6 +813,7 @@ export type Database = {
           expira_em?: string | null
           id?: string
           max_usos?: number | null
+          role?: string
           tipo: string
           token?: string
           updated_at?: string | null
@@ -1072,6 +829,7 @@ export type Database = {
           expira_em?: string | null
           id?: string
           max_usos?: number | null
+          role?: string
           tipo?: string
           token?: string
           updated_at?: string | null
@@ -1438,52 +1196,6 @@ export type Database = {
             columns: ["id_funil"]
             isOneToOne: false
             referencedRelation: "funis"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      etiquestas_conversa: {
-        Row: {
-          created_at: string
-          criada_por: string | null
-          id: number
-          id_conversa: string | null
-          id_etiqueta: number | null
-        }
-        Insert: {
-          created_at?: string
-          criada_por?: string | null
-          id?: number
-          id_conversa?: string | null
-          id_etiqueta?: number | null
-        }
-        Update: {
-          created_at?: string
-          criada_por?: string | null
-          id?: number
-          id_conversa?: string | null
-          id_etiqueta?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "etiquestas_conversa_criada_por_fkey"
-            columns: ["criada_por"]
-            isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["uuid"]
-          },
-          {
-            foreignKeyName: "etiquestas_conversa_id_conversa_fkey"
-            columns: ["id_conversa"]
-            isOneToOne: false
-            referencedRelation: "antigo_conversas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "etiquestas_conversa_id_etiqueta_fkey"
-            columns: ["id_etiqueta"]
-            isOneToOne: false
-            referencedRelation: "etiquetas"
             referencedColumns: ["id"]
           },
         ]
@@ -2260,6 +1972,7 @@ export type Database = {
           data_criacao: string | null
           id: number
           id_empresa: number | null
+          id_empresa_geral: number | null
           id_time: number | null
           mensagem: string
           slug: string
@@ -2272,6 +1985,7 @@ export type Database = {
           data_criacao?: string | null
           id?: never
           id_empresa?: number | null
+          id_empresa_geral?: number | null
           id_time?: number | null
           mensagem: string
           slug: string
@@ -2284,6 +1998,7 @@ export type Database = {
           data_criacao?: string | null
           id?: never
           id_empresa?: number | null
+          id_empresa_geral?: number | null
           id_time?: number | null
           mensagem?: string
           slug?: string
@@ -2296,6 +2011,13 @@ export type Database = {
             columns: ["id_empresa"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "macros_id_empresa_geral_fkey"
+            columns: ["id_empresa_geral"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
           {
@@ -2469,6 +2191,7 @@ export type Database = {
           descricao: string | null
           id: number
           id_empresa: number | null
+          id_empresa_geral: number | null
           nome: string
           numero_parcelas: number | null
           preco: number | null
@@ -2481,6 +2204,7 @@ export type Database = {
           descricao?: string | null
           id?: never
           id_empresa?: number | null
+          id_empresa_geral?: number | null
           nome: string
           numero_parcelas?: number | null
           preco?: number | null
@@ -2493,6 +2217,7 @@ export type Database = {
           descricao?: string | null
           id?: never
           id_empresa?: number | null
+          id_empresa_geral?: number | null
           nome?: string
           numero_parcelas?: number | null
           preco?: number | null
@@ -2506,11 +2231,19 @@ export type Database = {
             referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "produtos_id_empresa_geral_fkey"
+            columns: ["id_empresa_geral"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sdr_buffer_mensagem: {
         Row: {
           created_at: string
+          id: number
           id_empresa: number | null
           id_empresa_purificador: number | null
           mensagem: string
@@ -2519,6 +2252,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          id?: number
           id_empresa?: number | null
           id_empresa_purificador?: number | null
           mensagem: string
@@ -2527,6 +2261,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          id?: number
           id_empresa?: number | null
           id_empresa_purificador?: number | null
           mensagem?: string
@@ -2687,35 +2422,6 @@ export type Database = {
           },
           {
             foreignKeyName: "user_empresa_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas_geral"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_empresa_geral: {
-        Row: {
-          created_at: string | null
-          empresa_id: number
-          id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          empresa_id: number
-          id?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          empresa_id?: number
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_empresa_geral_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas_geral"
@@ -2929,8 +2635,48 @@ export type Database = {
           },
         ]
       }
+      user_empresa_geral: {
+        Row: {
+          convite_id: string | null
+          created_at: string | null
+          empresa_id: number | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          convite_id?: string | null
+          created_at?: string | null
+          empresa_id?: number | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          convite_id?: string | null
+          created_at?: string | null
+          empresa_id?: number | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_empresa_convite_id_fkey"
+            columns: ["convite_id"]
+            isOneToOne: false
+            referencedRelation: "convites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_empresa_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      aceitar_convite: { Args: { p_convite_id: string }; Returns: Json }
       buscar_faq_similar: {
         Args: {
           p_empresa_id: number
@@ -2950,6 +2696,7 @@ export type Database = {
         Args: { p_id_empresa?: number; p_nome?: string; p_whatsapp: string }
         Returns: number
       }
+      get_empresas_usuario: { Args: never; Returns: number[] }
       get_etiquetas_by_empresa: {
         Args: { empresa_id: number }
         Returns: {
