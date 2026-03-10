@@ -85,7 +85,11 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
               } else if (enriched.status === 'perdido') {
                 setLostLeads((prev) => [enriched, ...prev])
               } else {
-                setLeads((prev) => [...prev, enriched])
+                setLeads((prev) =>
+                  prev.some(l => l.id === enriched.id)
+                    ? prev.map(l => l.id === enriched.id ? enriched : l)
+                    : [...prev, enriched]
+                )
               }
             }
           }
