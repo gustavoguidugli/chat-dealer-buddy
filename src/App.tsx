@@ -39,6 +39,10 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/sem-empresa" element={<SemEmpresa />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/onboarding/invalid" element={<OnboardingInvalid />} />
+            <Route path="/onboarding/expired" element={<OnboardingExpired />} />
+            <Route path="/onboarding/used" element={<OnboardingUsed />} />
             <Route path="/aceitar-convite" element={
               <ProtectedRoute><AceitarConvite /></ProtectedRoute>
             } />
