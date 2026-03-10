@@ -19,6 +19,11 @@ import AdminEmpresas from "./pages/AdminEmpresas";
 import CrmFunil from "./pages/CrmFunil";
 import CrmAtividades from "./pages/CrmAtividades";
 import ConfigUsuarios from "./pages/ConfigUsuarios";
+import MeuTime from "./pages/MeuTime";
+import Onboarding from "./pages/Onboarding";
+import OnboardingInvalid from "./pages/OnboardingInvalid";
+import OnboardingExpired from "./pages/OnboardingExpired";
+import OnboardingUsed from "./pages/OnboardingUsed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
