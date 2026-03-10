@@ -296,6 +296,90 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "convidar_usuario": {
+        const { email, empresa_id, role } = body;
+
+        if (!isCallerAdminForEmpresa(empresa_id)) {
+          return new Response(JSON.stringify({ error: "Sem permissão para convidar" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Create invite record
+        const { data: convite, error: conviteError } = await adminClient
+          .from("convites")
+          .insert({
+            empresa_id,
+            tipo: "link",
+            max_usos: 1,
+            email_destino: email.toLowerCase(),
+            role: role || "member",
+            criado_por: caller.id,
+          })
+          .select("id, token")
+          .single();
+
+        if (conviteError) {
+          return new Response(JSON.stringify({ error: conviteError.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Send invite email via Supabase Auth (inviteUserByEmail creates user if not exists)
+        const siteUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".supabase.co") || "";
+        const redirectUrl = siteUrl.replace("https://", "https://").replace(".supabase.co", "") || "";
+
+        // Try to send a magic link / invite
+        const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+          redirectTo: `${body.redirect_base_url || "https://chat-dealer-buddy.lovable.app"}/aceitar-convite?convite_id=${convite.id}`,
+        });
+
+        if (inviteError && !inviteError.message.includes("already been registered")) {
+          console.error("Invite email error:", inviteError.message);
+          // Don't fail - invite record was created, user can still be sent the link manually
+        }
+
+        return new Response(JSON.stringify({ success: true, convite_id: convite.id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "aceitar_convite_pos_login": {
+        const { convite_id } = body;
+
+        // Use the DB function to accept the invite
+        const { data: result, error: rpcError } = await adminClient.rpc("aceitar_convite", {
+          p_convite_id: convite_id,
+        });
+
+        if (rpcError) {
+          return new Response(JSON.stringify({ error: rpcError.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const parsed = typeof result === "string" ? JSON.parse(result) : result;
+        if (!parsed?.ok) {
+          return new Response(JSON.stringify({ error: parsed?.erro || "Erro ao aceitar convite" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Also upsert user_empresa_geral
+        await adminClient.from("user_empresa_geral").upsert({
+          user_id: caller.id,
+          empresa_id: parsed.empresa_id,
+        }, { onConflict: "user_id" });
+
+        return new Response(JSON.stringify({ success: true, empresa_id: parsed.empresa_id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(JSON.stringify({ error: "Ação inválida" }), {
           status: 400,

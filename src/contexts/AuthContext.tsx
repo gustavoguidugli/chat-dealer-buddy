@@ -14,6 +14,7 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   empresaId: number | null;
   empresaNome: string | null;
+  semEmpresa: boolean;
   setEmpresa: (id: number, nome: string) => void;
   loading: boolean;
   signOut: () => Promise<void>;
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [empresaNome, setEmpresaNome] = useState<string | null>(null);
+  const [semEmpresa, setSemEmpresa] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsAdmin(false);
           setEmpresaId(null);
           setEmpresaNome(null);
+          setSemEmpresa(false);
           setLoading(false);
         }
       }
@@ -76,8 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setEmpresaId(Number(savedId));
             setEmpresaNome(savedNome);
           }
+          setSemEmpresa(false);
         } else {
-          const { data: mapping } = await (supabase as any)
+          const { data: mapping } = await supabase
             .from('user_empresa_geral')
             .select('empresa_id')
             .eq('user_id', user.id)
@@ -85,12 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (mapping?.empresa_id) {
             setEmpresaId(mapping.empresa_id);
+            setSemEmpresa(false);
             const { data: emp } = await supabase
               .from('empresas_geral')
               .select('nome')
               .eq('id', mapping.empresa_id)
               .single();
             setEmpresaNome(emp?.nome ?? null);
+          } else {
+            setSemEmpresa(true);
           }
         }
       } catch (err) {
@@ -119,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, session, isAdmin, isSuperAdmin: SUPER_ADMIN_EMAILS.includes(user?.email ?? ''),
-      empresaId, empresaNome,
+      empresaId, empresaNome, semEmpresa,
       setEmpresa, loading, signOut: handleSignOut
     }}>
       {children}

@@ -63,6 +63,10 @@ export interface LeadCard {
   valor_final?: number | null;
 }
 
+function escapePostgrest(str: string): string {
+  return str.replace(/[(),.]/g, '\\$&');
+}
+
 export default function CrmFunil() {
   const { empresaId } = useAuth();
   const { toast } = useToast();
@@ -267,9 +271,12 @@ export default function CrmFunil() {
     }
   }, [toast, setLeads]);
 
-  const handleNewDeal = useCallback(() => {
+  const handleNewDeal = useCallback((lead: any) => {
+    if (lead) {
+      setLeads((prev: any[]) => [...prev, lead]);
+    }
     setModalOpen(false);
-  }, []);
+  }, [setLeads]);
 
   const handleDragGanho = useCallback(async () => {
     if (!dragGanhoLeadId) return;
@@ -322,7 +329,7 @@ export default function CrmFunil() {
         .eq('id_empresa', empresaId)
         .eq('ativo', true)
         .eq('status', 'aberto')
-        .or(`nome.ilike.%${searchQuery.trim()}%,empresa_cliente.ilike.%${searchQuery.trim()}%,whatsapp.ilike.%${searchQuery.trim()}%`)
+        .or(`nome.ilike.%${escapePostgrest(searchQuery.trim())}%,empresa_cliente.ilike.%${escapePostgrest(searchQuery.trim())}%,whatsapp.ilike.%${escapePostgrest(searchQuery.trim())}%`)
         .limit(10);
       setSearchResults(data || []);
       setSearching(false);

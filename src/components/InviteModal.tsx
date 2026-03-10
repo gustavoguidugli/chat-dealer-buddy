@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Copy, Loader2, CheckCircle2, XCircle, Plus, Mail } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Plus, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -43,7 +44,6 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
         .from('convites')
         .select('*')
         .eq('empresa_id', empresa.id)
-        .eq('tipo', 'link')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -59,29 +59,26 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
     if (open) fetchInvites();
   }, [open, fetchInvites]);
 
-  const copyLink = (token: string) => {
-    const link = `${window.location.origin}/invite?token=${token}`;
-    navigator.clipboard.writeText(link);
-    toast({ title: 'Link copiado!' });
-  };
-
-  const createInvite = async () => {
+  const sendInvite = async () => {
     const email = newEmail.trim().toLowerCase();
     if (!email) return;
 
     setCreating(true);
     try {
-      const { error } = await supabase.from('convites').insert({
-        empresa_id: empresa.id,
-        tipo: 'link',
-        max_usos: 1,
-        email_destino: email,
-        role: newRole,
-      } as any);
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'convidar_usuario',
+          email,
+          empresa_id: empresa.id,
+          role: newRole,
+        },
+      });
 
-      if (error) throw error;
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || 'Erro ao enviar convite');
+      }
 
-      toast({ title: 'Convite criado!', description: `Convite para ${email}` });
+      toast({ title: 'Convite enviado!', description: `Convite enviado para ${email}` });
       setNewEmail('');
       setNewRole('member');
       setShowForm(false);
@@ -98,7 +95,7 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
       <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Convites — {empresa.nome}</DialogTitle>
-          <DialogDescription>Gere convites vinculados a um email específico.</DialogDescription>
+          <DialogDescription>Envie convites por email para novos membros.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 flex-1 overflow-y-auto">
@@ -135,9 +132,9 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
                 <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setNewEmail(''); setNewRole('member'); }}>
                   Cancelar
                 </Button>
-                <Button size="sm" onClick={createInvite} disabled={creating || !newEmail.trim()}>
+                <Button size="sm" onClick={sendInvite} disabled={creating || !newEmail.trim()}>
                   {creating && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-                  Criar Convite
+                  Enviar Convite
                 </Button>
               </div>
             </div>
@@ -183,22 +180,10 @@ export function InviteModal({ open, onOpenChange, empresa }: Props) {
                           <CheckCircle2 className="h-4 w-4 text-primary" />
                         )}
                         <span className="text-xs text-muted-foreground">
-                          {isExpired ? 'Usado' : 'Disponível'}
+                          {isExpired ? 'Usado' : 'Pendente'}
                         </span>
                       </div>
                     </div>
-                    {!isExpired && (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          readOnly
-                          value={`${window.location.origin}/invite?token=${invite.token}`}
-                          className="bg-muted text-xs h-8"
-                        />
-                        <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={() => copyLink(invite.token)}>
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 );
               })}

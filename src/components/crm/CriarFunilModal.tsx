@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -115,12 +115,9 @@ function SortableEtapaCard({
   );
 }
 
-let counter = 0;
-function nextTempId() {
-  return `temp-${++counter}`;
-}
-
 export function CriarFunilModal({ open, onOpenChange, empresaId, onCreated }: Props) {
+  const counterRef = useRef(0);
+  const nextTempId = () => `temp-${++counterRef.current}`;
   const { toast } = useToast();
   const [nome, setNome] = useState('');
   const [etapas, setEtapas] = useState<EtapaNova[]>([
