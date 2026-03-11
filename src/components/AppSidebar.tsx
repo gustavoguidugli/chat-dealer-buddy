@@ -221,7 +221,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
       <nav className="flex-1 flex flex-col items-center gap-1 py-3 overflow-y-auto">
         <CompactNavItem to="/home" icon={Home} label="Home" />
 
-        <CollapsedSubmenu icon={Kanban} label="CRM" isActive={isCrmActive}>
+        <CollapsedSubmenu icon={Handshake} label="CRM" isActive={isCrmActive} defaultTo="/crm">
           <SubmenuLink to="/crm" label="Funil" icon={Target} />
           <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} />
         </CollapsedSubmenu>
