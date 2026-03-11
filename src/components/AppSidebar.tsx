@@ -35,8 +35,8 @@ function CollapsedSubmenu({
 
   return (
     <div className="relative flex justify-center" onMouseEnter={enter} onMouseLeave={leave}>
-      <button
-        type="button"
+      <NavLink
+        to={defaultTo}
         className={cn(
           COMPACT_SLOT,
           isActive
@@ -45,7 +45,7 @@ function CollapsedSubmenu({
         )}
       >
         <Icon className="h-5 w-5" />
-      </button>
+      </NavLink>
       {open && (
         <div className="absolute left-full top-0 ml-1 z-50 min-w-[170px] rounded-lg border border-sidebar-border bg-sidebar p-2 shadow-xl space-y-0.5">
           <p className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">{label}</p>
