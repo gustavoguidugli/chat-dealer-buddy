@@ -20,11 +20,13 @@ function CollapsedSubmenu({
   icon: Icon,
   label,
   isActive,
+  defaultTo,
   children,
 }: {
   icon: ElementType;
   label: string;
   isActive: boolean;
+  defaultTo: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
