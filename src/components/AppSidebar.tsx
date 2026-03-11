@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type ElementType, type ReactNode } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -20,10 +20,10 @@ function CollapsedSubmenu({
   isActive,
   children,
 }: {
-  icon: React.ElementType;
+  icon: ElementType;
   label: string;
   isActive: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const timeout = useRef<ReturnType<typeof setTimeout>>();
@@ -32,17 +32,18 @@ function CollapsedSubmenu({
   const leave = () => { timeout.current = setTimeout(() => setOpen(false), 150); };
 
   return (
-    <div className="relative flex justify-center" onMouseEnter={enter} onMouseLeave={leave}>
-      <div
+    <div className="relative w-10" onMouseEnter={enter} onMouseLeave={leave}>
+      <button
+        type="button"
         className={cn(
-          'flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer',
+          'flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none transition-colors',
           isActive
             ? 'bg-sidebar-accent text-sidebar-accent-foreground'
             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
         )}
       >
         <Icon className="h-5 w-5" />
-      </div>
+      </button>
       {open && (
         <div className="absolute left-full top-0 ml-1 z-50 min-w-[170px] rounded-lg border border-sidebar-border bg-sidebar p-2 shadow-xl space-y-0.5">
           <p className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">{label}</p>
@@ -54,7 +55,7 @@ function CollapsedSubmenu({
 }
 
 /* ─── Submenu link used inside CollapsedSubmenu panel ─── */
-function SubmenuLink({ to, label, icon: Icon, onClick }: { to: string; label: string; icon: React.ElementType; onClick?: () => void }) {
+function SubmenuLink({ to, label, icon: Icon, onClick }: { to: string; label: string; icon: ElementType; onClick?: () => void }) {
   return (
     <NavLink
       to={to}
@@ -74,7 +75,7 @@ function SubmenuLink({ to, label, icon: Icon, onClick }: { to: string; label: st
 }
 
 /* ─── Icon-only nav item with tooltip (compact mode) ─── */
-function CompactNavItem({ to, icon: Icon, label, onClick }: { to: string; icon: React.ElementType; label: string; onClick?: () => void }) {
+function CompactNavItem({ to, icon: Icon, label, onClick }: { to: string; icon: ElementType; label: string; onClick?: () => void }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -82,7 +83,7 @@ function CompactNavItem({ to, icon: Icon, label, onClick }: { to: string; icon: 
           to={to}
           onClick={onClick}
           className={({ isActive }) => cn(
-            'flex h-10 w-10 items-center justify-center rounded-lg transition-colors shrink-0',
+            'flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none transition-colors shrink-0',
             isActive
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
@@ -231,7 +232,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={() => navigate('/admin/empresas')} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+                <button onClick={() => navigate('/admin/empresas')} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
                   <Building2 className="h-5 w-5" />
                 </button>
               </TooltipTrigger>
@@ -239,7 +240,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={() => navigate('/selecionar-empresa')} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+                <button onClick={() => navigate('/selecionar-empresa')} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
                   <ArrowLeftRight className="h-5 w-5" />
                 </button>
               </TooltipTrigger>
@@ -254,7 +255,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
         <CompactNavItem to="/configuracoes/perfil" icon={UserCog} label="Meu perfil" />
         <Tooltip>
           <TooltipTrigger asChild>
-            <button onClick={signOut} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:text-destructive transition-colors">
+            <button onClick={signOut} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:text-destructive transition-colors">
               <LogOut className="h-5 w-5" />
             </button>
           </TooltipTrigger>
