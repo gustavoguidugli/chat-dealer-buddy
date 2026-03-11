@@ -2884,6 +2884,10 @@ export type Database = {
         Args: { p_empresa_id: number; p_user_id: string }
         Returns: boolean
       }
+      resetar_lead_completo: {
+        Args: { p_id_empresa: number; p_whatsapp: string }
+        Returns: Json
+      }
       timestamp_sao_paulo: { Args: { ts: string }; Returns: string }
       update_user_role: {
         Args: { p_empresa_id: number; p_new_role: string; p_user_id: string }
