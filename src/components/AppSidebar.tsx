@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2,
-  Kanban, ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen,
+  ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen, Handshake,
   Settings, Users, UserCog,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
