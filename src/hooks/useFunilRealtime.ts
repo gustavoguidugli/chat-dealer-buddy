@@ -140,6 +140,7 @@ export function useFunilRealtime(funilId: number, empresaId: number | null, etap
           event: '*',
           schema: 'public',
           table: 'lead_etiquetas',
+          filter: `id_empresa=eq.${empresaId}`,
         },
         () => {
           setEtiquetaVersion((v) => v + 1)

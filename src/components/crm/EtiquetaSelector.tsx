@@ -147,7 +147,7 @@ export function EtiquetaSelector({ leadId, empresaId, onChange }: EtiquetaSelect
       await supabase.from('lead_etiquetas').delete().eq('id_lead', leadId).eq('id_etiqueta', id);
       setSelectedIds(prev => prev.filter(i => i !== id));
     } else {
-      await supabase.from('lead_etiquetas').insert({ id_lead: leadId, id_etiqueta: id });
+      await supabase.from('lead_etiquetas').insert({ id_lead: leadId, id_etiqueta: id, id_empresa: empresaId });
       setSelectedIds(prev => [...prev, id]);
     }
     onChange?.();
