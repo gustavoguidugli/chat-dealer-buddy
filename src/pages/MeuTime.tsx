@@ -21,12 +21,10 @@ interface TeamMember {
   role: string;
   status_membro: string;
   joined_at: string;
-  usuarios: {
-    email: string;
-    nome: string | null;
-    primeiro_nome: string | null;
-    sobrenome: string | null;
-  };
+  email: string | null;
+  nome: string | null;
+  primeiro_nome: string | null;
+  sobrenome: string | null;
 }
 
 interface Convite {
@@ -71,12 +69,9 @@ export default function MeuTime() {
     if (!empresaId) return;
     setLoadingMembers(true);
     const { data, error } = await supabase
-      .from('usuario_time')
-      .select('id, id_usuario, role, status_membro, joined_at, usuarios(email, nome, primeiro_nome, sobrenome)')
-      .eq('id_empresa', empresaId)
-      .in('status_membro', ['active', 'suspended']);
+      .rpc('get_team_members', { p_empresa_id: empresaId });
 
-    if (!error && data) setMembers(data as unknown as TeamMember[]);
+    if (!error && data) setMembers(data as TeamMember[]);
     setLoadingMembers(false);
   }, [empresaId]);
 
@@ -118,10 +113,8 @@ export default function MeuTime() {
   };
 
   const getMemberName = (m: TeamMember) => {
-    const u = m.usuarios;
-    if (!u) return '—';
-    if (u.primeiro_nome) return `${u.primeiro_nome} ${u.sobrenome ?? ''}`.trim();
-    return u.nome ?? u.email;
+    if (m.primeiro_nome) return `${m.primeiro_nome} ${m.sobrenome ?? ''}`.trim();
+    return m.nome ?? m.email ?? '—';
   };
 
   // Member actions
@@ -248,7 +241,7 @@ export default function MeuTime() {
                   ) : members.map(m => (
                     <TableRow key={m.id}>
                       <TableCell className="font-medium">{getMemberName(m)}</TableCell>
-                      <TableCell className="text-muted-foreground">{m.usuarios?.email ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{m.email ?? '—'}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="gap-1">
                           {m.role === 'admin' ? <ShieldAlert className="h-3 w-3" /> : <Shield className="h-3 w-3" />}

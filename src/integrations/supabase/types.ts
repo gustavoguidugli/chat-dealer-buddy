@@ -2534,6 +2534,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_usuario_time_usuarios"
+            columns: ["id_usuario"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["uuid"]
+          },
+          {
             foreignKeyName: "usuario_time_id_empresa_fkey"
             columns: ["id_empresa"]
             isOneToOne: false
@@ -2774,6 +2781,20 @@ export type Database = {
           id: number
           id_empresa: number
           nome_etiqueta: string
+        }[]
+      }
+      get_team_members: {
+        Args: { p_empresa_id: number }
+        Returns: {
+          email: string
+          id: number
+          id_usuario: string
+          joined_at: string
+          nome: string
+          primeiro_nome: string
+          role: string
+          sobrenome: string
+          status_membro: string
         }[]
       }
       get_user_empresa_id: { Args: { user_uuid: string }; Returns: number }
