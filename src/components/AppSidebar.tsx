@@ -34,11 +34,11 @@ function CollapsedSubmenu({
   const leave = () => { timeout.current = setTimeout(() => setOpen(false), 150); };
 
   return (
-    <div className="relative w-10" onMouseEnter={enter} onMouseLeave={leave}>
+    <div className="relative flex justify-center" onMouseEnter={enter} onMouseLeave={leave}>
       <button
         type="button"
         className={cn(
-          'flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none transition-colors',
+          COMPACT_SLOT,
           isActive
             ? 'bg-sidebar-accent text-sidebar-accent-foreground'
             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
