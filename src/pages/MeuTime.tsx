@@ -113,10 +113,8 @@ export default function MeuTime() {
   };
 
   const getMemberName = (m: TeamMember) => {
-    const u = m.usuarios;
-    if (!u) return '—';
-    if (u.primeiro_nome) return `${u.primeiro_nome} ${u.sobrenome ?? ''}`.trim();
-    return u.nome ?? u.email;
+    if (m.primeiro_nome) return `${m.primeiro_nome} ${m.sobrenome ?? ''}`.trim();
+    return m.nome ?? m.email ?? '—';
   };
 
   // Member actions
