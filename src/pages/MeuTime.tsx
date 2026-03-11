@@ -248,7 +248,7 @@ export default function MeuTime() {
                   ) : members.map(m => (
                     <TableRow key={m.id}>
                       <TableCell className="font-medium">{getMemberName(m)}</TableCell>
-                      <TableCell className="text-muted-foreground">{m.usuarios.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{m.usuarios?.email ?? '—'}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="gap-1">
                           {m.role === 'admin' ? <ShieldAlert className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
