@@ -243,7 +243,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     dadosContato,
     anexos: realtimeAnexos,
     loading: realtimeLoading,
-  } = useLeadRealtime(open ? leadId : null);
+  } = useLeadRealtime(open ? leadId : null, empresaId);
 
   const [lead, setLead] = useState<LeadDetail | null>(null);
   const [funilNome, setFunilNome] = useState('');
