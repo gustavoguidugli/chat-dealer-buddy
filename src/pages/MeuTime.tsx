@@ -69,12 +69,9 @@ export default function MeuTime() {
     if (!empresaId) return;
     setLoadingMembers(true);
     const { data, error } = await supabase
-      .from('usuario_time')
-      .select('id, id_usuario, role, status_membro, joined_at, usuarios(email, nome, primeiro_nome, sobrenome)')
-      .eq('id_empresa', empresaId)
-      .in('status_membro', ['active', 'suspended']);
+      .rpc('get_team_members', { p_empresa_id: empresaId });
 
-    if (!error && data) setMembers(data as unknown as TeamMember[]);
+    if (!error && data) setMembers(data as TeamMember[]);
     setLoadingMembers(false);
   }, [empresaId]);
 
