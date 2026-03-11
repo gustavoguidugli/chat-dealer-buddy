@@ -1,25 +1,111 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Home, Bot, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2, Kanban, ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen, Settings, Users, MessageSquare, UserCog } from 'lucide-react';
+import {
+  Home, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2,
+  Kanban, ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen,
+  Settings, Users, UserCog,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
-const navItems = [
-  { to: '/home', icon: Home, label: 'Home' },
-];
+/* ─── Collapsed hover submenu ─── */
+function CollapsedSubmenu({
+  icon: Icon,
+  label,
+  isActive,
+  children,
+}: {
+  icon: React.ElementType;
+  label: string;
+  isActive: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const timeout = useRef<ReturnType<typeof setTimeout>>();
 
-function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
-  const { user, isCompanyAdmin, isSuperAdmin, empresaNome, signOut } = useAuth();
+  const enter = () => { clearTimeout(timeout.current); setOpen(true); };
+  const leave = () => { timeout.current = setTimeout(() => setOpen(false), 150); };
+
+  return (
+    <div className="relative" onMouseEnter={enter} onMouseLeave={leave}>
+      <div
+        className={cn(
+          'flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer',
+          isActive
+            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+        )}
+      >
+        <Icon className="h-5 w-5" />
+      </div>
+      {open && (
+        <div className="absolute left-full top-0 ml-2 z-50 min-w-[160px] rounded-lg border border-sidebar-border bg-sidebar p-2 shadow-lg space-y-0.5">
+          <p className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">{label}</p>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Submenu link used inside CollapsedSubmenu panel ─── */
+function SubmenuLink({ to, label, icon: Icon, onClick }: { to: string; label: string; icon: React.ElementType; onClick?: () => void }) {
+  return (
+    <NavLink
+      to={to}
+      end
+      onClick={onClick}
+      className={({ isActive }) => cn(
+        'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+        isActive
+          ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
+          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </NavLink>
+  );
+}
+
+/* ─── Icon-only nav item with tooltip (compact mode) ─── */
+function CompactNavItem({ to, icon: Icon, label, onClick }: { to: string; icon: React.ElementType; label: string; onClick?: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <NavLink
+          to={to}
+          onClick={onClick}
+          className={({ isActive }) => cn(
+            'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+            isActive
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </NavLink>
+      </TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/* ─── Full sidebar content (expanded) ─── */
+function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
+  const { user, isSuperAdmin, empresaNome, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      {/* Header */}
       <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
@@ -34,208 +120,185 @@ function SidebarInner({ onNavigate, onCollapse }: { onNavigate?: () => void; onC
         )}
       </div>
 
+      {/* Company info */}
       {empresaNome && (
         <div className="px-6 py-4 border-b border-sidebar-border">
           <p className="text-xs text-sidebar-foreground/60 uppercase tracking-wider">Empresa</p>
           <p className="text-sm font-semibold truncate mt-1">{empresaNome}</p>
-          {user?.email && (
-            <p className="text-xs text-sidebar-foreground/50 truncate mt-1">{user.email}</p>
-          )}
+          {user?.email && <p className="text-xs text-sidebar-foreground/50 truncate mt-1">{user.email}</p>}
         </div>
       )}
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            onClick={onNavigate}
-            className={({ isActive }) => cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-              isActive
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-            {item.label}
-          </NavLink>
-        ))}
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <NavLink to="/home" onClick={onNavigate} className={({ isActive }) => cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
+          <Home className="h-5 w-5" /> Home
+        </NavLink>
 
-        {/* CRM Collapsible Menu */}
+        {/* CRM */}
         <Collapsible defaultOpen={isCrmActive}>
-          <CollapsibleTrigger className={cn(
-            'flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            isCrmActive
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-          )}>
-            <div className="flex items-center gap-3">
-              <Kanban className="h-5 w-5" />
-              CRM
-            </div>
+          <CollapsibleTrigger className={cn('flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isCrmActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
+            <div className="flex items-center gap-3"><Kanban className="h-5 w-5" /> CRM</div>
             <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-8 space-y-0.5 mt-0.5">
-            <NavLink
-              to="/crm"
-              end
-              onClick={onNavigate}
-              className={({ isActive }) => cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                isActive
-                  ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
-              )}
-            >
-              <Target className="h-4 w-4" />
-              Funil
-            </NavLink>
-            <NavLink
-              to="/crm/atividades"
-              onClick={onNavigate}
-              className={({ isActive }) => cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                isActive
-                  ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
-              )}
-            >
-              <CheckSquare className="h-4 w-4" />
-              Atividades
-            </NavLink>
+            <SubmenuLink to="/crm" label="Funil" icon={Target} onClick={onNavigate} />
+            <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} onClick={onNavigate} />
           </CollapsibleContent>
         </Collapsible>
 
-        <NavLink
-          to="/base-conhecimento"
-          onClick={onNavigate}
-          className={({ isActive }) => cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            isActive
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-          )}
-        >
-          <BookOpen className="h-5 w-5" />
-          Base de conhecimento
+        <NavLink to="/base-conhecimento" onClick={onNavigate} className={({ isActive }) => cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
+          <BookOpen className="h-5 w-5" /> Base de conhecimento
         </NavLink>
 
-        {/* Configurações Collapsible Menu */}
-        <Collapsible defaultOpen={location.pathname.startsWith('/configuracoes')}>
-          <CollapsibleTrigger className={cn(
-            'flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            location.pathname.startsWith('/configuracoes')
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-          )}>
-            <div className="flex items-center gap-3">
-              <Settings className="h-5 w-5" />
-              Configurações
-            </div>
+        {/* Configurações */}
+        <Collapsible defaultOpen={location.pathname.startsWith('/configuracoes') || location.pathname === '/meu-time'}>
+          <CollapsibleTrigger className={cn('flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', (location.pathname.startsWith('/configuracoes') || location.pathname === '/meu-time') ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
+            <div className="flex items-center gap-3"><Settings className="h-5 w-5" /> Configurações</div>
             <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-8 space-y-0.5 mt-0.5">
-            <NavLink
-              to="/meu-time"
-              onClick={onNavigate}
-              className={({ isActive }) => cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                isActive
-                  ? 'text-sidebar-accent-foreground font-medium bg-sidebar-accent/60'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
-              )}
-            >
-              <Users className="h-4 w-4" />
-              Meu Time
-            </NavLink>
+            <SubmenuLink to="/meu-time" label="Meu Time" icon={Users} onClick={onNavigate} />
           </CollapsibleContent>
         </Collapsible>
 
         {isSuperAdmin && (
           <>
-            <button
-              onClick={() => { navigate('/admin/empresas'); onNavigate?.(); }}
-              className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-            >
-              <Building2 className="h-5 w-5" />
-              Empresas
+            <button onClick={() => { navigate('/admin/empresas'); onNavigate?.(); }} className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+              <Building2 className="h-5 w-5" /> Empresas
             </button>
-            <button
-              onClick={() => { navigate('/selecionar-empresa'); onNavigate?.(); }}
-              className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-            >
-              <ArrowLeftRight className="h-5 w-5" />
-              Trocar empresa
+            <button onClick={() => { navigate('/selecionar-empresa'); onNavigate?.(); }} className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+              <ArrowLeftRight className="h-5 w-5" /> Trocar empresa
             </button>
           </>
         )}
       </nav>
 
+      {/* Footer */}
       <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
-        <NavLink
-          to="/configuracoes/perfil"
-          onClick={onNavigate}
-          className={({ isActive }) => cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            isActive
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-          )}
-        >
-          <UserCog className="h-5 w-5" />
-          Meu perfil
+        <NavLink to="/configuracoes/perfil" onClick={onNavigate} className={({ isActive }) => cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
+          <UserCog className="h-5 w-5" /> Meu perfil
         </NavLink>
-        <button
-          onClick={signOut}
-          className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:text-destructive transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          Sair
+        <button onClick={signOut} className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:text-destructive transition-colors">
+          <LogOut className="h-5 w-5" /> Sair
         </button>
       </div>
     </div>
   );
 }
 
+/* ─── Compact sidebar (icons only) ─── */
+function CompactContent({ onExpand }: { onExpand: () => void }) {
+  const { isSuperAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isCrmActive = location.pathname.startsWith('/crm');
+  const isConfigActive = location.pathname.startsWith('/configuracoes') || location.pathname === '/meu-time';
+
+  return (
+    <div className="flex h-full flex-col items-center bg-sidebar text-sidebar-foreground py-4">
+      {/* Header */}
+      <div className="flex flex-col items-center gap-3 mb-4 pb-4 border-b border-sidebar-border w-full px-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
+          <Snowflake className="h-6 w-6 text-sidebar-primary-foreground" />
+        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button onClick={onExpand} className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
+              <PanelLeftOpen className="h-5 w-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Expandir menu</TooltipContent>
+        </Tooltip>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 flex flex-col items-center gap-1 px-2 overflow-y-auto">
+        <CompactNavItem to="/home" icon={Home} label="Home" />
+
+        <CollapsedSubmenu icon={Kanban} label="CRM" isActive={isCrmActive}>
+          <SubmenuLink to="/crm" label="Funil" icon={Target} />
+          <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} />
+        </CollapsedSubmenu>
+
+        <CompactNavItem to="/base-conhecimento" icon={BookOpen} label="Base de conhecimento" />
+
+        <CollapsedSubmenu icon={Settings} label="Configurações" isActive={isConfigActive}>
+          <SubmenuLink to="/meu-time" label="Meu Time" icon={Users} />
+        </CollapsedSubmenu>
+
+        {isSuperAdmin && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button onClick={() => navigate('/admin/empresas')} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+                  <Building2 className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Empresas</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button onClick={() => navigate('/selecionar-empresa')} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+                  <ArrowLeftRight className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Trocar empresa</TooltipContent>
+            </Tooltip>
+          </>
+        )}
+      </nav>
+
+      {/* Footer */}
+      <div className="flex flex-col items-center gap-1 pt-4 border-t border-sidebar-border w-full px-2">
+        <CompactNavItem to="/configuracoes/perfil" icon={UserCog} label="Meu perfil" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button onClick={signOut} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:text-destructive transition-colors">
+              <LogOut className="h-5 w-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Sair</TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main export ─── */
 export function AppSidebar() {
   const isMobile = useIsMobile();
-  const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true');
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      localStorage.setItem('sidebar-collapsed', String(!prev));
+      return !prev;
+    });
+  };
 
   if (isMobile) {
     return (
       <>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed top-4 left-4 z-50 bg-card shadow-md"
-          onClick={() => setOpen(true)}
-        >
+        <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50 bg-card shadow-md" onClick={() => setMobileOpen(true)}>
           <Menu className="h-6 w-6" />
         </Button>
-        <Sheet open={open} onOpenChange={setOpen}>
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetContent side="left" className="p-0 w-64 border-0 [&>button]:hidden">
-            <SidebarInner onNavigate={() => setOpen(false)} />
+            <ExpandedContent onNavigate={() => setMobileOpen(false)} />
           </SheetContent>
         </Sheet>
       </>
     );
   }
 
-  if (collapsed) {
-    return (
-      <aside className="w-12 shrink-0 flex flex-col items-center py-4 bg-sidebar border-r border-sidebar-border">
-        <button onClick={() => setCollapsed(false)} className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
-          <PanelLeftOpen className="h-5 w-5" />
-        </button>
-      </aside>
-    );
-  }
-
   return (
-    <aside className="w-64 shrink-0">
-      <SidebarInner onCollapse={() => setCollapsed(true)} />
+    <aside className={cn('shrink-0 transition-all duration-200', collapsed ? 'w-16' : 'w-64')}>
+      {collapsed
+        ? <CompactContent onExpand={toggleCollapsed} />
+        : <ExpandedContent onCollapse={toggleCollapsed} />
+      }
     </aside>
   );
 }
