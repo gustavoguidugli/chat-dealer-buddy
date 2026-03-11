@@ -143,7 +143,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
         {/* CRM */}
         <Collapsible defaultOpen={isCrmActive}>
           <CollapsibleTrigger className={cn('flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isCrmActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
-            <div className="flex items-center gap-3"><Kanban className="h-5 w-5" /> CRM</div>
+            <div className="flex items-center gap-3"><Handshake className="h-5 w-5" /> CRM</div>
             <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-8 space-y-0.5 mt-0.5">
