@@ -2779,7 +2779,7 @@ export type Database = {
         }[]
       }
       criar_lead_triagem: {
-        Args: { p_id_empresa?: number; p_nome?: string; p_whatsapp: string }
+        Args: { p_id_empresa: number; p_nome?: string; p_whatsapp: string }
         Returns: number
       }
       get_empresas_usuario: { Args: never; Returns: number[] }
