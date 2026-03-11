@@ -82,7 +82,7 @@ function CompactNavItem({ to, icon: Icon, label, onClick }: { to: string; icon: 
           to={to}
           onClick={onClick}
           className={({ isActive }) => cn(
-            'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+            'flex h-10 w-10 items-center justify-center rounded-lg transition-colors shrink-0',
             isActive
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
