@@ -13,6 +13,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
+const COMPACT_SLOT = 'flex h-10 w-10 items-center justify-center rounded-lg transition-colors shrink-0';
+
 /* ─── Collapsed hover submenu ─── */
 function CollapsedSubmenu({
   icon: Icon,
@@ -32,11 +34,11 @@ function CollapsedSubmenu({
   const leave = () => { timeout.current = setTimeout(() => setOpen(false), 150); };
 
   return (
-    <div className="relative w-10" onMouseEnter={enter} onMouseLeave={leave}>
+    <div className="relative flex justify-center" onMouseEnter={enter} onMouseLeave={leave}>
       <button
         type="button"
         className={cn(
-          'flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none transition-colors',
+          COMPACT_SLOT,
           isActive
             ? 'bg-sidebar-accent text-sidebar-accent-foreground'
             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
@@ -83,7 +85,7 @@ function CompactNavItem({ to, icon: Icon, label, onClick }: { to: string; icon: 
           to={to}
           onClick={onClick}
           className={({ isActive }) => cn(
-            'flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none transition-colors shrink-0',
+            COMPACT_SLOT,
             isActive
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
@@ -199,14 +201,14 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Header */}
-      <div className="flex flex-col items-center gap-2 px-3 py-5 border-b border-sidebar-border">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary shrink-0">
+      <div className="flex flex-col items-center gap-2 py-5 border-b border-sidebar-border">
+        <div className={cn(COMPACT_SLOT, 'bg-sidebar-primary')}>
           <Snowflake className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button onClick={onExpand} className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
-              <PanelLeftOpen className="h-4 w-4" />
+            <button onClick={onExpand} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent')}>
+              <PanelLeftOpen className="h-5 w-5" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="right">Expandir menu</TooltipContent>
@@ -214,7 +216,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 flex flex-col items-center gap-1 px-3 py-3 overflow-y-auto">
+      <nav className="flex-1 flex flex-col items-center gap-1 py-3 overflow-y-auto">
         <CompactNavItem to="/home" icon={Home} label="Home" />
 
         <CollapsedSubmenu icon={Kanban} label="CRM" isActive={isCrmActive}>
@@ -232,7 +234,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={() => navigate('/admin/empresas')} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+                <button onClick={() => navigate('/admin/empresas')} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
                   <Building2 className="h-5 w-5" />
                 </button>
               </TooltipTrigger>
@@ -240,7 +242,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={() => navigate('/selecionar-empresa')} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+                <button onClick={() => navigate('/selecionar-empresa')} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
                   <ArrowLeftRight className="h-5 w-5" />
                 </button>
               </TooltipTrigger>
@@ -251,11 +253,11 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
       </nav>
 
       {/* Footer */}
-      <div className="flex flex-col items-center gap-1 px-3 py-3 border-t border-sidebar-border">
+      <div className="flex flex-col items-center gap-1 py-3 border-t border-sidebar-border">
         <CompactNavItem to="/configuracoes/perfil" icon={UserCog} label="Meu perfil" />
         <Tooltip>
           <TooltipTrigger asChild>
-            <button onClick={signOut} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:text-destructive transition-colors">
+            <button onClick={signOut} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/70 hover:text-destructive')}>
               <LogOut className="h-5 w-5" />
             </button>
           </TooltipTrigger>
