@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, BookOpen, ArrowLeftRight, LogOut, Menu, Snowflake, Building2,
-  Kanban, ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen,
+  ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen, Handshake,
   Settings, Users, UserCog,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,11 +20,13 @@ function CollapsedSubmenu({
   icon: Icon,
   label,
   isActive,
+  defaultTo,
   children,
 }: {
   icon: ElementType;
   label: string;
   isActive: boolean;
+  defaultTo: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -35,8 +37,8 @@ function CollapsedSubmenu({
 
   return (
     <div className="relative flex justify-center" onMouseEnter={enter} onMouseLeave={leave}>
-      <button
-        type="button"
+      <NavLink
+        to={defaultTo}
         className={cn(
           COMPACT_SLOT,
           isActive
@@ -45,7 +47,7 @@ function CollapsedSubmenu({
         )}
       >
         <Icon className="h-5 w-5" />
-      </button>
+      </NavLink>
       {open && (
         <div className="absolute left-full top-0 ml-1 z-50 min-w-[170px] rounded-lg border border-sidebar-border bg-sidebar p-2 shadow-xl space-y-0.5">
           <p className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">{label}</p>
@@ -141,7 +143,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
         {/* CRM */}
         <Collapsible defaultOpen={isCrmActive}>
           <CollapsibleTrigger className={cn('flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isCrmActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
-            <div className="flex items-center gap-3"><Kanban className="h-5 w-5" /> CRM</div>
+            <div className="flex items-center gap-3"><Handshake className="h-5 w-5" /> CRM</div>
             <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-8 space-y-0.5 mt-0.5">
@@ -219,14 +221,14 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
       <nav className="flex-1 flex flex-col items-center gap-1 py-3 overflow-y-auto">
         <CompactNavItem to="/home" icon={Home} label="Home" />
 
-        <CollapsedSubmenu icon={Kanban} label="CRM" isActive={isCrmActive}>
+        <CollapsedSubmenu icon={Handshake} label="CRM" isActive={isCrmActive} defaultTo="/crm">
           <SubmenuLink to="/crm" label="Funil" icon={Target} />
           <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} />
         </CollapsedSubmenu>
 
         <CompactNavItem to="/base-conhecimento" icon={BookOpen} label="Base de conhecimento" />
 
-        <CollapsedSubmenu icon={Settings} label="Configurações" isActive={isConfigActive}>
+        <CollapsedSubmenu icon={Settings} label="Configurações" isActive={isConfigActive} defaultTo="/meu-time">
           <SubmenuLink to="/meu-time" label="Meu Time" icon={Users} />
         </CollapsedSubmenu>
 
