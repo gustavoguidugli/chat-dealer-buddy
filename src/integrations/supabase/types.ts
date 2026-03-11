@@ -1789,6 +1789,7 @@ export type Database = {
           aplicada_automaticamente: boolean | null
           aplicada_por: string | null
           created_at: string | null
+          id_empresa: number
           id_etiqueta: number
           id_lead: number
         }
@@ -1796,6 +1797,7 @@ export type Database = {
           aplicada_automaticamente?: boolean | null
           aplicada_por?: string | null
           created_at?: string | null
+          id_empresa: number
           id_etiqueta: number
           id_lead: number
         }
@@ -1803,10 +1805,18 @@ export type Database = {
           aplicada_automaticamente?: boolean | null
           aplicada_por?: string | null
           created_at?: string | null
+          id_empresa?: number
           id_etiqueta?: number
           id_lead?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "lead_etiquetas_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lead_etiquetas_id_etiqueta_fkey"
             columns: ["id_etiqueta"]
