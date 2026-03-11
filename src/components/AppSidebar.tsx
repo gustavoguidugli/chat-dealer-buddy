@@ -32,7 +32,7 @@ function CollapsedSubmenu({
   const leave = () => { timeout.current = setTimeout(() => setOpen(false), 150); };
 
   return (
-    <div className="relative" onMouseEnter={enter} onMouseLeave={leave}>
+    <div className="relative flex justify-center" onMouseEnter={enter} onMouseLeave={leave}>
       <div
         className={cn(
           'flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer',
@@ -44,7 +44,7 @@ function CollapsedSubmenu({
         <Icon className="h-5 w-5" />
       </div>
       {open && (
-        <div className="absolute left-full top-0 ml-2 z-50 min-w-[160px] rounded-lg border border-sidebar-border bg-sidebar p-2 shadow-lg space-y-0.5">
+        <div className="absolute left-full top-0 ml-1 z-50 min-w-[170px] rounded-lg border border-sidebar-border bg-sidebar p-2 shadow-xl space-y-0.5">
           <p className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">{label}</p>
           {children}
         </div>
