@@ -228,7 +228,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
 
         <CompactNavItem to="/base-conhecimento" icon={BookOpen} label="Base de conhecimento" />
 
-        <CollapsedSubmenu icon={Settings} label="Configurações" isActive={isConfigActive}>
+        <CollapsedSubmenu icon={Settings} label="Configurações" isActive={isConfigActive} defaultTo="/meu-time">
           <SubmenuLink to="/meu-time" label="Meu Time" icon={Users} />
         </CollapsedSubmenu>
 
