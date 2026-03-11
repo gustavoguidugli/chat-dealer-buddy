@@ -13,6 +13,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
+const COMPACT_SLOT = 'flex h-10 w-10 items-center justify-center rounded-lg transition-colors shrink-0';
+
 /* ─── Collapsed hover submenu ─── */
 function CollapsedSubmenu({
   icon: Icon,
