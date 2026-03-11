@@ -21,12 +21,10 @@ interface TeamMember {
   role: string;
   status_membro: string;
   joined_at: string;
-  usuarios: {
-    email: string;
-    nome: string | null;
-    primeiro_nome: string | null;
-    sobrenome: string | null;
-  };
+  email: string | null;
+  nome: string | null;
+  primeiro_nome: string | null;
+  sobrenome: string | null;
 }
 
 interface Convite {
