@@ -1,0 +1,1 @@
+ALTER TABLE public.atividades REPLICA IDENTITY FULL;
