@@ -232,30 +232,15 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={() => navigate('/admin/empresas')} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+                <button onClick={() => navigate('/admin/empresas')} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
                   <Building2 className="h-5 w-5" />
                 </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Empresas</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button onClick={() => navigate('/selecionar-empresa')} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+...
+                <button onClick={() => navigate('/selecionar-empresa')} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
                   <ArrowLeftRight className="h-5 w-5" />
                 </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Trocar empresa</TooltipContent>
-            </Tooltip>
-          </>
-        )}
-      </nav>
-
-      {/* Footer */}
-      <div className="flex flex-col items-center gap-1 px-3 py-3 border-t border-sidebar-border">
-        <CompactNavItem to="/configuracoes/perfil" icon={UserCog} label="Meu perfil" />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button onClick={signOut} className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:text-destructive transition-colors">
+...
+            <button onClick={signOut} className="flex h-10 w-10 items-center justify-center rounded-lg p-0 leading-none shrink-0 text-sidebar-foreground/70 hover:text-destructive transition-colors">
               <LogOut className="h-5 w-5" />
             </button>
           </TooltipTrigger>
