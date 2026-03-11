@@ -126,7 +126,7 @@ export default function CrmFunil() {
   }, [empresaId]);
 
   // Realtime leads
-  const { leads: realtimeLeads, setLeads, wonLeads: realtimeWonLeads, lostLeads: realtimeLostLeads, loading: loadingLeads, etiquetaVersion, atividadeVersion } = useFunilRealtime(funilAtual || 0);
+  const { leads: realtimeLeads, setLeads, wonLeads: realtimeWonLeads, lostLeads: realtimeLostLeads, loading: loadingLeads, etiquetaVersion, atividadeVersion } = useFunilRealtime(funilAtual || 0, empresaId);
 
   // Enrich leads with etiquetas
   const [leads, setEnrichedLeads] = useState<LeadCard[]>([]);
