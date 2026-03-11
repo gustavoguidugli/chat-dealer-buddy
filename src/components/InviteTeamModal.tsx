@@ -37,10 +37,10 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
     // Load existing members and pending invites for validation
     (async () => {
       const [membersRes, invitesRes] = await Promise.all([
-        supabase.from('usuario_time').select('usuarios(email)').eq('id_empresa', empresaId).eq('status_membro', 'active'),
+        supabase.rpc('get_team_members', { p_empresa_id: empresaId }),
         supabase.from('convites').select('email_destino').eq('empresa_id', empresaId).eq('status_convite', 'pending'),
       ]);
-      setExistingMembers((membersRes.data ?? []).map((m: any) => m.usuarios?.email?.toLowerCase()).filter(Boolean));
+      setExistingMembers((membersRes.data ?? []).map((m: any) => m.email?.toLowerCase()).filter(Boolean));
       setPendingInvites((invitesRes.data ?? []).map((c: any) => c.email_destino?.toLowerCase()).filter(Boolean));
     })();
   }, [open, empresaId]);
