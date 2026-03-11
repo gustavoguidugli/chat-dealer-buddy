@@ -1,12 +1,77 @@
 
 
-## Plan: Vincular usuário à Empresa 1 como super_admin
+## Plano: Redesenhar sidebar com modos compacto e expandido
 
-Three data inserts are needed using the Supabase insert tool:
+### Resumo
 
-1. **user_empresa** - Insert `user_id`, `empresa_id: 1`, `role: 'super_admin'`
-2. **user_empresa_geral** - Insert `user_id`, `empresa_id: 1` (defines which company loads in AuthContext)
-3. **user_permissions** - Insert `user_id`, `is_admin: true` (grants admin-level access for RLS policies)
+Reescrever `AppSidebar.tsx` para suportar dois modos de navegação no desktop: **expandido** (w-64, ícones + labels + submenus colapsáveis) e **compacto** (w-16, apenas ícones com popover de submenu ao hover). A preferência é persistida em `localStorage`. Mobile continua usando Sheet.
 
-All three use the user UUID `89a6ca88-181a-40dd-b4e4-262eff0b7460`. No schema changes needed -- purely data operations.
+### Estrutura de navegação
+
+```text
+┌─────────────────────────────┐
+│ [Logo] Eco Ice   [◀ toggle] │  ← Header (compacto: só logo icon)
+├─────────────────────────────┤
+│ Empresa / email             │  ← Só no expandido
+├─────────────────────────────┤
+│ 🏠 Home                     │
+│ 📊 CRM ▾                   │  ← Collapsible (expandido) / Popover (compacto)
+│    ├ Funil                  │
+│    └ Atividades             │
+│ 📖 Base de conhecimento     │
+│ ⚙ Configurações ▾          │  ← Collapsible / Popover
+│    └ Meu Time               │
+│ 🏢 Empresas (super)         │
+│ ↔ Trocar empresa (super)    │
+├─────────────────────────────┤
+│ 👤 Meu perfil               │  ← Footer fixo
+│ 🚪 Sair                     │
+└─────────────────────────────┘
+```
+
+### Mudanças técnicas
+
+**1. `src/components/AppSidebar.tsx`** — Reescrever completo
+
+- Estado `collapsed` inicializado de `localStorage.getItem('sidebar-collapsed')`
+- Toggle persiste em `localStorage`
+- Transição animada de largura (`transition-all duration-200`)
+- **Modo expandido**: igual ao atual — Collapsible para CRM e Configurações
+- **Modo compacto** (w-16):
+  - Header: apenas ícone Snowflake + botão expand
+  - Itens simples: ícone centralizado com `Tooltip` (label no tooltip)
+  - Itens com submenu (CRM, Configurações): ao hover, abre um painel flutuante (`Popover` ou div absoluta) com os sub-itens
+  - Footer: ícones de perfil e sair com tooltip
+- **Mobile**: Sheet inalterado (sempre expandido)
+- Item ativo destacado com `bg-sidebar-accent`
+
+**2. Componente auxiliar `CollapsedSubmenu`**
+
+Componente interno que envolve um ícone e, ao hover, renderiza um painel posicionado à direita com os sub-links. Usa `onMouseEnter`/`onMouseLeave` com estado local.
+
+**3. `src/components/AppLayout.tsx`** — sem alterações significativas
+
+### Detalhes de interação (modo compacto)
+
+- Itens sem submenu: clique navega, tooltip mostra label
+- Itens com submenu: hover abre painel flutuante à direita do ícone com fundo `bg-sidebar`, sombra, border-radius. O painel some ao sair do hover (com delay de 150ms para evitar flicker)
+- Toggle expandir: botão `PanelLeftOpen` no topo
+
+### Persistência
+
+```typescript
+const [collapsed, setCollapsed] = useState(() => {
+  return localStorage.getItem('sidebar-collapsed') === 'true';
+});
+const toggleCollapsed = () => {
+  setCollapsed(prev => {
+    localStorage.setItem('sidebar-collapsed', String(!prev));
+    return !prev;
+  });
+};
+```
+
+### Arquivo editado
+
+- `src/components/AppSidebar.tsx` — reescrita completa
 
