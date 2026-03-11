@@ -196,16 +196,16 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
   const isConfigActive = location.pathname.startsWith('/configuracoes') || location.pathname === '/meu-time';
 
   return (
-    <div className="flex h-full flex-col items-center bg-sidebar text-sidebar-foreground py-4">
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Header */}
-      <div className="flex flex-col items-center gap-3 mb-4 pb-4 border-b border-sidebar-border w-full px-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-          <Snowflake className="h-6 w-6 text-sidebar-primary-foreground" />
+      <div className="flex flex-col items-center gap-2 px-3 py-5 border-b border-sidebar-border">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary shrink-0">
+          <Snowflake className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button onClick={onExpand} className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
-              <PanelLeftOpen className="h-5 w-5" />
+            <button onClick={onExpand} className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
+              <PanelLeftOpen className="h-4 w-4" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="right">Expandir menu</TooltipContent>
@@ -213,7 +213,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 flex flex-col items-center gap-1 px-2 overflow-y-auto">
+      <nav className="flex-1 flex flex-col items-center gap-1 px-3 py-3 overflow-y-auto">
         <CompactNavItem to="/home" icon={Home} label="Home" />
 
         <CollapsedSubmenu icon={Kanban} label="CRM" isActive={isCrmActive}>
@@ -250,7 +250,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
       </nav>
 
       {/* Footer */}
-      <div className="flex flex-col items-center gap-1 pt-4 border-t border-sidebar-border w-full px-2">
+      <div className="flex flex-col items-center gap-1 px-3 py-3 border-t border-sidebar-border">
         <CompactNavItem to="/configuracoes/perfil" icon={UserCog} label="Meu perfil" />
         <Tooltip>
           <TooltipTrigger asChild>
