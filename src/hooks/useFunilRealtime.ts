@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 
 /**
- * Hook para sincronizar o funil em tempo real
+ * Hook para sincronizar o funil em tempo real.
+ * Todos os channels incluem filtro de empresa para compatibilidade com RLS.
  */
-export function useFunilRealtime(funilId: number, etapaId?: number) {
+export function useFunilRealtime(funilId: number, empresaId: number | null, etapaId?: number) {
   const [leads, setLeads] = useState<any[]>([])
   const [wonLeads, setWonLeads] = useState<any[]>([])
   const [lostLeads, setLostLeads] = useState<any[]>([])
@@ -13,7 +14,7 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
   const [atividadeVersion, setAtividadeVersion] = useState(0)
 
   useEffect(() => {
-    if (!funilId) {
+    if (!funilId || !empresaId) {
       setLoading(false)
       return
     }
@@ -66,13 +67,14 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
     }
 
     const channel = supabase
-      .channel(`funil-${funilId}`)
+      .channel(`funil-${funilId}-${empresaId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'leads_crm',
+          filter: `id_empresa=eq.${empresaId}`,
         },
         async (payload) => {
           if (payload.eventType === 'INSERT') {
@@ -131,7 +133,7 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
       .subscribe()
 
     const etiquetaChannel = supabase
-      .channel(`funil-etiquetas-${funilId}`)
+      .channel(`funil-etiquetas-${funilId}-${empresaId}`)
       .on(
         'postgres_changes',
         {
@@ -146,13 +148,14 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
       .subscribe()
 
     const atividadeChannel = supabase
-      .channel(`funil-atividades-${funilId}`)
+      .channel(`funil-atividades-${funilId}-${empresaId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'atividades',
+          filter: `id_empresa=eq.${empresaId}`,
         },
         () => {
           setAtividadeVersion((v) => v + 1)
@@ -165,7 +168,7 @@ export function useFunilRealtime(funilId: number, etapaId?: number) {
       supabase.removeChannel(etiquetaChannel)
       supabase.removeChannel(atividadeChannel)
     }
-  }, [funilId, etapaId])
+  }, [funilId, empresaId, etapaId])
 
   return { leads, setLeads, wonLeads, lostLeads, loading, etiquetaVersion, atividadeVersion }
 }

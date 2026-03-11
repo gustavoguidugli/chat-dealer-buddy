@@ -2,15 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 
 /**
- * Hook para sincronizar UM lead específico em tempo real
- * 
- * O QUE FAZ:
- * - Quando alguém edita o lead, você vê a mudança instantaneamente
- * - Atualiza anotações, atividades, histórico automaticamente
- * - Puxa dados de contatos_geral (interesse) e contatos_sdr (cidade, tipo_uso, etc.)
- * 
- * COMO USAR:
- * const { lead, anotacoes, atividades, historico, dadosContato } = useLeadRealtime(leadId)
+ * Hook para sincronizar UM lead específico em tempo real.
+ * Todos os channels incluem filtro de empresa para compatibilidade com RLS.
  */
 
 export interface DadosContato {
@@ -23,7 +16,7 @@ export interface DadosContato {
   telefone: string | null
 }
 
-export function useLeadRealtime(leadId: number | null) {
+export function useLeadRealtime(leadId: number | null, empresaId: number | null) {
   const [lead, setLead] = useState<any>(null)
   const [anotacoes, setAnotacoes] = useState<any[]>([])
   const [atividades, setAtividades] = useState<any[]>([])
@@ -36,7 +29,7 @@ export function useLeadRealtime(leadId: number | null) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!leadId) return
+    if (!leadId || !empresaId) return
 
     let contatoGeralId: number | null = null
     let contatoWhatsapp: string | null = null
@@ -45,7 +38,6 @@ export function useLeadRealtime(leadId: number | null) {
     async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null) {
       let currentInteresse = interesse ?? null
 
-      // Busca interesse de contatos_geral (prioriza FK e faz fallback por whatsapp)
       let contatoGeral: {
         id: number
         interesse: string | null
@@ -59,7 +51,6 @@ export function useLeadRealtime(leadId: number | null) {
           .select('id, interesse, whatsapp, whatsapp_padrao_pipedrive')
           .eq('id', idContatoGeral)
           .maybeSingle()
-
         contatoGeral = contatoGeralById
       }
 
@@ -70,7 +61,6 @@ export function useLeadRealtime(leadId: number | null) {
           .eq('whatsapp', whatsapp)
           .limit(1)
           .maybeSingle()
-
         contatoGeral = contatoGeralByWhatsapp
       }
 
@@ -89,7 +79,6 @@ export function useLeadRealtime(leadId: number | null) {
         telefone: contatoGeral?.whatsapp_padrao_pipedrive ?? null,
       }
 
-      // Busca dados SDR por whatsapp (independente da FK de contato_geral)
       if (whatsappLookup) {
         const [sdrMaqRes, sdrPurRes] = await Promise.all([
           supabase
@@ -109,13 +98,11 @@ export function useLeadRealtime(leadId: number | null) {
         const sdrMaq = sdrMaqRes.data
         const sdrPur = sdrPurRes.data
 
-        // Se interesse não veio do contato_geral, inferir pelo cadastro SDR existente
         if (!currentInteresse) {
           currentInteresse = sdrMaq ? 'maquina_gelo' : sdrPur ? 'purificador' : null
           dados.interesse = currentInteresse
         }
 
-        // Prioriza purificador apenas quando interesse indicar purificador, senão usa máquina
         if (currentInteresse === 'purificador' && sdrPur) {
           dados.cidade = sdrPur.cidade || null
           dados.tipo_uso = sdrPur.tipo_uso || null
@@ -133,14 +120,9 @@ export function useLeadRealtime(leadId: number | null) {
 
     // 1. Busca dados iniciais
     async function fetchData() {
-      // Lead principal
       const { data: leadData } = await supabase
         .from('leads_crm')
-        .select(`
-          *,
-          funis(nome, tipo),
-          etapas_funil(nome, ordem, cor)
-        `)
+        .select(`*, funis(nome, tipo), etapas_funil(nome, ordem, cor)`)
         .eq('id', leadId)
         .single()
 
@@ -152,16 +134,13 @@ export function useLeadRealtime(leadId: number | null) {
         await fetchContatoData(contatoGeralId, contatoWhatsapp)
       }
 
-      // Anotações
       const { data: anotacoesData } = await supabase
         .from('anotacoes_lead')
         .select('*')
         .eq('id_lead', leadId)
         .order('created_at', { ascending: false })
-
       setAnotacoes(anotacoesData || [])
 
-      // Anexos de anotações
       const anotacaoIds = (anotacoesData || []).map((a: any) => a.id)
       if (anotacaoIds.length > 0) {
         const { data: anexosData } = await supabase
@@ -174,22 +153,18 @@ export function useLeadRealtime(leadId: number | null) {
         setAnexos([])
       }
 
-      // Atividades
       const { data: atividadesData } = await supabase
         .from('atividades')
         .select('*')
         .eq('id_lead', leadId)
         .order('data_vencimento')
-
       setAtividades(atividadesData || [])
 
-      // Histórico
       const { data: historicoData } = await supabase
         .from('historico_lead')
         .select('*')
         .eq('id_lead', leadId)
         .order('created_at', { ascending: false })
-
       setHistorico(historicoData || [])
       setLoading(false)
     }
@@ -208,9 +183,9 @@ export function useLeadRealtime(leadId: number | null) {
       (a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime()
     )
 
-    // 2. Realtime no lead
+    // 2. Realtime no lead (filtrado por id — OK, é específico)
     const leadChannel = supabase
-      .channel(`lead-${leadId}`)
+      .channel(`lead-${leadId}-${empresaId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads_crm', filter: `id=eq.${leadId}` },
@@ -236,10 +211,15 @@ export function useLeadRealtime(leadId: number | null) {
       )
       .subscribe()
 
-    // 3. Realtime nas anotações (sem filtro para não perder DELETE)
+    // 3. Realtime nas anotações (com filtro de empresa)
     const anotacoesChannel = supabase
-      .channel(`anotacoes-${leadId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'anotacoes_lead' }, (payload) => {
+      .channel(`anotacoes-${leadId}-${empresaId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'anotacoes_lead',
+        filter: `id_empresa=eq.${empresaId}`,
+      }, (payload) => {
         if (payload.eventType === 'INSERT') {
           if (!isCurrentLead((payload.new as any).id_lead)) return
           setAnotacoes((prev) => [payload.new, ...prev])
@@ -263,10 +243,15 @@ export function useLeadRealtime(leadId: number | null) {
       })
       .subscribe()
 
-    // 4. Realtime nas atividades (sem filtro para não perder DELETE)
+    // 4. Realtime nas atividades (com filtro de empresa)
     const atividadesChannel = supabase
-      .channel(`atividades-${leadId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades' }, (payload) => {
+      .channel(`atividades-${leadId}-${empresaId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'atividades',
+        filter: `id_empresa=eq.${empresaId}`,
+      }, (payload) => {
         if (payload.eventType === 'INSERT') {
           if (!isCurrentLead((payload.new as any).id_lead)) return
           setAtividades((prev) => sortAtividades([...prev.filter((a) => a.id !== (payload.new as any).id), payload.new]))
@@ -290,10 +275,15 @@ export function useLeadRealtime(leadId: number | null) {
       })
       .subscribe()
 
-    // 5. Realtime no histórico (sem filtro para não perder DELETE)
+    // 5. Realtime no histórico (com filtro de empresa)
     const historicoChannel = supabase
-      .channel(`historico-${leadId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'historico_lead' }, (payload) => {
+      .channel(`historico-${leadId}-${empresaId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'historico_lead',
+        filter: `id_empresa=eq.${empresaId}`,
+      }, (payload) => {
         if (payload.eventType === 'INSERT') {
           if (!isCurrentLead((payload.new as any).id_lead)) return
           setHistorico((prev) => [payload.new, ...prev])
@@ -317,10 +307,15 @@ export function useLeadRealtime(leadId: number | null) {
       })
       .subscribe()
 
-    // 6. Realtime em contatos_geral (interesse)
+    // 6. Realtime em contatos_geral (interesse) — filtro por empresa_id
     const contatoGeralChannel = supabase
-      .channel(`contato-geral-${leadId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_geral' }, (payload) => {
+      .channel(`contato-geral-${leadId}-${empresaId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'contatos_geral',
+        filter: `empresa_id=eq.${empresaId}`,
+      }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
           const sameContatoGeralId = !!contatoGeralId && isSameNumericId(updated.id, contatoGeralId)
@@ -339,10 +334,15 @@ export function useLeadRealtime(leadId: number | null) {
       })
       .subscribe()
 
-    // 7. Realtime em contatos_sdr_maquinagelo
+    // 7. Realtime em contatos_sdr_maquinagelo (filtro por id_empresa)
     const sdrMaqChannel = supabase
-      .channel(`sdr-maq-${leadId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_sdr_maquinagelo' }, (payload) => {
+      .channel(`sdr-maq-${leadId}-${empresaId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'contatos_sdr_maquinagelo',
+        filter: `id_empresa=eq.${empresaId}`,
+      }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
           if (contatoWhatsapp && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)) {
@@ -352,10 +352,15 @@ export function useLeadRealtime(leadId: number | null) {
       })
       .subscribe()
 
-    // 8. Realtime em contatos_sdr_purificador
+    // 8. Realtime em contatos_sdr_purificador (filtro por id_empresa)
     const sdrPurChannel = supabase
-      .channel(`sdr-pur-${leadId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contatos_sdr_purificador' }, (payload) => {
+      .channel(`sdr-pur-${leadId}-${empresaId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'contatos_sdr_purificador',
+        filter: `id_empresa=eq.${empresaId}`,
+      }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
           if (contatoWhatsapp && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)) {
@@ -365,13 +370,17 @@ export function useLeadRealtime(leadId: number | null) {
       })
       .subscribe()
 
-    // 9. Realtime nos anexos de anotação
+    // 9. Realtime nos anexos de anotação (filtro por id_empresa)
     const anexosChannel = supabase
-      .channel(`anexos-anotacao-${leadId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'anexos_anotacao' }, (payload) => {
+      .channel(`anexos-anotacao-${leadId}-${empresaId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'anexos_anotacao',
+        filter: `id_empresa=eq.${empresaId}`,
+      }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newAnexo = payload.new as any
-          // Only add if it belongs to one of this lead's anotações
           setAnexos((prev) => {
             if (prev.some((a) => a.id === newAnexo.id)) return prev
             return [...prev, newAnexo]
@@ -401,7 +410,7 @@ export function useLeadRealtime(leadId: number | null) {
       supabase.removeChannel(sdrPurChannel)
       supabase.removeChannel(anexosChannel)
     }
-  }, [leadId])
+  }, [leadId, empresaId])
 
   return { lead, setLead, anotacoes, setAnotacoes, atividades, setAtividades, historico, setHistorico, dadosContato, anexos, setAnexos, loading }
 }
