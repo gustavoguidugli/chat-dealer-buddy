@@ -26,9 +26,11 @@ interface KanbanBoardProps {
   onAddClick?: (etapaId: number) => void;
   onDropWon?: (leadId: number) => void;
   onDropLost?: (leadId: number) => void;
+  listaInteresses?: { nome: string; label: string }[];
+  onLeadChanged?: () => void;
 }
 
-export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveLead, onLeadClick, onAddClick, onDropWon, onDropLost }: KanbanBoardProps) {
+export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveLead, onLeadClick, onAddClick, onDropWon, onDropLost, listaInteresses, onLeadChanged }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<number | null>(null);
 
   const sensors = useSensors(
@@ -110,6 +112,8 @@ export function KanbanBoard({ etapas, leadsByEtapa, wonLeads, lostLeads, onMoveL
               totalValor={totalValor}
               onLeadClick={onLeadClick}
               onAddClick={onAddClick}
+              listaInteresses={listaInteresses}
+              onLeadChanged={onLeadChanged}
             />
           );
         })}

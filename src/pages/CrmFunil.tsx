@@ -54,10 +54,14 @@ export interface LeadCard {
   valor_estimado: number | null;
   data_criacao: string | null;
   id_etapa_atual: number;
+  id_empresa: number;
+  id_funil: number;
+  id_contato_geral: number | null;
   ordem_no_funil: number | null;
   proprietario_id: string | null;
   etiquetas: { nome: string; cor: string }[];
   proximaAtividade: LeadAtividade | null;
+  campos_extras: Record<string, any> | null;
   status?: string | null;
   motivo_perda?: string | null;
   valor_final?: number | null;
@@ -94,6 +98,7 @@ export default function CrmFunil() {
   const [dragPerdidoLeadId, setDragPerdidoLeadId] = useState<number | null>(null);
   const [dragMotivosSelecionados, setDragMotivosSelecionados] = useState<number[]>([]);
   const [manageMotivosOpen, setManageMotivosOpen] = useState(false);
+  const [listaInteresses, setListaInteresses] = useState<{ nome: string; label: string }[]>([]);
 
   // Motivos de perda hook
   const { motivos: motivosPerda } = useMotivosPerda(empresaId);
@@ -142,10 +147,14 @@ export default function CrmFunil() {
       valor_estimado: l.valor_estimado,
       data_criacao: l.data_criacao,
       id_etapa_atual: l.id_etapa_atual,
+      id_empresa: l.id_empresa,
+      id_funil: l.id_funil,
+      id_contato_geral: l.id_contato_geral,
       ordem_no_funil: l.ordem_no_funil,
       proprietario_id: l.proprietario_id,
       etiquetas: etiquetasMap[l.id] || [],
       proximaAtividade: atividadesMap[l.id] || null,
+      campos_extras: l.campos_extras,
       status: l.status,
       motivo_perda: l.motivo_perda,
       valor_final: l.valor_final,
@@ -217,7 +226,19 @@ export default function CrmFunil() {
 
   const loading = loadingFunis || loadingLeads;
 
-  // Fetch funis
+  // Fetch lista de interesses
+  useEffect(() => {
+    if (!empresaId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('lista_interesses')
+        .select('nome, label')
+        .eq('empresa_id', empresaId)
+        .order('ordem');
+      setListaInteresses(data || []);
+    })();
+  }, [empresaId]);
+
   useEffect(() => {
     if (!empresaId) return;
     const fetch = async () => {
@@ -527,6 +548,8 @@ export default function CrmFunil() {
               onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
               onDropWon={(leadId) => setDragGanhoLeadId(leadId)}
               onDropLost={(leadId) => setDragPerdidoLeadId(leadId)}
+              listaInteresses={listaInteresses}
+              onLeadChanged={() => setReloadKey((k) => k + 1)}
             />
           )}
         </div>
