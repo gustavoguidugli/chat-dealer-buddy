@@ -70,7 +70,7 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
 
   const addRow = () => {
     if (rows.length >= 20) return;
-    setRows(prev => [...prev, { email: '', role: 'user', error: '' }]);
+    setRows(prev => [...prev, { email: '', role: 'member', error: '' }]);
   };
 
   const removeRow = (idx: number) => {
