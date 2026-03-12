@@ -220,10 +220,12 @@ export default function MeuTime() {
             <h1 className="text-2xl font-bold text-foreground">Meu Time</h1>
             <p className="text-muted-foreground text-sm mt-1">Gerencie os membros e convites do seu time</p>
           </div>
-          <Button onClick={() => setInviteModalOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Enviar convite
-          </Button>
+          {(isCompanyAdmin || isSuperAdmin) && (
+            <Button onClick={() => setInviteModalOpen(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              Enviar convite
+            </Button>
+          )}
         </div>
 
         <Tabs defaultValue="usuarios">
