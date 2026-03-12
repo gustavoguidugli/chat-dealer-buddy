@@ -202,17 +202,56 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. Copy lista_interesses
+    // 5. Copy lista_interesses (with funil_id remapping)
     const { data: sourceInterests } = await supabaseAdmin
       .from("lista_interesses")
-      .select("nome, label, palavras_chave, mensagem_resposta, ordem, ativo")
+      .select("nome, label, palavras_chave, mensagem_resposta, ordem, ativo, funil_id")
       .eq("empresa_id", source_company_id);
 
     if (sourceInterests && sourceInterests.length > 0) {
+      // Build a funil name map: source funil_id -> funil nome
+      const sourceFunilIds = sourceInterests
+        .map((i) => i.funil_id)
+        .filter((id): id is number => id != null);
+
+      let funilIdRemap: Record<number, number> = {};
+
+      if (sourceFunilIds.length > 0) {
+        const { data: sourceFunis } = await supabaseAdmin
+          .from("funis")
+          .select("id, nome")
+          .in("id", sourceFunilIds);
+
+        const { data: targetFunis } = await supabaseAdmin
+          .from("funis")
+          .select("id, nome")
+          .eq("id_empresa", target_company_id)
+          .eq("ativo", true);
+
+        if (sourceFunis && targetFunis) {
+          const targetByNome: Record<string, number> = {};
+          for (const tf of targetFunis) {
+            targetByNome[tf.nome] = tf.id;
+          }
+          for (const sf of sourceFunis) {
+            if (targetByNome[sf.nome] != null) {
+              funilIdRemap[sf.id] = targetByNome[sf.nome];
+            }
+          }
+        }
+      }
+
       const newInterests = sourceInterests.map((i) => ({
-        ...i,
+        nome: i.nome,
+        label: i.label,
+        palavras_chave: i.palavras_chave,
+        mensagem_resposta: i.mensagem_resposta,
+        ordem: i.ordem,
+        ativo: i.ativo,
         empresa_id: target_company_id,
+        funil_id: i.funil_id ? (funilIdRemap[i.funil_id] ?? null) : null,
       }));
+
       const { data: insertedInterests, error: intErr } = await supabaseAdmin
         .from("lista_interesses")
         .insert(newInterests)
