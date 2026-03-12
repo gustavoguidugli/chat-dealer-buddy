@@ -248,13 +248,27 @@ Deno.serve(async (req) => {
           await adminClient.from("historico_lead").update({ usuario_id: null }).eq("usuario_id", user_id).eq("id_empresa", empresa_id);
         }
 
-        // Remove from tables
+        // Remove from user_empresa for THIS company only
         await adminClient.from("user_empresa").delete().eq("user_id", user_id).eq("empresa_id", empresa_id);
-        await adminClient.from("user_empresa_geral").delete().eq("user_id", user_id);
-        await adminClient.from("user_permissions").delete().eq("user_id", user_id);
 
-        // Delete auth user
-        await adminClient.auth.admin.deleteUser(user_id);
+        // Check if user still belongs to any other company
+        const { data: remainingLinks } = await adminClient
+          .from("user_empresa")
+          .select("empresa_id")
+          .eq("user_id", user_id);
+
+        if (!remainingLinks || remainingLinks.length === 0) {
+          // No more companies — clean up fully
+          await adminClient.from("user_empresa_geral").delete().eq("user_id", user_id);
+          await adminClient.from("user_permissions").delete().eq("user_id", user_id);
+          await adminClient.auth.admin.deleteUser(user_id);
+        } else {
+          // User still has other companies — update user_empresa_geral to another company
+          await adminClient.from("user_empresa_geral").upsert({
+            user_id,
+            empresa_id: remainingLinks[0].empresa_id,
+          }, { onConflict: "user_id" });
+        }
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

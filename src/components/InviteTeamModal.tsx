@@ -163,7 +163,7 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
                 <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="member">Membro</SelectItem>
                 </SelectContent>
               </Select>
               {rows.length > 1 && (

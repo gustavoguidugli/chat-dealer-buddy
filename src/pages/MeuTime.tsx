@@ -378,7 +378,7 @@ export default function MeuTime() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="user">Usuário</SelectItem>
+                <SelectItem value="member">Membro</SelectItem>
               </SelectContent>
             </Select>
             <DialogFooter>
