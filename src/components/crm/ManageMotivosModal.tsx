@@ -98,7 +98,7 @@ function SortableMotivoItem({
   );
 }
 
-export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivosModalProps) {
+export function ManageMotivosModal({ isOpen, onClose, empresaId, onSave }: ManageMotivosModalProps) {
   const { toast } = useToast();
   const [motivos, setMotivos] = useState<MotivoPerda[]>([]);
   const [originalMotivos, setOriginalMotivos] = useState<MotivoPerda[]>([]);
