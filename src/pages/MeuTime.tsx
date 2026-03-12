@@ -119,7 +119,18 @@ export default function MeuTime() {
 
   // Member actions
   const handleChangeRole = async () => {
-    if (!selectedMember) return;
+    if (!selectedMember || !empresaId) return;
+    // Sync role in user_empresa (the authoritative table for RLS)
+    const { error: rpcError } = await supabase.rpc('update_user_role', {
+      p_user_id: selectedMember.id_usuario,
+      p_empresa_id: empresaId,
+      p_new_role: newRole,
+    });
+    if (rpcError) {
+      toast({ title: 'Erro ao alterar permissão', description: rpcError.message, variant: 'destructive' });
+      return;
+    }
+    // Also sync usuario_time for display consistency
     await supabase.from('usuario_time').update({ role: newRole }).eq('id', selectedMember.id);
     await logAudit('role_changed', 'usuario_time', String(selectedMember.id), { new_role: newRole });
     toast({ title: 'Permissão alterada com sucesso' });
