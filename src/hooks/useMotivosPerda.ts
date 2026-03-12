@@ -37,7 +37,7 @@ export function useMotivosPerda(empresaId: number | null) {
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, refreshKey]);
 
   // Realtime subscription
   useEffect(() => {
