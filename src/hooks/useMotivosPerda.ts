@@ -64,5 +64,5 @@ export function useMotivosPerda(empresaId: number | null) {
     };
   }, [empresaId, fetch]);
 
-  return { motivos, loading, refetch: fetch };
+  return { motivos, loading, refetch: fetch, forceRefresh };
 }
