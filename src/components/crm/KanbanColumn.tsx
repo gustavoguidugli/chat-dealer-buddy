@@ -10,13 +10,15 @@ interface KanbanColumnProps {
   totalValor: number;
   onLeadClick?: (leadId: number) => void;
   onAddClick?: (etapaId: number) => void;
+  listaInteresses?: { nome: string; label: string }[];
+  onLeadChanged?: () => void;
 }
 
 function formatCurrency(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
 }
 
-export function KanbanColumn({ etapa, leads, totalValor, onLeadClick, onAddClick }: KanbanColumnProps) {
+export function KanbanColumn({ etapa, leads, totalValor, onLeadClick, onAddClick, listaInteresses, onLeadChanged }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `etapa-${etapa.id}` });
 
   return (
@@ -46,8 +48,8 @@ export function KanbanColumn({ etapa, leads, totalValor, onLeadClick, onAddClick
       <ScrollArea className="flex-1 px-2.5 pb-2.5 pt-2">
         <div className="flex flex-col gap-2.5">
           {leads.map(lead => (
-            <div key={lead.id} onClick={(e) => { if ((e.target as HTMLElement).closest('[data-activity-zone]')) return; onLeadClick?.(lead.id); }}>
-              <LeadCardComponent lead={lead} />
+            <div key={lead.id} onClick={(e) => { if ((e.target as HTMLElement).closest('[data-activity-zone]') || (e.target as HTMLElement).closest('[data-interesse-zone]')) return; onLeadClick?.(lead.id); }}>
+              <LeadCardComponent lead={lead} listaInteresses={listaInteresses} onLeadChanged={onLeadChanged} />
             </div>
           ))}
           <button

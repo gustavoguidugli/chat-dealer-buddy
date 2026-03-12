@@ -548,6 +548,8 @@ export default function CrmFunil() {
               onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
               onDropWon={(leadId) => setDragGanhoLeadId(leadId)}
               onDropLost={(leadId) => setDragPerdidoLeadId(leadId)}
+              listaInteresses={listaInteresses}
+              onLeadChanged={() => setReloadKey((k) => k + 1)}
             />
           )}
         </div>
