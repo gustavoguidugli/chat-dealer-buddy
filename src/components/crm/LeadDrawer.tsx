@@ -408,7 +408,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
         supabase.from('funis').select('nome').eq('id', l.id_funil).single(),
         supabase.from('etapas_funil').select('id, nome, ordem').eq('id_funil', l.id_funil).eq('ativo', true).order('ordem'),
         supabase.from('campos_customizados').select('*').or(`id_funil.is.null,id_funil.eq.${l.id_funil}`).eq('id_empresa', l.id_empresa).eq('ativo', true).order('ordem'),
-        supabase.from('lista_interesses').select('nome, label').eq('empresa_id', l.id_empresa).order('ordem'),
+        supabase.from('lista_interesses').select('nome, label, funil_id').eq('empresa_id', l.id_empresa).order('ordem'),
       ]);
 
       setFunilNome(funilRes.data?.nome || '');
