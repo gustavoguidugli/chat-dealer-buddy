@@ -12,6 +12,11 @@ export interface MotivoPerda {
 export function useMotivosPerda(empresaId: number | null) {
   const [motivos, setMotivos] = useState<MotivoPerda[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const forceRefresh = useCallback(() => {
+    setRefreshKey(k => k + 1);
+  }, []);
 
   const fetch = useCallback(async () => {
     if (!empresaId) {
