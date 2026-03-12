@@ -63,7 +63,7 @@ export default function MeuTime() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
-  const [newRole, setNewRole] = useState('user');
+  const [newRole, setNewRole] = useState('member');
 
   const fetchMembers = useCallback(async () => {
     if (!empresaId) return;
