@@ -231,7 +231,7 @@ function SortableFieldItem({ campo, index, editingCampos, setEditingCampos, onDe
 export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDrawerProps) {
   const { user, empresaId } = useAuth();
   const { toast } = useToast();
-  const { motivos: motivosPerda } = useMotivosPerda(empresaId);
+  const { motivos: motivosPerda, forceRefresh: refreshMotivos } = useMotivosPerda(empresaId);
 
   // Realtime data for lead, annotations, activities, history
   const {
