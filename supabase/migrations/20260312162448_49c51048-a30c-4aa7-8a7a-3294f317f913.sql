@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "isolamento_via_lead" ON public.lead_etiquetas;
