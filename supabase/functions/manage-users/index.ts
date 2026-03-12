@@ -248,13 +248,27 @@ Deno.serve(async (req) => {
           await adminClient.from("historico_lead").update({ usuario_id: null }).eq("usuario_id", user_id).eq("id_empresa", empresa_id);
         }
 
-        // Remove from tables
+        // Remove from user_empresa for THIS company only
         await adminClient.from("user_empresa").delete().eq("user_id", user_id).eq("empresa_id", empresa_id);
-        await adminClient.from("user_empresa_geral").delete().eq("user_id", user_id);
-        await adminClient.from("user_permissions").delete().eq("user_id", user_id);
 
-        // Delete auth user
-        await adminClient.auth.admin.deleteUser(user_id);
+        // Check if user still belongs to any other company
+        const { data: remainingLinks } = await adminClient
+          .from("user_empresa")
+          .select("empresa_id")
+          .eq("user_id", user_id);
+
+        if (!remainingLinks || remainingLinks.length === 0) {
+          // No more companies — clean up fully
+          await adminClient.from("user_empresa_geral").delete().eq("user_id", user_id);
+          await adminClient.from("user_permissions").delete().eq("user_id", user_id);
+          await adminClient.auth.admin.deleteUser(user_id);
+        } else {
+          // User still has other companies — update user_empresa_geral to another company
+          await adminClient.from("user_empresa_geral").upsert({
+            user_id,
+            empresa_id: remainingLinks[0].empresa_id,
+          }, { onConflict: "user_id" });
+        }
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -394,6 +408,86 @@ Deno.serve(async (req) => {
         }, { onConflict: "user_id" });
 
         return new Response(JSON.stringify({ success: true, empresa_id: parsed.empresa_id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "complete_onboarding": {
+        const { user_id, convite_id, primeiro_nome, sobrenome, email, empresa_id, role } = body;
+
+        if (!user_id || !convite_id) {
+          return new Response(JSON.stringify({ error: "Dados incompletos" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // 1. Accept invite via RPC
+        const { data: acceptResult, error: acceptError } = await adminClient.rpc("aceitar_convite", {
+          p_convite_id: convite_id,
+          p_user_id: user_id,
+        });
+
+        if (acceptError) {
+          return new Response(JSON.stringify({ error: acceptError.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const acceptData = typeof acceptResult === "string" ? JSON.parse(acceptResult) : acceptResult;
+        if (!acceptData?.ok) {
+          return new Response(JSON.stringify({ error: acceptData?.erro || "Erro ao aceitar convite" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const finalEmpresaId = acceptData.empresa_id || empresa_id;
+        const finalRole = acceptData.role || role || "member";
+
+        // 2. Upsert usuarios
+        await adminClient.from("usuarios").upsert({
+          uuid: user_id,
+          email,
+          primeiro_nome,
+          sobrenome,
+          nome: `${primeiro_nome} ${sobrenome}`.trim(),
+          id_empresa: finalEmpresaId,
+          nivel_acesso: finalRole,
+          onboarding_completed: true,
+        }, { onConflict: "uuid" });
+
+        // 3. Insert usuario_time
+        await adminClient.from("usuario_time").insert({
+          id_usuario: user_id,
+          id_empresa: finalEmpresaId,
+          role: finalRole,
+          status_membro: "active",
+        });
+
+        // 4. Update convite status
+        await adminClient.from("convites").update({
+          status_convite: "accepted",
+          accepted_at: new Date().toISOString(),
+          accepted_by_user_id: user_id,
+        }).eq("id", convite_id);
+
+        // 5. Upsert user_empresa_geral
+        await adminClient.from("user_empresa_geral").upsert({
+          user_id,
+          empresa_id: finalEmpresaId,
+        }, { onConflict: "user_id" });
+
+        // 6. Audit log
+        await adminClient.from("audit_logs").insert({
+          actor_user_id: user_id,
+          action: "onboarding_completed",
+          entity_type: "convites",
+          entity_id: convite_id,
+        });
+
+        return new Response(JSON.stringify({ success: true, empresa_id: finalEmpresaId }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

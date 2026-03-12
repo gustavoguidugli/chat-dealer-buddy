@@ -38,7 +38,7 @@ interface Convite {
   token: string;
 }
 
-const roleLabel: Record<string, string> = { admin: 'Admin', user: 'Usuário', member: 'Membro' };
+const roleLabel: Record<string, string> = { admin: 'Admin', member: 'Membro', user: 'Membro' };
 const statusLabel: Record<string, string> = { active: 'Ativo', suspended: 'Suspenso', deactivated: 'Desativado' };
 const conviteStatusLabel: Record<string, string> = { pending: 'Pendente', accepted: 'Aceito', expired: 'Expirado', canceled: 'Cancelado' };
 
@@ -54,7 +54,7 @@ const conviteStatusColor: Record<string, string> = {
 };
 
 export default function MeuTime() {
-  const { user, empresaId, empresaNome } = useAuth();
+  const { user, empresaId, empresaNome, isCompanyAdmin, isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [convites, setConvites] = useState<Convite[]>([]);
@@ -63,7 +63,7 @@ export default function MeuTime() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
-  const [newRole, setNewRole] = useState('user');
+  const [newRole, setNewRole] = useState('member');
 
   const fetchMembers = useCallback(async () => {
     if (!empresaId) return;
@@ -119,7 +119,18 @@ export default function MeuTime() {
 
   // Member actions
   const handleChangeRole = async () => {
-    if (!selectedMember) return;
+    if (!selectedMember || !empresaId) return;
+    // Sync role in user_empresa (the authoritative table for RLS)
+    const { error: rpcError } = await supabase.rpc('update_user_role', {
+      p_user_id: selectedMember.id_usuario,
+      p_empresa_id: empresaId,
+      p_new_role: newRole,
+    });
+    if (rpcError) {
+      toast({ title: 'Erro ao alterar permissão', description: rpcError.message, variant: 'destructive' });
+      return;
+    }
+    // Also sync usuario_time for display consistency
     await supabase.from('usuario_time').update({ role: newRole }).eq('id', selectedMember.id);
     await logAudit('role_changed', 'usuario_time', String(selectedMember.id), { new_role: newRole });
     toast({ title: 'Permissão alterada com sucesso' });
@@ -209,10 +220,12 @@ export default function MeuTime() {
             <h1 className="text-2xl font-bold text-foreground">Meu Time</h1>
             <p className="text-muted-foreground text-sm mt-1">Gerencie os membros e convites do seu time</p>
           </div>
-          <Button onClick={() => setInviteModalOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Enviar convite
-          </Button>
+          {(isCompanyAdmin || isSuperAdmin) && (
+            <Button onClick={() => setInviteModalOpen(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              Enviar convite
+            </Button>
+          )}
         </div>
 
         <Tabs defaultValue="usuarios">
@@ -254,25 +267,27 @@ export default function MeuTime() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => { setSelectedMember(m); setNewRole(m.role); setRoleModalOpen(true); }}>
-                              Alterar permissão
-                            </DropdownMenuItem>
-                            {m.status_membro === 'active' && (
-                              <DropdownMenuItem onClick={() => handleSuspend(m)}>Suspender</DropdownMenuItem>
-                            )}
-                            {m.status_membro === 'suspended' && (
-                              <DropdownMenuItem onClick={() => handleReactivate(m)}>Reativar</DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(m)}>
-                              Remover do time
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {(isCompanyAdmin || isSuperAdmin) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => { setSelectedMember(m); setNewRole(m.role); setRoleModalOpen(true); }}>
+                                Alterar permissão
+                              </DropdownMenuItem>
+                              {m.status_membro === 'active' && (
+                                <DropdownMenuItem onClick={() => handleSuspend(m)}>Suspender</DropdownMenuItem>
+                              )}
+                              {m.status_membro === 'suspended' && (
+                                <DropdownMenuItem onClick={() => handleReactivate(m)}>Reativar</DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(m)}>
+                                Remover do time
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -363,7 +378,7 @@ export default function MeuTime() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="user">Usuário</SelectItem>
+                <SelectItem value="member">Membro</SelectItem>
               </SelectContent>
             </Select>
             <DialogFooter>

@@ -25,14 +25,14 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamModalProps) {
   const { user, empresaId, empresaNome } = useAuth();
   const { toast } = useToast();
-  const [rows, setRows] = useState<InviteRow[]>([{ email: '', role: 'user', error: '' }]);
+  const [rows, setRows] = useState<InviteRow[]>([{ email: '', role: 'member', error: '' }]);
   const [sending, setSending] = useState(false);
   const [existingMembers, setExistingMembers] = useState<string[]>([]);
   const [pendingInvites, setPendingInvites] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open || !empresaId) return;
-    setRows([{ email: '', role: 'user', error: '' }]);
+    setRows([{ email: '', role: 'member', error: '' }]);
 
     // Load existing members and pending invites for validation
     (async () => {
@@ -70,7 +70,7 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
 
   const addRow = () => {
     if (rows.length >= 20) return;
-    setRows(prev => [...prev, { email: '', role: 'user', error: '' }]);
+    setRows(prev => [...prev, { email: '', role: 'member', error: '' }]);
   };
 
   const removeRow = (idx: number) => {
@@ -163,7 +163,7 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
                 <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="member">Membro</SelectItem>
                 </SelectContent>
               </Select>
               {rows.length > 1 && (
