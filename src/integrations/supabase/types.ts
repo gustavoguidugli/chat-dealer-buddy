@@ -1870,6 +1870,7 @@ export type Database = {
           valor_final: number | null
           whatsapp: string | null
           whatsapp_contato_geral: string | null
+          whatsapp_id: string | null
         }
         Insert: {
           anotacoes?: string | null
@@ -1907,6 +1908,7 @@ export type Database = {
           valor_final?: number | null
           whatsapp?: string | null
           whatsapp_contato_geral?: string | null
+          whatsapp_id?: string | null
         }
         Update: {
           anotacoes?: string | null
@@ -1944,6 +1946,7 @@ export type Database = {
           valor_final?: number | null
           whatsapp?: string | null
           whatsapp_contato_geral?: string | null
+          whatsapp_id?: string | null
         }
         Relationships: [
           {
@@ -2889,6 +2892,15 @@ export type Database = {
         Returns: Json
       }
       timestamp_sao_paulo: { Args: { ts: string }; Returns: string }
+      update_contato_sdr_field: {
+        Args: {
+          p_campo: string
+          p_interesse?: string
+          p_valor: string
+          p_whatsapp: string
+        }
+        Returns: undefined
+      }
       update_user_role: {
         Args: { p_empresa_id: number; p_new_role: string; p_user_id: string }
         Returns: boolean

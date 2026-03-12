@@ -695,6 +695,25 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
       campos_extras: newExtras,
     }).eq('id', lead.id);
     setLead({ ...lead, campos_extras: newExtras });
+
+    // Sync SDR tables for mapped fields
+    const sdrFields = ['gasto_mensal', 'consumo_mensal', 'dias_semana', 'cidade', 'tipo_uso'];
+    if (sdrFields.includes(slug) && lead.whatsapp) {
+      const raw = lead.whatsapp.replace(/\D/g, '');
+      const whatsappLookup = raw.startsWith('55') ? raw : '55' + raw;
+      const interesse = dadosContato.interesse || lead.campos_extras?.interesse || null;
+      try {
+        await supabase.rpc('update_contato_sdr_field', {
+          p_whatsapp: whatsappLookup,
+          p_campo: slug,
+          p_valor: editingValue,
+          p_interesse: interesse,
+        });
+      } catch (e) {
+        console.warn('Falha ao sincronizar campo SDR:', e);
+      }
+    }
+
     setEditingField(null);
     setEditingValue('');
   };
@@ -1226,8 +1245,9 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             <div
                               key={campo.id}
                               className="flex items-center justify-between py-2 px-1 rounded-md group hover:bg-muted/50 cursor-pointer"
-                              onClick={() => {
+                              onMouseDown={(e) => {
                                 if (!isEditing && !isInteresseField) {
+                                  e.preventDefault();
                                   setEditingField(campo.slug);
                                   setEditingValue(value);
                                 }
@@ -1313,6 +1333,42 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                       } catch (e) {
                                         console.warn('Falha ao sincronizar interesse com contatos_geral:', e);
                                       }
+
+                                      // 4. Move lead to matching funnel by tipo
+                                      try {
+                                        const { data: targetFunil } = await supabase
+                                          .from('funis')
+                                          .select('id')
+                                          .eq('id_empresa', lead.id_empresa)
+                                          .eq('tipo', val)
+                                          .eq('ativo', true)
+                                          .limit(1)
+                                          .maybeSingle();
+
+                                        if (targetFunil && targetFunil.id !== lead.id_funil) {
+                                          const { data: firstEtapa } = await supabase
+                                            .from('etapas_funil')
+                                            .select('id')
+                                            .eq('id_funil', targetFunil.id)
+                                            .eq('ativo', true)
+                                            .order('ordem')
+                                            .limit(1)
+                                            .maybeSingle();
+
+                                          if (firstEtapa) {
+                                            await supabase.from('leads_crm').update({
+                                              id_funil: targetFunil.id,
+                                              id_etapa_atual: firstEtapa.id,
+                                              data_entrada_etapa_atual: new Date().toISOString(),
+                                            }).eq('id', lead.id);
+                                            fetchMeta();
+                                            onLeadChanged?.();
+                                            toast({ title: `Lead movido para o funil correspondente` });
+                                          }
+                                        }
+                                      } catch (e) {
+                                        console.warn('Falha ao mover lead para funil:', e);
+                                      }
                                     }}
                                   >
                                     <SelectTrigger className="h-7 text-xs">
@@ -1338,7 +1394,19 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                       if (e.key === 'Enter') handleSaveField(storageKey);
                                       if (e.key === 'Escape') setEditingField(null);
                                     }}
-                                    onBlur={() => handleSaveField(storageKey)}
+                                    onBlur={() => {
+                                      const currentSlug = campo.slug;
+                                      const currentStorageKey = storageKey;
+                                      requestAnimationFrame(() => {
+                                        // If onMouseDown already switched to another field, skip save-and-clear
+                                        setEditingField(prev => {
+                                          if (prev !== null && prev !== currentSlug) return prev;
+                                          // Still on same field or null — save and clear
+                                          handleSaveField(currentStorageKey);
+                                          return null;
+                                        });
+                                      });
+                                    }}
                                   />
                                 </div>
                               ) : (
