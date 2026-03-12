@@ -80,13 +80,26 @@ export default function Onboarding() {
     setSubmitting(true);
 
     try {
-      // 1. Sign up
+      // 1. Sign up (or sign in if user already exists)
+      let newUserId: string | undefined;
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: conviteData.email_destino,
         password,
       });
-      if (signUpError) throw signUpError;
-      const newUserId = signUpData.user?.id;
+      if (signUpError) {
+        if (signUpError.message?.includes('User already registered')) {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: conviteData.email_destino,
+            password,
+          });
+          if (signInError) throw signInError;
+          newUserId = signInData.user?.id;
+        } else {
+          throw signUpError;
+        }
+      } else {
+        newUserId = signUpData.user?.id;
+      }
       if (!newUserId) throw new Error('Não foi possível criar a conta');
 
       // 2. Accept invite + setup via Edge Function (runs with service role, bypasses RLS)
