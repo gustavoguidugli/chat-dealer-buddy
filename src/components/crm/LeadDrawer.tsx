@@ -249,7 +249,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
   const [funilNome, setFunilNome] = useState('');
   const [etapas, setEtapas] = useState<EtapaInfo[]>([]);
   const [campos, setCampos] = useState<CampoCustomizado[]>([]);
-  const [listaInteresses, setListaInteresses] = useState<{ nome: string; label: string }[]>([]);
+  const [listaInteresses, setListaInteresses] = useState<{ nome: string; label: string; funil_id: number | null }[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Map realtime data to typed state
