@@ -334,14 +334,13 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       })
       .subscribe()
 
-    // 7. Realtime em contatos_sdr_maquinagelo (filtro por id_empresa)
+    // 7. Realtime em contatos_sdr_maquinagelo (sem filtro de empresa — id_empresa referencia empresas_sdr_maquinagelo, não empresas_geral)
     const sdrMaqChannel = supabase
       .channel(`sdr-maq-${leadId}-${empresaId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'contatos_sdr_maquinagelo',
-        filter: `id_empresa=eq.${empresaId}`,
       }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
