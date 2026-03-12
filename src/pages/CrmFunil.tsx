@@ -232,7 +232,7 @@ export default function CrmFunil() {
     (async () => {
       const { data } = await supabase
         .from('lista_interesses')
-        .select('nome, label')
+        .select('nome, label, funil_id')
         .eq('empresa_id', empresaId)
         .order('ordem');
       setListaInteresses(data || []);
