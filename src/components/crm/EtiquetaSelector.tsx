@@ -29,63 +29,13 @@ const CORES_DISPONIVEIS = [
   '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#6b7280',
 ];
 
-function SortableEtiquetaItem({
-  etiqueta, isSelected, isEditing, onToggle, onUpdate, onDelete,
+function EtiquetaItem({
+  etiqueta, isSelected, onToggle,
 }: {
   etiqueta: Etiqueta;
   isSelected: boolean;
-  isEditing: boolean;
   onToggle: () => void;
-  onUpdate: (e: Etiqueta) => void;
-  onDelete: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: etiqueta.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
-  const [editNome, setEditNome] = useState(etiqueta.nome);
-  const [showColors, setShowColors] = useState(false);
-
-  if (isEditing) {
-    return (
-      <div ref={setNodeRef} style={style} className="flex items-center gap-1.5 py-1.5 px-1 rounded-md hover:bg-muted/50">
-        <div {...attributes} {...listeners} className="cursor-grab text-muted-foreground shrink-0">
-          <GripVertical className="h-3.5 w-3.5" />
-        </div>
-        <div className="relative">
-          <button
-            className="h-5 w-5 rounded-full border-2 border-background shrink-0 shadow-sm"
-            style={{ backgroundColor: etiqueta.cor }}
-            onClick={() => setShowColors(!showColors)}
-          />
-          {showColors && (
-            <div className="absolute left-0 top-7 z-50 bg-popover border rounded-md p-2 grid grid-cols-5 gap-1 shadow-lg">
-              {CORES_DISPONIVEIS.map(cor => (
-                <button
-                  key={cor}
-                  className="h-5 w-5 rounded-full border hover:scale-110 transition-transform"
-                  style={{ backgroundColor: cor }}
-                  onClick={() => {
-                    onUpdate({ ...etiqueta, cor });
-                    setShowColors(false);
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-        <Input
-          value={editNome}
-          onChange={e => setEditNome(e.target.value)}
-          onBlur={() => { if (editNome.trim() && editNome !== etiqueta.nome) onUpdate({ ...etiqueta, nome: editNome }); }}
-          onKeyDown={e => { if (e.key === 'Enter' && editNome.trim()) { onUpdate({ ...etiqueta, nome: editNome }); } }}
-          className="h-6 text-xs flex-1 px-1.5"
-        />
-        <button onClick={onDelete} className="text-destructive hover:text-destructive/80 shrink-0">
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div
       className={`flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors ${
@@ -108,6 +58,59 @@ function SortableEtiquetaItem({
           <Check className="h-3.5 w-3.5" />
         </div>
       )}
+    </div>
+  );
+}
+
+function SortableEtiquetaItem({
+  etiqueta, onUpdate, onDelete,
+}: {
+  etiqueta: Etiqueta;
+  onUpdate: (e: Etiqueta) => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: etiqueta.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const [editNome, setEditNome] = useState(etiqueta.nome);
+  const [showColors, setShowColors] = useState(false);
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1.5 py-1.5 px-1 rounded-md hover:bg-muted/50">
+      <div {...attributes} {...listeners} className="cursor-grab text-muted-foreground shrink-0">
+        <GripVertical className="h-3.5 w-3.5" />
+      </div>
+      <div className="relative">
+        <button
+          className="h-5 w-5 rounded-full border-2 border-background shrink-0 shadow-sm"
+          style={{ backgroundColor: etiqueta.cor }}
+          onClick={() => setShowColors(!showColors)}
+        />
+        {showColors && (
+          <div className="absolute left-0 top-7 z-50 bg-popover border rounded-md p-2 grid grid-cols-5 gap-1 shadow-lg">
+            {CORES_DISPONIVEIS.map(cor => (
+              <button
+                key={cor}
+                className="h-5 w-5 rounded-full border hover:scale-110 transition-transform"
+                style={{ backgroundColor: cor }}
+                onClick={() => {
+                  onUpdate({ ...etiqueta, cor });
+                  setShowColors(false);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      <Input
+        value={editNome}
+        onChange={e => setEditNome(e.target.value)}
+        onBlur={() => { if (editNome.trim() && editNome !== etiqueta.nome) onUpdate({ ...etiqueta, nome: editNome }); }}
+        onKeyDown={e => { if (e.key === 'Enter' && editNome.trim()) { onUpdate({ ...etiqueta, nome: editNome }); } }}
+        className="h-6 text-xs flex-1 px-1.5"
+      />
+      <button onClick={onDelete} className="text-destructive hover:text-destructive/80 shrink-0">
+        <Trash2 className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -238,9 +241,6 @@ export function EtiquetaSelector({ leadId, empresaId, onChange }: EtiquetaSelect
                       <SortableEtiquetaItem
                         key={etiqueta.id}
                         etiqueta={etiqueta}
-                        isSelected={selectedIds.includes(etiqueta.id)}
-                        isEditing={true}
-                        onToggle={() => {}}
                         onUpdate={handleUpdate}
                         onDelete={() => handleDelete(etiqueta.id)}
                       />
@@ -249,14 +249,11 @@ export function EtiquetaSelector({ leadId, empresaId, onChange }: EtiquetaSelect
                 </DndContext>
               ) : (
                 filtered.map(etiqueta => (
-                  <SortableEtiquetaItem
+                  <EtiquetaItem
                     key={etiqueta.id}
                     etiqueta={etiqueta}
                     isSelected={selectedIds.includes(etiqueta.id)}
-                    isEditing={false}
                     onToggle={() => toggleEtiqueta(etiqueta.id)}
-                    onUpdate={handleUpdate}
-                    onDelete={() => handleDelete(etiqueta.id)}
                   />
                 ))
               )}
