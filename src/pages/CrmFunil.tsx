@@ -101,7 +101,7 @@ export default function CrmFunil() {
   const [listaInteresses, setListaInteresses] = useState<{ nome: string; label: string; funil_id: number | null }[]>([]);
 
   // Motivos de perda hook
-  const { motivos: motivosPerda } = useMotivosPerda(empresaId);
+  const { motivos: motivosPerda, forceRefresh: refreshMotivos } = useMotivosPerda(empresaId);
 
   // Close search on outside click
   useEffect(() => {
