@@ -1395,11 +1395,14 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                       if (e.key === 'Escape') setEditingField(null);
                                     }}
                                     onBlur={() => {
+                                      const currentSlug = campo.slug;
+                                      const currentStorageKey = storageKey;
                                       requestAnimationFrame(() => {
+                                        // If onMouseDown already switched to another field, skip save-and-clear
                                         setEditingField(prev => {
-                                          // If another field was already set by onMouseDown, don't clear
-                                          if (prev !== campo.slug) return prev;
-                                          handleSaveField(storageKey);
+                                          if (prev !== null && prev !== currentSlug) return prev;
+                                          // Still on same field or null — save and clear
+                                          handleSaveField(currentStorageKey);
                                           return null;
                                         });
                                       });
