@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,11 +27,18 @@ import { ActivityModal } from '@/components/crm/ActivityModal';
 import { LeadDrawer } from '@/components/crm/LeadDrawer';
 import {
   Plus, ChevronDown, Filter, MoreHorizontal, ArrowUp, ArrowDown,
-  Phone, Video, Mail, FileText, DollarSign, AlertCircle, Pencil, Copy, Trash2, CalendarIcon, CheckSquare,
+  Phone, Video, Mail, FileText, DollarSign, AlertCircle, Pencil, Copy, Trash2, CalendarIcon, CheckSquare, GripVertical, Check,
 } from 'lucide-react';
 import { format, isToday, isTomorrow, isThisWeek, addWeeks, startOfWeek, endOfWeek, isWithinInterval, differenceInCalendarDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove, SortableContext, horizontalListSortingStrategy, useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const iconePorTipo: Record<string, React.ReactNode> = {
   follow_up: <Phone className="h-4 w-4" />,
@@ -49,16 +56,16 @@ function getDateSP(dateStr: string) {
   return new Date(new Date(dateStr).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
 }
 
-function getRowColor(dataVencimento: string, concluida: boolean) {
-  if (concluida) return 'bg-muted/40';
+function getTextColor(dataVencimento: string, concluida: boolean) {
+  if (concluida) return 'text-muted-foreground';
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   const v = getDateSP(dataVencimento);
   v.setHours(0, 0, 0, 0);
   const diff = Math.floor((v.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return 'bg-destructive/5';
-  if (diff === 0) return 'bg-emerald-50 dark:bg-emerald-950/20';
-  return '';
+  if (diff < 0) return 'text-destructive';
+  if (diff === 0) return 'text-emerald-600 dark:text-emerald-400';
+  return 'text-foreground';
 }
 
 function formatarData(dataStr: string) {
