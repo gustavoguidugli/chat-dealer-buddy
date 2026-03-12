@@ -226,7 +226,19 @@ export default function CrmFunil() {
 
   const loading = loadingFunis || loadingLeads;
 
-  // Fetch funis
+  // Fetch lista de interesses
+  useEffect(() => {
+    if (!empresaId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('lista_interesses')
+        .select('nome, label')
+        .eq('empresa_id', empresaId)
+        .order('ordem');
+      setListaInteresses(data || []);
+    })();
+  }, [empresaId]);
+
   useEffect(() => {
     if (!empresaId) return;
     const fetch = async () => {
