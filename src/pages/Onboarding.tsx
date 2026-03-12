@@ -89,52 +89,22 @@ export default function Onboarding() {
       const newUserId = signUpData.user?.id;
       if (!newUserId) throw new Error('Não foi possível criar a conta');
 
-      // 2. Accept invite via RPC
-      const { data: acceptResult, error: acceptError } = await supabase.rpc('aceitar_convite', {
-        p_convite_id: conviteData.id,
-        p_user_id: newUserId,
+      // 2. Accept invite + setup via Edge Function (runs with service role, bypasses RLS)
+      const { data: efResult, error: efError } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'complete_onboarding',
+          user_id: newUserId,
+          convite_id: conviteData.id,
+          primeiro_nome: firstName.trim(),
+          sobrenome: lastName.trim(),
+          email: conviteData.email_destino,
+          empresa_id: conviteData.empresa_id,
+          role: conviteData.role,
+        },
       });
-      if (acceptError) throw new Error('Erro ao vincular conta à empresa');
-      const acceptData = acceptResult as unknown as { ok: boolean; erro?: string; empresa_id?: number; role?: string };
-      if (!acceptData?.ok) throw new Error(acceptData?.erro || 'Erro ao aceitar convite');
-
-      const empresaId = acceptData.empresa_id || conviteData.empresa_id;
-      const role = acceptData.role || conviteData.role || 'user';
-
-      // 3. Upsert usuarios
-      await supabase.from('usuarios').upsert({
-        uuid: newUserId,
-        email: conviteData.email_destino,
-        primeiro_nome: firstName.trim(),
-        sobrenome: lastName.trim(),
-        nome: `${firstName.trim()} ${lastName.trim()}`,
-        id_empresa: empresaId,
-        nivel_acesso: role,
-        onboarding_completed: true,
-      }, { onConflict: 'uuid' });
-
-      // 4. Insert usuario_time
-      await supabase.from('usuario_time').insert({
-        id_usuario: newUserId,
-        id_empresa: empresaId,
-        role: role,
-        status_membro: 'active',
-      });
-
-      // 5. Update convite status
-      await supabase.from('convites').update({
-        status_convite: 'accepted',
-        accepted_at: new Date().toISOString(),
-        accepted_by_user_id: newUserId,
-      }).eq('id', conviteData.id);
-
-      // 6. Audit log
-      await supabase.from('audit_logs').insert([{
-        actor_user_id: newUserId,
-        action: 'onboarding_completed',
-        entity_type: 'convites',
-        entity_id: conviteData.id,
-      }]);
+      if (efError) throw new Error('Erro ao vincular conta à empresa');
+      const efData = efResult as { success?: boolean; error?: string };
+      if (!efData?.success) throw new Error(efData?.error || 'Erro ao completar onboarding');
 
       // 7. Re-login to refresh session
       await supabase.auth.signInWithPassword({
