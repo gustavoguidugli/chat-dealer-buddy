@@ -78,15 +78,51 @@ function formatarData(dataStr: string) {
   return format(d, "dd 'de' MMM. 'de' yyyy", { locale: ptBR });
 }
 
-function getDateColor(dataStr: string, concluida: boolean) {
-  if (concluida) return 'text-muted-foreground';
-  const d = getDateSP(dataStr);
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  if (d < hoje) return 'text-destructive font-medium';
-  if (d.getTime() === hoje.getTime()) return 'text-emerald-600 dark:text-emerald-400 font-medium';
-  return 'text-muted-foreground';
+// Column definition for draggable reordering
+type ColumnDef = {
+  id: string;
+  label: string;
+  sortable?: boolean;
+};
+
+const DEFAULT_COLUMNS: ColumnDef[] = [
+  { id: 'concluido', label: 'Concluído' },
+  { id: 'assunto', label: 'Assunto' },
+  { id: 'funil', label: 'Funil' },
+  { id: 'negocio', label: 'Negócio' },
+  { id: 'atribuido', label: 'Atribuído a usuário' },
+  { id: 'data_vencimento', label: 'Data de vencimento', sortable: true },
+];
+
+// Sortable header cell component
+function SortableHeaderCell({ col, sortDir, onSort }: { col: ColumnDef; sortDir: 'asc' | 'desc'; onSort: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: col.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableHead
+      ref={setNodeRef}
+      style={style}
+      className={cn("border-r border-border last:border-r-0 select-none", col.sortable && "cursor-pointer")}
+    >
+      <div className="flex items-center gap-1">
+        <span {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing shrink-0 text-muted-foreground/50 hover:text-muted-foreground">
+          <GripVertical className="h-3.5 w-3.5" />
+        </span>
+        <span
+          className="inline-flex items-center gap-1"
+          onClick={col.sortable ? onSort : undefined}
+        >
+          {col.label}
+          {col.sortable && (sortDir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />)}
+        </span>
+      </div>
+    </TableHead>
+  );
 }
 
 export default function CrmAtividades() {
