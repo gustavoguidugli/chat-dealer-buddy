@@ -98,7 +98,7 @@ export default function CrmFunil() {
   const [dragPerdidoLeadId, setDragPerdidoLeadId] = useState<number | null>(null);
   const [dragMotivosSelecionados, setDragMotivosSelecionados] = useState<number[]>([]);
   const [manageMotivosOpen, setManageMotivosOpen] = useState(false);
-  const [listaInteresses, setListaInteresses] = useState<{ nome: string; label: string }[]>([]);
+  const [listaInteresses, setListaInteresses] = useState<{ nome: string; label: string; funil_id: number | null }[]>([]);
 
   // Motivos de perda hook
   const { motivos: motivosPerda } = useMotivosPerda(empresaId);
@@ -232,7 +232,7 @@ export default function CrmFunil() {
     (async () => {
       const { data } = await supabase
         .from('lista_interesses')
-        .select('nome, label')
+        .select('nome, label, funil_id')
         .eq('empresa_id', empresaId)
         .order('ordem');
       setListaInteresses(data || []);

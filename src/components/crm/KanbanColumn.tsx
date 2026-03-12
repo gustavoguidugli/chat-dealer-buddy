@@ -10,7 +10,7 @@ interface KanbanColumnProps {
   totalValor: number;
   onLeadClick?: (leadId: number) => void;
   onAddClick?: (etapaId: number) => void;
-  listaInteresses?: { nome: string; label: string }[];
+  listaInteresses?: { nome: string; label: string; funil_id: number | null }[];
   onLeadChanged?: () => void;
 }
 

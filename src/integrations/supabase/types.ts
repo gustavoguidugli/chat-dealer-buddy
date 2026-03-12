@@ -1984,6 +1984,7 @@ export type Database = {
           ativo: boolean | null
           created_at: string | null
           empresa_id: number | null
+          funil_id: number | null
           id: string
           label: string
           mensagem_resposta: string
@@ -1996,6 +1997,7 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           empresa_id?: number | null
+          funil_id?: number | null
           id?: string
           label: string
           mensagem_resposta: string
@@ -2008,6 +2010,7 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           empresa_id?: number | null
+          funil_id?: number | null
           id?: string
           label?: string
           mensagem_resposta?: string
@@ -2022,6 +2025,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lista_interesses_funil_id_fkey"
+            columns: ["funil_id"]
+            isOneToOne: false
+            referencedRelation: "funis"
             referencedColumns: ["id"]
           },
         ]
