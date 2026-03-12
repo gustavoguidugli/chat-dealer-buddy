@@ -36,6 +36,7 @@ interface ManageMotivosModalProps {
   isOpen: boolean;
   onClose: () => void;
   empresaId: number;
+  onSave?: () => void;
 }
 
 function SortableMotivoItem({ 
@@ -97,7 +98,7 @@ function SortableMotivoItem({
   );
 }
 
-export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivosModalProps) {
+export function ManageMotivosModal({ isOpen, onClose, empresaId, onSave }: ManageMotivosModalProps) {
   const { toast } = useToast();
   const [motivos, setMotivos] = useState<MotivoPerda[]>([]);
   const [originalMotivos, setOriginalMotivos] = useState<MotivoPerda[]>([]);
@@ -254,6 +255,7 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId }: ManageMotivos
 
       toast({ title: 'Alterações salvas!' });
       await fetchMotivos();
+      onSave?.();
     } catch (error) {
       toast({ title: 'Erro ao salvar alterações', variant: 'destructive' });
     } finally {
