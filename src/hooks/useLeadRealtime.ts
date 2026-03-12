@@ -98,10 +98,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         const sdrMaq = sdrMaqRes.data
         const sdrPur = sdrPurRes.data
 
-        if (!currentInteresse) {
-          currentInteresse = sdrMaq ? 'maquina_gelo' : sdrPur ? 'purificador' : null
-          dados.interesse = currentInteresse
-        }
+      // No longer infer interest from SDR table — interest is always explicit from contatos_geral or campos_extras
 
         if (currentInteresse === 'purificador' && sdrPur) {
           dados.cidade = sdrPur.cidade || null

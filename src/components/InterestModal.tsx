@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TagInput } from '@/components/TagInput';
 import { Loader2 } from 'lucide-react';
 
@@ -13,6 +14,12 @@ export interface InterestFormData {
   palavras_chave: string[];
   mensagem_resposta: string;
   ordem: number;
+  funil_id: number | null;
+}
+
+interface FunilOption {
+  id: number;
+  nome: string;
 }
 
 interface InterestModalProps {
@@ -20,22 +27,20 @@ interface InterestModalProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: InterestFormData) => Promise<void>;
   initialData?: InterestFormData;
-  isDefault?: boolean;
   nextOrder: number;
+  funis: FunilOption[];
 }
 
-const DEFAULT_NAMES = ['maquina_gelo', 'purificador', 'outros'];
-
-export function InterestModal({ open, onOpenChange, onSave, initialData, isDefault, nextOrder }: InterestModalProps) {
+export function InterestModal({ open, onOpenChange, onSave, initialData, nextOrder, funis }: InterestModalProps) {
   const [form, setForm] = useState<InterestFormData>({
-    nome: '', label: '', palavras_chave: [], mensagem_resposta: '', ordem: nextOrder,
+    nome: '', label: '', palavras_chave: [], mensagem_resposta: '', ordem: nextOrder, funil_id: null,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
-      setForm(initialData ?? { nome: '', label: '', palavras_chave: [], mensagem_resposta: '', ordem: nextOrder });
+      setForm(initialData ?? { nome: '', label: '', palavras_chave: [], mensagem_resposta: '', ordem: nextOrder, funil_id: null });
       setError('');
     }
   }, [open, initialData, nextOrder]);
@@ -43,6 +48,7 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, isDefau
   const handleSave = async () => {
     if (!form.nome.trim()) return setError('Nome é obrigatório');
     if (!form.label.trim()) return setError('Label é obrigatório');
+    if (!form.funil_id) return setError('Selecione o funil de destino');
     if (form.palavras_chave.length === 0) return setError('Adicione pelo menos uma palavra-chave');
     if (!form.mensagem_resposta.trim()) return setError('Mensagem é obrigatória');
 
@@ -59,7 +65,6 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, isDefau
   };
 
   const isEditing = !!initialData;
-  const isNameLocked = isDefault || (isEditing && DEFAULT_NAMES.includes(form.nome));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -74,7 +79,6 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, isDefau
               value={form.nome}
               onChange={(e) => setForm(f => ({ ...f, nome: e.target.value.toLowerCase().replace(/\s/g, '_') }))}
               placeholder="maquina_de_gelo"
-              disabled={isNameLocked}
             />
             <p className="text-xs text-muted-foreground">Use o formato snake_case (ex: assistencia_tecnica)</p>
           </div>
@@ -87,6 +91,26 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, isDefau
               placeholder="Máquina de Gelo"
             />
             <p className="text-xs text-muted-foreground">Adicione o nome que aparecerá como opção para o lead/cliente.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="font-semibold">Funil de destino</Label>
+            <Select
+              value={form.funil_id ? String(form.funil_id) : ''}
+              onValueChange={(val) => setForm(f => ({ ...f, funil_id: Number(val) }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o funil..." />
+              </SelectTrigger>
+              <SelectContent>
+                {funis.map((funil) => (
+                  <SelectItem key={funil.id} value={String(funil.id)}>
+                    {funil.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">O lead será direcionado automaticamente para este funil ao escolher esse interesse.</p>
           </div>
 
           <div className="space-y-2">

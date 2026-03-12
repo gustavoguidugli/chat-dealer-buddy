@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { InterestModal, InterestFormData } from '@/components/InterestModal';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -19,7 +18,7 @@ import {
   arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Pencil, Trash2, Plus, Save, Lock, CheckCheck } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, Plus, Save, CheckCheck } from 'lucide-react';
 
 interface Interesse {
   id: string;
@@ -30,14 +29,18 @@ interface Interesse {
   ordem: number;
   ativo: boolean | null;
   empresa_id: number | null;
+  funil_id: number | null;
 }
 
-const DEFAULT_NAMES = ['maquina_gelo', 'purificador', 'outros'];
+interface FunilOption {
+  id: number;
+  nome: string;
+}
 
 function SortableInterestRow({
-  interesse, index, isDefault, onEdit, onDelete
+  interesse, index, funilNome, onEdit, onDelete
 }: {
-  interesse: Interesse; index: number; isDefault: boolean;
+  interesse: Interesse; index: number; funilNome: string | null;
   onEdit: () => void; onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: interesse.id });
@@ -49,17 +52,17 @@ function SortableInterestRow({
       <button {...attributes} {...listeners} className="cursor-grab text-muted-foreground hover:text-foreground touch-none">
         <GripVertical className="h-5 w-5" />
       </button>
-      <span className="font-semibold text-foreground flex-1">{interesse.label}</span>
-      {isDefault && (
-        <Badge variant="outline" className="text-xs gap-1 shrink-0">
-          <Lock className="h-3 w-3" /> Padrão
-        </Badge>
-      )}
+      <div className="flex-1 min-w-0">
+        <span className="font-semibold text-foreground">{interesse.label}</span>
+        {funilNome && (
+          <span className="text-xs text-muted-foreground ml-2">→ {funilNome}</span>
+        )}
+      </div>
       <Button variant="ghost" size="icon" onClick={onEdit} className="shrink-0">
         <Pencil className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={onDelete} disabled={isDefault}
-        className={`shrink-0 ${isDefault ? 'opacity-30' : 'text-muted-foreground hover:text-destructive'}`}>
+      <Button variant="ghost" size="icon" onClick={onDelete}
+        className="shrink-0 text-muted-foreground hover:text-destructive">
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
@@ -72,6 +75,7 @@ export default function Triagem() {
   const [loading, setLoading] = useState(true);
   const [mensagemTriagem, setMensagemTriagem] = useState('');
   const [interesses, setInteresses] = useState<Interesse[]>([]);
+  const [funis, setFunis] = useState<FunilOption[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingInterest, setEditingInterest] = useState<Interesse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Interesse | null>(null);
@@ -86,13 +90,15 @@ export default function Triagem() {
     if (!empresaId) return;
     setLoading(true);
 
-    const [configRes, interessesRes] = await Promise.all([
+    const [configRes, interessesRes, funisRes] = await Promise.all([
       supabase.from('config_empresas_geral').select('mensagem_triagem').eq('id_empresa', empresaId).maybeSingle(),
       supabase.from('lista_interesses').select('*').eq('empresa_id', empresaId).order('ordem'),
+      supabase.from('funis').select('id, nome').eq('id_empresa', empresaId).eq('ativo', true).order('ordem'),
     ]);
 
     setMensagemTriagem(configRes.data?.mensagem_triagem || '');
     setInteresses(interessesRes.data || []);
+    setFunis(funisRes.data || []);
     setLoading(false);
   };
 
@@ -114,6 +120,7 @@ export default function Triagem() {
       const { error } = await supabase.from('lista_interesses').update({
         nome: formData.nome, label: formData.label, palavras_chave: formData.palavras_chave,
         mensagem_resposta: formData.mensagem_resposta, ordem: formData.ordem,
+        funil_id: formData.funil_id,
       }).eq('id', editingInterest.id);
       if (error) throw new Error('Erro ao atualizar interesse');
       toast({ title: 'Interesse atualizado!' });
@@ -121,7 +128,7 @@ export default function Triagem() {
       const { error } = await supabase.from('lista_interesses').insert({
         empresa_id: empresaId!, nome: formData.nome, label: formData.label,
         palavras_chave: formData.palavras_chave, mensagem_resposta: formData.mensagem_resposta,
-        ordem: formData.ordem, ativo: true,
+        ordem: formData.ordem, ativo: true, funil_id: formData.funil_id,
       });
       if (error) {
         if (error.message?.includes('unique') || error.message?.includes('duplicate'))
@@ -156,7 +163,8 @@ export default function Triagem() {
 
   const activeInteresses = interesses.filter(i => i.ativo !== false);
   const nextOrder = interesses.length > 0 ? Math.max(...interesses.map(i => i.ordem)) + 1 : 1;
-  const isDefault = (nome: string) => DEFAULT_NAMES.includes(nome);
+
+  const funilNameMap = new Map(funis.map(f => [f.id, f.nome]));
 
   if (loading) {
     return (
@@ -238,7 +246,7 @@ export default function Triagem() {
                     key={interesse.id}
                     interesse={interesse}
                     index={index}
-                    isDefault={isDefault(interesse.nome)}
+                    funilNome={interesse.funil_id ? funilNameMap.get(interesse.funil_id) || null : null}
                     onEdit={() => { setEditingInterest(interesse); setModalOpen(true); }}
                     onDelete={() => setDeleteTarget(interesse)}
                   />
@@ -271,9 +279,10 @@ export default function Triagem() {
             nome: editingInterest.nome, label: editingInterest.label,
             palavras_chave: editingInterest.palavras_chave || [],
             mensagem_resposta: editingInterest.mensagem_resposta, ordem: editingInterest.ordem,
+            funil_id: editingInterest.funil_id,
           } : undefined}
-          isDefault={editingInterest ? isDefault(editingInterest.nome) : false}
           nextOrder={nextOrder}
+          funis={funis}
         />
 
         {/* Delete dialog */}
