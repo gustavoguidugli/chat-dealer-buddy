@@ -54,7 +54,7 @@ const conviteStatusColor: Record<string, string> = {
 };
 
 export default function MeuTime() {
-  const { user, empresaId, empresaNome } = useAuth();
+  const { user, empresaId, empresaNome, isCompanyAdmin, isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [convites, setConvites] = useState<Convite[]>([]);
