@@ -241,9 +241,6 @@ export function EtiquetaSelector({ leadId, empresaId, onChange }: EtiquetaSelect
                       <SortableEtiquetaItem
                         key={etiqueta.id}
                         etiqueta={etiqueta}
-                        isSelected={selectedIds.includes(etiqueta.id)}
-                        isEditing={true}
-                        onToggle={() => {}}
                         onUpdate={handleUpdate}
                         onDelete={() => handleDelete(etiqueta.id)}
                       />
@@ -252,14 +249,11 @@ export function EtiquetaSelector({ leadId, empresaId, onChange }: EtiquetaSelect
                 </DndContext>
               ) : (
                 filtered.map(etiqueta => (
-                  <SortableEtiquetaItem
+                  <EtiquetaItem
                     key={etiqueta.id}
                     etiqueta={etiqueta}
                     isSelected={selectedIds.includes(etiqueta.id)}
-                    isEditing={false}
                     onToggle={() => toggleEtiqueta(etiqueta.id)}
-                    onUpdate={handleUpdate}
-                    onDelete={() => handleDelete(etiqueta.id)}
                   />
                 ))
               )}
