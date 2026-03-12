@@ -366,5 +366,6 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
       open={showIconManager}
       onClose={() => setShowIconManager(false)}
     />
+    </>
   );
 }
