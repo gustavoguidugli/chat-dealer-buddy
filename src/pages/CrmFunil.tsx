@@ -54,10 +54,14 @@ export interface LeadCard {
   valor_estimado: number | null;
   data_criacao: string | null;
   id_etapa_atual: number;
+  id_empresa: number;
+  id_funil: number;
+  id_contato_geral: number | null;
   ordem_no_funil: number | null;
   proprietario_id: string | null;
   etiquetas: { nome: string; cor: string }[];
   proximaAtividade: LeadAtividade | null;
+  campos_extras: Record<string, any> | null;
   status?: string | null;
   motivo_perda?: string | null;
   valor_final?: number | null;
