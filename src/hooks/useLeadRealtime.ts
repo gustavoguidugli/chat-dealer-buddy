@@ -34,7 +34,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
     let contatoGeralId: number | null = null
     let contatoWhatsapp: string | null = null
 
-    // Busca dados do contato_geral e SDR baseado no interesse
+    // Busca dados do contato_geral e SDR, usando campos_extras do lead como fonte primária
     async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null) {
       let currentInteresse = interesse ?? null
 
@@ -72,43 +72,54 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
 
       const whatsappLookup = contatoWhatsapp ?? whatsapp ?? contatoGeral?.whatsapp ?? null
 
+      // Start with campos_extras from the lead as primary source
+      const camposExtras = lead?.campos_extras ?? {}
+
       const dados: DadosContato = {
         interesse: currentInteresse,
-        cidade: null, tipo_uso: null,
-        consumo_mensal: null, gasto_mensal: null, dias_semana: null,
+        cidade: camposExtras.cidade ?? null,
+        tipo_uso: camposExtras.tipo_uso ?? null,
+        consumo_mensal: camposExtras.consumo_mensal ?? null,
+        gasto_mensal: camposExtras.gasto_mensal ?? null,
+        dias_semana: camposExtras.dias_semana ?? null,
         telefone: contatoGeral?.whatsapp_padrao_pipedrive ?? null,
       }
 
+      // Fallback: enrich from SDR tables if campos_extras is missing data
       if (whatsappLookup) {
-        const [sdrMaqRes, sdrPurRes] = await Promise.all([
-          supabase
-            .from('contatos_sdr_maquinagelo')
-            .select('cidade, tipo_uso, consumo_mensal, gasto_mensal, dias_semana')
-            .eq('whatsapp', whatsappLookup)
-            .limit(1)
-            .maybeSingle(),
-          supabase
-            .from('contatos_sdr_purificador')
-            .select('cidade, tipo_uso')
-            .eq('whatsapp', whatsappLookup)
-            .limit(1)
-            .maybeSingle(),
-        ])
+        const hasMissingSdrData = !dados.cidade && !dados.tipo_uso && !dados.consumo_mensal && !dados.gasto_mensal && !dados.dias_semana
 
-        const sdrMaq = sdrMaqRes.data
-        const sdrPur = sdrPurRes.data
+        if (hasMissingSdrData) {
+          const [sdrMaqRes, sdrPurRes] = await Promise.all([
+            supabase
+              .from('contatos_sdr_maquinagelo')
+              .select('cidade, tipo_uso, consumo_mensal, gasto_mensal, dias_semana')
+              .eq('whatsapp', whatsappLookup)
+              .limit(1)
+              .maybeSingle(),
+            supabase
+              .from('contatos_sdr_purificador')
+              .select('cidade, tipo_uso')
+              .eq('whatsapp', whatsappLookup)
+              .limit(1)
+              .maybeSingle(),
+          ])
 
-      // No longer infer interest from SDR table — interest is always explicit from contatos_geral or campos_extras
+          const sdrMaq = sdrMaqRes.data
+          const sdrPur = sdrPurRes.data
 
-        if (currentInteresse === 'purificador' && sdrPur) {
-          dados.cidade = sdrPur.cidade || null
-          dados.tipo_uso = sdrPur.tipo_uso || null
-        } else if (sdrMaq) {
-          dados.cidade = sdrMaq.cidade || null
-          dados.tipo_uso = sdrMaq.tipo_uso || null
-          dados.consumo_mensal = sdrMaq.consumo_mensal
-          dados.gasto_mensal = sdrMaq.gasto_mensal
-          dados.dias_semana = sdrMaq.dias_semana
+          // Use whichever SDR table has data (no hardcoded interest check)
+          if (sdrPur && (sdrPur.cidade || sdrPur.tipo_uso)) {
+            dados.cidade = dados.cidade || sdrPur.cidade || null
+            dados.tipo_uso = dados.tipo_uso || sdrPur.tipo_uso || null
+          }
+          if (sdrMaq) {
+            dados.cidade = dados.cidade || sdrMaq.cidade || null
+            dados.tipo_uso = dados.tipo_uso || sdrMaq.tipo_uso || null
+            dados.consumo_mensal = dados.consumo_mensal ?? sdrMaq.consumo_mensal
+            dados.gasto_mensal = dados.gasto_mensal ?? sdrMaq.gasto_mensal
+            dados.dias_semana = dados.dias_semana ?? sdrMaq.dias_semana
+          }
         }
       }
 
