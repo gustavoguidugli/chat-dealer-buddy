@@ -25,7 +25,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamModalProps) {
   const { user, empresaId, empresaNome } = useAuth();
   const { toast } = useToast();
-  const [rows, setRows] = useState<InviteRow[]>([{ email: '', role: 'user', error: '' }]);
+  const [rows, setRows] = useState<InviteRow[]>([{ email: '', role: 'member', error: '' }]);
   const [sending, setSending] = useState(false);
   const [existingMembers, setExistingMembers] = useState<string[]>([]);
   const [pendingInvites, setPendingInvites] = useState<string[]>([]);
