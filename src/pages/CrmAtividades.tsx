@@ -132,6 +132,28 @@ export default function CrmAtividades() {
 
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('para_fazer');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_COLUMNS.map(c => c.id));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const handleColumnDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setColumnOrder(prev => {
+        const oldIndex = prev.indexOf(String(active.id));
+        const newIndex = prev.indexOf(String(over.id));
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  }, []);
+
+  const orderedColumns = useMemo(() =>
+    columnOrder.map(id => DEFAULT_COLUMNS.find(c => c.id === id)!).filter(Boolean),
+    [columnOrder]
+  );
 
   // Advanced filters
   const [filterOpen, setFilterOpen] = useState(false);
