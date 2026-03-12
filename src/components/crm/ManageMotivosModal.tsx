@@ -255,6 +255,7 @@ export function ManageMotivosModal({ isOpen, onClose, empresaId, onSave }: Manag
 
       toast({ title: 'Alterações salvas!' });
       await fetchMotivos();
+      onSave?.();
     } catch (error) {
       toast({ title: 'Erro ao salvar alterações', variant: 'destructive' });
     } finally {
