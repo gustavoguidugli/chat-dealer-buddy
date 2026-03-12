@@ -36,6 +36,7 @@ interface ManageMotivosModalProps {
   isOpen: boolean;
   onClose: () => void;
   empresaId: number;
+  onSave?: () => void;
 }
 
 function SortableMotivoItem({ 
