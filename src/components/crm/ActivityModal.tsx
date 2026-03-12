@@ -358,12 +358,12 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
           </div>
         </DialogFooter>
       </DialogContent>
-
-      <IconeAtividadeManager
-        empresaId={empresaId}
-        open={showIconManager}
-        onClose={() => setShowIconManager(false)}
-      />
     </Dialog>
+
+    <IconeAtividadeManager
+      empresaId={empresaId}
+      open={showIconManager}
+      onClose={() => setShowIconManager(false)}
+    />
   );
 }
