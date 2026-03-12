@@ -202,6 +202,7 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
@@ -358,12 +359,13 @@ export function ActivityModal({ leadId, empresaId, activity, isOpen, onClose }: 
           </div>
         </DialogFooter>
       </DialogContent>
-
-      <IconeAtividadeManager
-        empresaId={empresaId}
-        open={showIconManager}
-        onClose={() => setShowIconManager(false)}
-      />
     </Dialog>
+
+    <IconeAtividadeManager
+      empresaId={empresaId}
+      open={showIconManager}
+      onClose={() => setShowIconManager(false)}
+    />
+    </>
   );
 }
