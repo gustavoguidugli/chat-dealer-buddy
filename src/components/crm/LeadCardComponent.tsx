@@ -14,7 +14,7 @@ interface LeadCardProps {
   lead: LeadCard;
   isDragging?: boolean;
   isOverlay?: boolean;
-  listaInteresses?: { nome: string; label: string }[];
+  listaInteresses?: { nome: string; label: string; funil_id: number | null }[];
   onLeadChanged?: () => void;
 }
 
