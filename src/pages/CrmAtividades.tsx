@@ -436,105 +436,135 @@ export default function CrmAtividades() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="[&>th]:border-r [&>th]:border-border [&>th:last-child]:border-r-0">
                   <TableHead className="w-[40px]" onClick={e => e.stopPropagation()}>
                     <Checkbox
                       checked={filtered.length > 0 && selectedIds.size === filtered.length}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead className="w-[40px]" />
-                  <TableHead className="w-[80px]">Concluído</TableHead>
-                  <TableHead>Assunto</TableHead>
-                  <TableHead>Funil</TableHead>
-                  <TableHead>Atribuído a usuário</TableHead>
-                  <TableHead>Negócio</TableHead>
-                  <TableHead
-                    className="cursor-pointer select-none"
-                    onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      Data de vencimento
-                      {sortDir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
-                    </span>
-                  </TableHead>
+                  <TableHead className="w-[40px] border-r border-border" />
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleColumnDragEnd}>
+                    <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
+                      {orderedColumns.map(col => (
+                        <SortableHeaderCell
+                          key={col.id}
+                          col={col}
+                          sortDir={sortDir}
+                          onSort={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                   <TableHead className="w-[40px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(a => (
-                  <TableRow
-                    key={a.id}
-                    className={cn(
-                      getRowColor(a.data_vencimento, a.concluida),
-                      'cursor-pointer hover:bg-muted/30 transition-colors',
-                      a.concluida && 'opacity-60'
-                    )}
-                    onClick={() => {
-                      if (a.id_lead) {
-                        setDrawerLeadId(a.id_lead);
-                        setDrawerOpen(true);
-                      }
-                    }}
-                  >
-                    <TableCell onClick={e => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedIds.has(a.id)}
-                        onCheckedChange={() => toggleSelect(a.id)}
-                      />
-                    </TableCell>
-                    <TableCell onClick={e => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-1 rounded hover:bg-muted">
-                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          <DropdownMenuItem onClick={() => { setEditingActivity(a); setActivityModalOpen(true); }}>
-                            <Pencil className="h-4 w-4 mr-2" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDuplicar(a)}>
-                            <Copy className="h-4 w-4 mr-2" /> Duplicar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => setExcluirId(a.id)}>
-                            <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell onClick={e => e.stopPropagation()}>
-                      <Checkbox
-                        checked={a.concluida}
-                        disabled={a.concluida}
-                        onCheckedChange={() => { if (!a.concluida) setConcluirId(a.id); }}
-                        className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="shrink-0 text-muted-foreground">
-                          {iconePorTipo[a.tipo] || <FileText className="h-4 w-4" />}
-                        </span>
-                        <span className={cn(
-                          'text-sm',
-                          a.concluida && 'line-through text-muted-foreground'
-                        )}>
-                          {a.assunto}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{a.funil_nome || '—'}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {a.atribuida_a ? (userNameMap[a.atribuida_a] || '—') : '—'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{a.lead_nome || '—'}</TableCell>
-                    <TableCell className={cn('text-sm', getDateColor(a.data_vencimento, a.concluida))}>
-                      {formatarData(a.data_vencimento)}
-                    </TableCell>
-                    <TableCell />
-                  </TableRow>
-                ))}
+                {filtered.map(a => {
+                  const textColor = getTextColor(a.data_vencimento, a.concluida);
+                  const isCompleted = a.concluida;
+
+                  const renderCell = (colId: string) => {
+                    switch (colId) {
+                      case 'concluido':
+                        return (
+                          <TableCell key={colId} className="border-r border-border" onClick={e => e.stopPropagation()}>
+                            {isCompleted ? (
+                              <div className="h-5 w-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                                <Check className="h-3.5 w-3.5 text-white" />
+                              </div>
+                            ) : (
+                              <Checkbox
+                                checked={false}
+                                onCheckedChange={() => setConcluirId(a.id)}
+                              />
+                            )}
+                          </TableCell>
+                        );
+                      case 'assunto':
+                        return (
+                          <TableCell key={colId} className="border-r border-border">
+                            <div className="flex items-center gap-2">
+                              <span className={cn("shrink-0", textColor)}>
+                                {iconePorTipo[a.tipo] || <FileText className="h-4 w-4" />}
+                              </span>
+                              <span className={cn('text-sm', textColor, isCompleted && 'line-through')}>
+                                {a.assunto}
+                              </span>
+                            </div>
+                          </TableCell>
+                        );
+                      case 'funil':
+                        return (
+                          <TableCell key={colId} className={cn("text-sm border-r border-border", textColor, isCompleted && 'line-through')}>
+                            {a.funil_nome || '—'}
+                          </TableCell>
+                        );
+                      case 'negocio':
+                        return (
+                          <TableCell key={colId} className={cn("text-sm border-r border-border", textColor, isCompleted && 'line-through')}>
+                            {a.lead_nome || '—'}
+                          </TableCell>
+                        );
+                      case 'atribuido':
+                        return (
+                          <TableCell key={colId} className={cn("text-sm border-r border-border", textColor, isCompleted && 'line-through')}>
+                            {a.atribuida_a ? (userNameMap[a.atribuida_a] || '—') : '—'}
+                          </TableCell>
+                        );
+                      case 'data_vencimento':
+                        return (
+                          <TableCell key={colId} className={cn('text-sm border-r border-border', textColor, isCompleted && 'line-through')}>
+                            {formatarData(a.data_vencimento)}
+                          </TableCell>
+                        );
+                      default:
+                        return <TableCell key={colId} className="border-r border-border" />;
+                    }
+                  };
+
+                  return (
+                    <TableRow
+                      key={a.id}
+                      className="cursor-pointer hover:bg-muted/30 transition-colors bg-card"
+                      onClick={() => {
+                        if (a.id_lead) {
+                          setDrawerLeadId(a.id_lead);
+                          setDrawerOpen(true);
+                        }
+                      }}
+                    >
+                      <TableCell className="border-r border-border" onClick={e => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(a.id)}
+                          onCheckedChange={() => toggleSelect(a.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="border-r border-border" onClick={e => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="p-1 rounded hover:bg-muted">
+                              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => { setEditingActivity(a); setActivityModalOpen(true); }}>
+                              <Pencil className="h-4 w-4 mr-2" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDuplicar(a)}>
+                              <Copy className="h-4 w-4 mr-2" /> Duplicar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => setExcluirId(a.id)}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                      {orderedColumns.map(col => renderCell(col.id))}
+                      <TableCell />
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
