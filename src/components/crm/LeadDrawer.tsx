@@ -1245,8 +1245,9 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             <div
                               key={campo.id}
                               className="flex items-center justify-between py-2 px-1 rounded-md group hover:bg-muted/50 cursor-pointer"
-                              onClick={() => {
+                              onMouseDown={(e) => {
                                 if (!isEditing && !isInteresseField) {
+                                  e.preventDefault();
                                   setEditingField(campo.slug);
                                   setEditingValue(value);
                                 }
