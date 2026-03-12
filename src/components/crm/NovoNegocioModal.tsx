@@ -66,7 +66,7 @@ export function NovoNegocioModal({ open, onOpenChange, funilId, etapas, empresaI
     }
 
     if (data) {
-      onCreated({ ...data, etiquetas: [], proximaAtividade: null });
+      onCreated({ ...data, etiquetas: [], proximaAtividade: null, campos_extras: (data.campos_extras as Record<string, any>) || null });
       toast({ title: 'Negócio criado com sucesso!' });
       // Reset form
       setNome('');
