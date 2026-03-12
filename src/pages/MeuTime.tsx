@@ -38,7 +38,7 @@ interface Convite {
   token: string;
 }
 
-const roleLabel: Record<string, string> = { admin: 'Admin', user: 'Usuário', member: 'Membro' };
+const roleLabel: Record<string, string> = { admin: 'Admin', member: 'Membro', user: 'Membro' };
 const statusLabel: Record<string, string> = { active: 'Ativo', suspended: 'Suspenso', deactivated: 'Desativado' };
 const conviteStatusLabel: Record<string, string> = { pending: 'Pendente', accepted: 'Aceito', expired: 'Expirado', canceled: 'Cancelado' };
 
