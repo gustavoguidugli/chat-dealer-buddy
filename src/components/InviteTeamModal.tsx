@@ -32,7 +32,7 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
 
   useEffect(() => {
     if (!open || !empresaId) return;
-    setRows([{ email: '', role: 'user', error: '' }]);
+    setRows([{ email: '', role: 'member', error: '' }]);
 
     // Load existing members and pending invites for validation
     (async () => {
