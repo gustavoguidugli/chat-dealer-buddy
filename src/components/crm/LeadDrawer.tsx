@@ -1334,22 +1334,16 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                         console.warn('Falha ao sincronizar interesse com contatos_geral:', e);
                                       }
 
-                                      // 4. Move lead to matching funnel by tipo
+                                      // 4. Move lead to matching funnel via lista_interesses.funil_id
                                       try {
-                                        const { data: targetFunil } = await supabase
-                                          .from('funis')
-                                          .select('id')
-                                          .eq('id_empresa', lead.id_empresa)
-                                          .eq('tipo', val)
-                                          .eq('ativo', true)
-                                          .limit(1)
-                                          .maybeSingle();
+                                        const selectedInteresse = listaInteresses.find(i => i.nome === val);
+                                        const targetFunilId = selectedInteresse?.funil_id;
 
-                                        if (targetFunil && targetFunil.id !== lead.id_funil) {
+                                        if (targetFunilId && targetFunilId !== lead.id_funil) {
                                           const { data: firstEtapa } = await supabase
                                             .from('etapas_funil')
                                             .select('id')
-                                            .eq('id_funil', targetFunil.id)
+                                            .eq('id_funil', targetFunilId)
                                             .eq('ativo', true)
                                             .order('ordem')
                                             .limit(1)
@@ -1357,7 +1351,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
                                           if (firstEtapa) {
                                             await supabase.from('leads_crm').update({
-                                              id_funil: targetFunil.id,
+                                              id_funil: targetFunilId,
                                               id_etapa_atual: firstEtapa.id,
                                               data_entrada_etapa_atual: new Date().toISOString(),
                                             }).eq('id', lead.id);
