@@ -1878,6 +1878,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
           isOpen={manageMotivosOpen}
           onClose={() => setManageMotivosOpen(false)}
           empresaId={empresaId}
+          onSave={refreshMotivos}
         />
       )}
 

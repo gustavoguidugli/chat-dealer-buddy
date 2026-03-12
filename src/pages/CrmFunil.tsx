@@ -665,6 +665,7 @@ export default function CrmFunil() {
           isOpen={manageMotivosOpen}
           onClose={() => setManageMotivosOpen(false)}
           empresaId={empresaId}
+          onSave={refreshMotivos}
         />
       )}
     </AppLayout>
