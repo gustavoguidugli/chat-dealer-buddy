@@ -1870,6 +1870,7 @@ export type Database = {
           valor_final: number | null
           whatsapp: string | null
           whatsapp_contato_geral: string | null
+          whatsapp_id: string | null
         }
         Insert: {
           anotacoes?: string | null
@@ -1907,6 +1908,7 @@ export type Database = {
           valor_final?: number | null
           whatsapp?: string | null
           whatsapp_contato_geral?: string | null
+          whatsapp_id?: string | null
         }
         Update: {
           anotacoes?: string | null
@@ -1944,6 +1946,7 @@ export type Database = {
           valor_final?: number | null
           whatsapp?: string | null
           whatsapp_contato_geral?: string | null
+          whatsapp_id?: string | null
         }
         Relationships: [
           {
