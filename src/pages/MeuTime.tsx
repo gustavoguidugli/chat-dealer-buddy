@@ -267,25 +267,27 @@ export default function MeuTime() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => { setSelectedMember(m); setNewRole(m.role); setRoleModalOpen(true); }}>
-                              Alterar permissão
-                            </DropdownMenuItem>
-                            {m.status_membro === 'active' && (
-                              <DropdownMenuItem onClick={() => handleSuspend(m)}>Suspender</DropdownMenuItem>
-                            )}
-                            {m.status_membro === 'suspended' && (
-                              <DropdownMenuItem onClick={() => handleReactivate(m)}>Reativar</DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(m)}>
-                              Remover do time
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {(isCompanyAdmin || isSuperAdmin) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => { setSelectedMember(m); setNewRole(m.role); setRoleModalOpen(true); }}>
+                                Alterar permissão
+                              </DropdownMenuItem>
+                              {m.status_membro === 'active' && (
+                                <DropdownMenuItem onClick={() => handleSuspend(m)}>Suspender</DropdownMenuItem>
+                              )}
+                              {m.status_membro === 'suspended' && (
+                                <DropdownMenuItem onClick={() => handleReactivate(m)}>Reativar</DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(m)}>
+                                Remover do time
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
