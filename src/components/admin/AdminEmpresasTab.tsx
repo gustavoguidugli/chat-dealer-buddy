@@ -32,6 +32,8 @@ interface Empresa {
 
 export function AdminEmpresasTab() {
   const { toast } = useToast();
+  const { setEmpresa } = useAuth();
+  const navigate = useNavigate();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
