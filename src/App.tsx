@@ -83,6 +83,7 @@ const App = () => (
             <Route path="/configuracoes/perfil" element={
               <ProtectedRoute><ConfigPerfil /></ProtectedRoute>
             } />
+            <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
