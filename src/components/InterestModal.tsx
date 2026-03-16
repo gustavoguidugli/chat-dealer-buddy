@@ -96,13 +96,16 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, nextOrd
           <div className="space-y-2">
             <Label className="font-semibold">Funil de destino</Label>
             <Select
-              value={form.funil_id ? String(form.funil_id) : ''}
-              onValueChange={(val) => setForm(f => ({ ...f, funil_id: Number(val) }))}
+              value={form.funil_id ? String(form.funil_id) : 'auto'}
+              onValueChange={(val) => setForm(f => ({ ...f, funil_id: val === 'auto' ? null : Number(val) }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o funil..." />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="auto">
+                  🔄 Criar funil automaticamente
+                </SelectItem>
                 {funis.map((funil) => (
                   <SelectItem key={funil.id} value={String(funil.id)}>
                     {funil.nome}
@@ -110,7 +113,11 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, nextOrd
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">O lead será direcionado automaticamente para este funil ao escolher esse interesse.</p>
+            <p className="text-xs text-muted-foreground">
+              {form.funil_id
+                ? 'O lead será direcionado automaticamente para este funil ao escolher esse interesse.'
+                : 'Um novo funil será criado automaticamente com o nome do interesse e etapas padrão.'}
+            </p>
           </div>
 
           <div className="space-y-2">
