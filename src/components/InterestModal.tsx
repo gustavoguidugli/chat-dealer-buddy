@@ -48,7 +48,7 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, nextOrd
   const handleSave = async () => {
     if (!form.nome.trim()) return setError('Nome é obrigatório');
     if (!form.label.trim()) return setError('Label é obrigatório');
-    if (!form.funil_id) return setError('Selecione o funil de destino');
+    // funil_id is optional — if not selected, Triagem will auto-create one
     if (form.palavras_chave.length === 0) return setError('Adicione pelo menos uma palavra-chave');
     if (!form.mensagem_resposta.trim()) return setError('Mensagem é obrigatória');
 

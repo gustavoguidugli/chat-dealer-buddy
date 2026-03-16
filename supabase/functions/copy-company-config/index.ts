@@ -25,7 +25,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify the user is admin
     const supabaseUser = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -44,7 +43,6 @@ Deno.serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
-    // Check admin
     const { data: perm } = await supabaseAdmin
       .from("user_permissions")
       .select("is_admin")
@@ -74,6 +72,8 @@ Deno.serve(async (req) => {
     }
 
     const results = {
+      funis_copied: 0,
+      etapas_copied: 0,
       faqs_copied: 0,
       labels_copied: 0,
       faq_labels_copied: 0,
@@ -81,13 +81,90 @@ Deno.serve(async (req) => {
       interests_copied: 0,
     };
 
-    // 1. Copy FAQs and their labels
+    // 1. Copy Funis + Etapas (MUST come before interests for funil_id remapping)
+    const funilIdRemap: Record<number, number> = {};
+
+    const { data: sourceFunis } = await supabaseAdmin
+      .from("funis")
+      .select("id, nome, tipo, ordem, cor, descricao, ativo")
+      .eq("id_empresa", source_company_id);
+
+    if (sourceFunis && sourceFunis.length > 0) {
+      // Check which funis already exist in target (created by trigger)
+      const { data: existingTargetFunis } = await supabaseAdmin
+        .from("funis")
+        .select("id, nome, tipo")
+        .eq("id_empresa", target_company_id);
+
+      const existingByType: Record<string, number> = {};
+      if (existingTargetFunis) {
+        for (const f of existingTargetFunis) {
+          existingByType[f.tipo] = f.id;
+        }
+      }
+
+      for (const srcFunil of sourceFunis) {
+        // If target already has a funil with same tipo, remap to it
+        if (existingByType[srcFunil.tipo]) {
+          funilIdRemap[srcFunil.id] = existingByType[srcFunil.tipo];
+        } else {
+          // Create new funil in target
+          const { id: _srcId, ...funilData } = srcFunil;
+          const { data: inserted, error: funilErr } = await supabaseAdmin
+            .from("funis")
+            .insert({ ...funilData, id_empresa: target_company_id })
+            .select("id")
+            .single();
+
+          if (funilErr) {
+            console.error("Error copying funil:", funilErr);
+          } else if (inserted) {
+            funilIdRemap[srcFunil.id] = inserted.id;
+            results.funis_copied++;
+          }
+        }
+      }
+
+      // Copy etapas for remapped funis (replace existing etapas in target funis)
+      for (const [srcFunilId, targetFunilId] of Object.entries(funilIdRemap)) {
+        const { data: srcEtapas } = await supabaseAdmin
+          .from("etapas_funil")
+          .select("nome, ordem, cor, descricao, meta_dias, probabilidade_fechamento, ativo")
+          .eq("id_funil", Number(srcFunilId))
+          .order("ordem");
+
+        if (srcEtapas && srcEtapas.length > 0) {
+          // Delete existing etapas in target funil (from trigger defaults)
+          await supabaseAdmin
+            .from("etapas_funil")
+            .delete()
+            .eq("id_funil", targetFunilId);
+
+          const newEtapas = srcEtapas.map((e) => ({
+            ...e,
+            id_funil: targetFunilId,
+          }));
+
+          const { data: insertedEtapas, error: etapaErr } = await supabaseAdmin
+            .from("etapas_funil")
+            .insert(newEtapas)
+            .select("id");
+
+          if (etapaErr) {
+            console.error("Error copying etapas:", etapaErr);
+          } else {
+            results.etapas_copied += insertedEtapas?.length ?? 0;
+          }
+        }
+      }
+    }
+
+    // 2. Copy FAQs and their labels
     const { data: sourceFaqs } = await supabaseAdmin
       .from("faqs")
       .select("id, pergunta, resposta, contexto, tipo_faq, tags, observacoes, ativo")
       .eq("id_empresa", source_company_id);
 
-    // We'll need a map from old FAQ id -> new FAQ id for faq_labels
     const faqIdMap: Record<number, number> = {};
 
     if (sourceFaqs && sourceFaqs.length > 0) {
@@ -104,7 +181,6 @@ Deno.serve(async (req) => {
         console.error("Error copying FAQs:", faqErr);
       } else {
         results.faqs_copied = inserted?.length ?? 0;
-        // Build the id map (inserted order matches sourceFaqs order)
         if (inserted) {
           sourceFaqs.forEach((src, idx) => {
             if (inserted[idx]) {
@@ -115,7 +191,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Copy Labels
+    // 3. Copy Labels
     const { data: sourceLabels } = await supabaseAdmin
       .from("labels")
       .select("id, nome, cor, icone, ordem, ativo")
@@ -147,7 +223,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Copy faq_labels (mapping old IDs to new IDs)
+    // 4. Copy faq_labels
     const sourceFaqIds = Object.keys(faqIdMap).map(Number);
     if (sourceFaqIds.length > 0 && Object.keys(labelIdMap).length > 0) {
       const { data: sourceFaqLabels } = await supabaseAdmin
@@ -178,7 +254,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Copy config_empresas_geral
+    // 5. Copy config_empresas_geral
     const { data: sourceConfig } = await supabaseAdmin
       .from("config_empresas_geral")
       .select(
@@ -202,44 +278,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. Copy lista_interesses (with funil_id remapping)
+    // 6. Copy lista_interesses (using funilIdRemap from step 1)
     const { data: sourceInterests } = await supabaseAdmin
       .from("lista_interesses")
       .select("nome, label, palavras_chave, mensagem_resposta, ordem, ativo, funil_id")
       .eq("empresa_id", source_company_id);
 
     if (sourceInterests && sourceInterests.length > 0) {
-      // Build a funil name map: source funil_id -> funil nome
-      const sourceFunilIds = sourceInterests
-        .map((i) => i.funil_id)
-        .filter((id): id is number => id != null);
-
-      let funilIdRemap: Record<number, number> = {};
-
-      if (sourceFunilIds.length > 0) {
-        const { data: sourceFunis } = await supabaseAdmin
-          .from("funis")
-          .select("id, nome")
-          .in("id", sourceFunilIds);
-
-        const { data: targetFunis } = await supabaseAdmin
-          .from("funis")
-          .select("id, nome")
-          .eq("id_empresa", target_company_id)
-          .eq("ativo", true);
-
-        if (sourceFunis && targetFunis) {
-          const targetByNome: Record<string, number> = {};
-          for (const tf of targetFunis) {
-            targetByNome[tf.nome] = tf.id;
-          }
-          for (const sf of sourceFunis) {
-            if (targetByNome[sf.nome] != null) {
-              funilIdRemap[sf.id] = targetByNome[sf.nome];
-            }
-          }
-        }
-      }
+      // Delete existing default interests (created by trigger) to replace with source
+      await supabaseAdmin
+        .from("lista_interesses")
+        .delete()
+        .eq("empresa_id", target_company_id);
 
       const newInterests = sourceInterests.map((i) => ({
         nome: i.nome,
