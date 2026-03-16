@@ -25,6 +25,7 @@ import OnboardingInvalid from "./pages/OnboardingInvalid";
 import OnboardingExpired from "./pages/OnboardingExpired";
 import OnboardingUsed from "./pages/OnboardingUsed";
 import NotFound from "./pages/NotFound";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 
 const queryClient = new QueryClient();
 
