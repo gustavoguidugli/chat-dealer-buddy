@@ -47,7 +47,7 @@ const App = () => (
               <ProtectedRoute><AceitarConvite /></ProtectedRoute>
             } />
             <Route path="/selecionar-empresa" element={
-              <ProtectedRoute><SelectCompany /></ProtectedRoute>
+              <Navigate to="/admin/empresas" replace />
             } />
             <Route path="/home" element={
               <ProtectedRoute><Home /></ProtectedRoute>
