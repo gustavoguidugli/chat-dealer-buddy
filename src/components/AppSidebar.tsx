@@ -228,24 +228,14 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
         </CollapsedSubmenu>
 
         {isSuperAdmin && (
-          <>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button onClick={() => navigate('/admin/empresas')} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
-                  <Building2 className="h-5 w-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Empresas</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button onClick={() => navigate('/selecionar-empresa')} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
-                  <ArrowLeftRight className="h-5 w-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Trocar empresa</TooltipContent>
-            </Tooltip>
-          </>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={() => navigate('/admin/empresas')} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
+                <Building2 className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Painel Admin</TooltipContent>
+          </Tooltip>
         )}
       </nav>
 
