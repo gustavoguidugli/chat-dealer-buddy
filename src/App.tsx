@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
-import SelectCompany from "./pages/SelectCompany";
 import SemEmpresa from "./pages/SemEmpresa";
 import ResetPassword from "./pages/ResetPassword";
 import AceitarConvite from "./pages/AceitarConvite";
