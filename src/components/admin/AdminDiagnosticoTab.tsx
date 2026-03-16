@@ -121,7 +121,7 @@ export function AdminDiagnosticoTab() {
     setFixing(null);
   };
 
-  const Check = () => <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+  const Check = () => <CheckCircle2 className="h-4 w-4 text-primary" />;
   const Cross = () => <XCircle className="h-4 w-4 text-destructive" />;
 
   return (
