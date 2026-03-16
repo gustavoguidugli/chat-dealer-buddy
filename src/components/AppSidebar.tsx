@@ -103,7 +103,7 @@ function CompactNavItem({ to, icon: Icon, label, onClick }: { to: string; icon: 
 
 /* ─── Full sidebar content (expanded) ─── */
 function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
-  const { user, isSuperAdmin, empresaNome, signOut } = useAuth();
+  const { user, isSuperAdmin, empresaNome, signOut, moduloCrm, moduloIA } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');
@@ -141,6 +141,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
         </NavLink>
 
         {/* CRM */}
+        {moduloCrm && (
         <Collapsible defaultOpen={isCrmActive}>
           <CollapsibleTrigger className={cn('flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isCrmActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
             <div className="flex items-center gap-3"><Handshake className="h-5 w-5" /> CRM</div>
@@ -151,10 +152,13 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
             <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} onClick={onNavigate} />
           </CollapsibleContent>
         </Collapsible>
+        )}
 
+        {moduloIA && (
         <NavLink to="/base-conhecimento" onClick={onNavigate} className={({ isActive }) => cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
           <BookOpen className="h-5 w-5" /> Base de conhecimento
         </NavLink>
+        )}
 
         {/* Configurações */}
         <Collapsible defaultOpen={location.pathname.startsWith('/configuracoes') || location.pathname === '/meu-time'}>
@@ -189,7 +193,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
 
 /* ─── Compact sidebar (icons only) ─── */
 function CompactContent({ onExpand }: { onExpand: () => void }) {
-  const { isSuperAdmin, signOut } = useAuth();
+  const { isSuperAdmin, signOut, moduloCrm, moduloIA } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');
@@ -216,12 +220,16 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
       <nav className="flex-1 flex flex-col items-center gap-1 py-3 overflow-y-auto">
         <CompactNavItem to="/home" icon={Home} label="Home" />
 
+        {moduloCrm && (
         <CollapsedSubmenu icon={Handshake} label="CRM" isActive={isCrmActive} defaultTo="/crm">
           <SubmenuLink to="/crm" label="Funil" icon={Target} />
           <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} />
         </CollapsedSubmenu>
+        )}
 
+        {moduloIA && (
         <CompactNavItem to="/base-conhecimento" icon={BookOpen} label="Base de conhecimento" />
+        )}
 
         <CollapsedSubmenu icon={Settings} label="Configurações" isActive={isConfigActive} defaultTo="/meu-time">
           <SubmenuLink to="/meu-time" label="Meu Time" icon={Users} />

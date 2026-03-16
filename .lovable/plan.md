@@ -1,45 +1,112 @@
 
+## Audit — Block 1 ✅ (Completed)
 
-## Plano: Sistema modular de funcionalidades por empresa (IA Agent + CRM)
+1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
+2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
+3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
+4. **`copy-company-config`** — Now copies and remaps `funil_id`
 
-### Conceito
+## Audit — Block 2 ✅ (Completed)
 
-Cada empresa terá dois módulos que podem ser ativados/desativados independentemente:
-- **Agente de IA** → controla acesso a: Triagem, Base de Conhecimento, FAQs, Horários
-- **CRM** → controla acesso a: Funil, Atividades
+1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
 
-Os flags já existem no banco: `config_empresas_geral.crm_is_ativo` e `config_empresas_geral.triagem_is_ativo` (este último será usado como flag do módulo IA).
+### Accepted Architectural Limitations (SDR Tables)
 
-### Mudanças
+The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
 
-**1. `src/contexts/AuthContext.tsx`**
-- Adicionar dois estados: `moduloCrm: boolean` e `moduloIA: boolean`
-- No `fetchUserData`, após obter o `empresaId`, buscar `config_empresas_geral` para ler `crm_is_ativo` e `triagem_is_ativo`
-- Para Super Admin, buscar com base no `empresaId` salvo no localStorage (quando disponível)
-- Expor `moduloCrm` e `moduloIA` no contexto
-- Na troca de empresa (`setEmpresa`), re-fetch os módulos da nova empresa
+- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
+- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
+- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
+- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
+- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
 
-**2. `src/components/AppSidebar.tsx`**
-- Ler `moduloCrm` e `moduloIA` do `useAuth()`
-- Condicionar a renderização do menu CRM a `moduloCrm`
-- Condicionar "Base de conhecimento" a `moduloIA`
-- Aplicar em ambos os modos (expandido e compacto)
+**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
 
-**3. `src/components/ProtectedRoute.tsx`**
-- Ler `moduloCrm` e `moduloIA` do `useAuth()`
-- Rotas `/crm` e `/crm/atividades`: redirecionar para `/home` se `!moduloCrm`
-- Rotas `/base-conhecimento`, `/base-conhecimento/faqs`, `/base-conhecimento/horarios`, `/triagem`: redirecionar para `/home` se `!moduloIA`
-- Super Admins **não são bloqueados** (têm acesso total sempre)
+## Audit — Block 3 ✅ (Completed)
 
-### Mapeamento de rotas por módulo
+### Automação de funis para novas empresas e interesses
 
-| Módulo | Rotas protegidas |
-|--------|-----------------|
-| CRM | `/crm`, `/crm/atividades` |
-| IA | `/triagem`, `/base-conhecimento`, `/base-conhecimento/faqs`, `/base-conhecimento/horarios` |
+1. **Trigger `criar_funis_padrao()`** — Novo trigger `AFTER INSERT ON empresas_geral` que cria automaticamente 4 funis padrão (Triagem, Máquina de Gelo, Purificador, Outros) com suas respectivas etapas. Executa antes de `inserir_interesses_padrao` via nomenclatura alfabética (`a_criar_funis_padrao`).
 
-### Notas técnicas
-- Nenhuma migração SQL necessária — os campos `crm_is_ativo` e `triagem_is_ativo` já existem em `config_empresas_geral`
-- Default: se a empresa não tiver registro em `config_empresas_geral`, ambos os módulos ficam **desativados** (segurança por padrão)
-- O painel admin continua permitindo ativar/desativar CRM via diagnóstico (já implementado)
+2. **`copy-company-config`** — Atualizada para copiar `funis` + `etapas_funil` da empresa template antes dos interesses, com remapeamento correto de IDs. Reutiliza funis criados pelo trigger quando o `tipo` já existe no destino.
 
+3. **`Triagem.tsx` + `InterestModal.tsx`** — Criação automática de funil ao adicionar novo interesse sem funil selecionado. O modal agora oferece opção "Criar funil automaticamente" como padrão, com etapas (Novo, Qualificação, Proposta, Fechamento).
+
+---
+
+## Arquitetura: Empresa ↔ Funil
+
+### Modelo de dados
+
+```text
+empresas_geral (id)
+  └── funis (id_empresa = empresas_geral.id)
+        ├── tipo: 'triagem' | 'maquina_gelo' | 'purificador' | 'outros' | 'custom'
+        └── etapas_funil (id_funil = funis.id)
+
+  └── lista_interesses (empresa_id = empresas_geral.id)
+        └── funil_id → funis.id  (FK direto — mapeia interesse → funil)
+```
+
+Os IDs **não são sincronizados** — cada empresa recebe funis com IDs sequenciais independentes (auto-increment). A vinculação é feita por **foreign key** (`funis.id_empresa` e `lista_interesses.funil_id`), nunca por nome ou convenção.
+
+### Fluxo completo: criação de empresa
+
+```text
+INSERT INTO empresas_geral (nome = 'Nova Empresa')
+  │
+  ├─ Trigger 1: a_criar_funis_padrao()
+  │    Cria 4 funis com etapas:
+  │    ┌──────────────────┬──────────────┬────────────────────────────┐
+  │    │ Funil            │ tipo         │ Etapas                     │
+  │    ├──────────────────┼──────────────┼────────────────────────────┤
+  │    │ Sem interesse    │ triagem      │ Novos, Em atendimento      │
+  │    │ Máquina de Gelo  │ maquina_gelo │ Novo, Qualif., Prop., Fech.│
+  │    │ Purificador      │ purificador  │ Novo, Qualif., Prop., Fech.│
+  │    │ Outros interesses│ outros       │ Novo, Em atendimento       │
+  │    └──────────────────┴──────────────┴────────────────────────────┘
+  │
+  ├─ Trigger 2: inserir_interesses_padrao()
+  │    Cria 3 interesses e vincula ao funil pelo tipo:
+  │    UPDATE lista_interesses SET funil_id = funis.id
+  │      WHERE funis.tipo = lista_interesses.nome
+  │
+  └─ Trigger 3: criar_convite_inicial()
+```
+
+### Fluxo: novo contato WhatsApp → lead
+
+```text
+INSERT INTO contatos_geral (whatsapp, empresa_id)
+  └─ Trigger: trg_criar_lead_apos_contato
+       └─ criar_lead_triagem(whatsapp, empresa_id)
+            ├─ SELECT id FROM funis WHERE tipo='triagem' AND id_empresa=X
+            ├─ SELECT id FROM etapas_funil WHERE id_funil=Y ORDER BY ordem LIMIT 1
+            └─ INSERT INTO leads_crm (id_funil=Y, id_etapa_atual=Z)
+```
+
+### Fluxo: interesse identificado → mover lead
+
+```text
+UPDATE contatos_geral SET interesse = 'maquina_gelo'
+  └─ Trigger: mover_lead_por_interesse()
+       ├─ SELECT funil_id FROM lista_interesses WHERE nome='maquina_gelo' AND empresa_id=X
+       ├─ SELECT id FROM etapas_funil WHERE id_funil=N ORDER BY ordem LIMIT 1
+       └─ UPDATE leads_crm SET id_funil=N, id_etapa_atual=primeira_etapa
+```
+
+### Fluxo: copy-company-config (empresa template)
+
+1. Copia funis da empresa fonte → cria novos na destino (IDs novos)
+2. Monta `funilIdRemap` (ID fonte → ID destino)
+3. Copia interesses e remapeia `funil_id` usando o map
+
+### Resumo
+
+| Pergunta | Resposta |
+|---|---|
+| IDs são iguais entre empresa e funil? | Não. São independentes (auto-increment) |
+| Como se vinculam? | `funis.id_empresa` = FK para `empresas_geral.id` |
+| Como interesse sabe qual funil? | `lista_interesses.funil_id` = FK direto para `funis.id` |
+| Como lead entra no CRM? | `criar_lead_triagem` busca funil com `tipo='triagem'` da empresa |
+| Como lead muda de funil? | `mover_lead_por_interesse` consulta `lista_interesses.funil_id` |
