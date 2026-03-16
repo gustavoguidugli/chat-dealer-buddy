@@ -193,7 +193,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
 
 /* ─── Compact sidebar (icons only) ─── */
 function CompactContent({ onExpand }: { onExpand: () => void }) {
-  const { isSuperAdmin, signOut } = useAuth();
+  const { isSuperAdmin, signOut, moduloCrm, moduloIA } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');
