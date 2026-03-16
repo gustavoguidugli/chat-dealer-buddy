@@ -25,6 +25,7 @@ import OnboardingInvalid from "./pages/OnboardingInvalid";
 import OnboardingExpired from "./pages/OnboardingExpired";
 import OnboardingUsed from "./pages/OnboardingUsed";
 import NotFound from "./pages/NotFound";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ const App = () => (
             <Route path="/configuracoes/perfil" element={
               <ProtectedRoute><ConfigPerfil /></ProtectedRoute>
             } />
+            <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
