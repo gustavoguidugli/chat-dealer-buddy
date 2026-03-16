@@ -1,32 +1,23 @@
 
+## Audit — Block 1 ✅ (Completed)
 
-## Diagnóstico: CRM da empresa 2 não recebe leads automaticamente
+1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
+2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
+3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
+4. **`copy-company-config`** — Now copies and remaps `funil_id`
 
-### Problema encontrado
+## Audit — Block 2 ✅ (Completed)
 
-A empresa 2 **não possui um funil de triagem** (`tipo = 'triagem'`). O trigger `trigger_criar_lead_apos_contato` chama a função `criar_lead_triagem`, que busca um funil com `tipo = 'triagem'` para a empresa. Como não existe, a criação do lead falha silenciosamente.
+1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
 
-**Empresa 1**: tem funil id=3, `tipo='triagem'` -- funciona.
-**Empresa 2**: funil id=4 (`Sem interesse`) tem `tipo='maquina_gelo'` em vez de `tipo='triagem'` -- falha.
+### Accepted Architectural Limitations (SDR Tables)
 
-Além disso, 3 dos 4 interesses da empresa 2 estão com `ativo = false`, o que impede o roteamento automático via o trigger `mover_lead_por_interesse`.
+The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
 
-### Solução
+- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
+- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
+- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
+- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
+- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
 
-Duas correções de dados (sem mudança de código):
-
-1. **Corrigir o tipo do funil "Sem interesse" da empresa 2** para `triagem`:
-   - `UPDATE funis SET tipo = 'triagem' WHERE id = 4 AND id_empresa = 2;`
-
-2. **Reativar os interesses desativados da empresa 2**:
-   - `UPDATE lista_interesses SET ativo = true WHERE empresa_id = 2 AND ativo = false;`
-
-### Por que isso resolve
-
-- Com o funil tipo `triagem` existente, novos contatos WhatsApp criam leads automaticamente na triagem.
-- Com os interesses ativos, o trigger `mover_lead_por_interesse` consegue rotear o lead para o funil correto (Máquina de gelo, Purificador, Outros) quando o interesse é identificado.
-
-### Observação importante
-
-Este mesmo problema pode acontecer com **qualquer nova empresa** que não tenha o funil de triagem configurado corretamente. Seria recomendável verificar que o trigger `inserir_interesses_padrao` e a lógica de criação de empresa também criam o funil de triagem com `tipo = 'triagem'`.
-
+**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
