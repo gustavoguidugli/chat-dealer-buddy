@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
-import SelectCompany from "./pages/SelectCompany";
 import SemEmpresa from "./pages/SemEmpresa";
 import ResetPassword from "./pages/ResetPassword";
 import AceitarConvite from "./pages/AceitarConvite";
@@ -48,7 +47,7 @@ const App = () => (
               <ProtectedRoute><AceitarConvite /></ProtectedRoute>
             } />
             <Route path="/selecionar-empresa" element={
-              <ProtectedRoute><SelectCompany /></ProtectedRoute>
+              <Navigate to="/admin/empresas" replace />
             } />
             <Route path="/home" element={
               <ProtectedRoute><Home /></ProtectedRoute>
