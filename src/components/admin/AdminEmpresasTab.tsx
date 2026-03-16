@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +32,8 @@ interface Empresa {
 
 export function AdminEmpresasTab() {
   const { toast } = useToast();
+  const { setEmpresa } = useAuth();
+  const navigate = useNavigate();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -145,7 +149,10 @@ export function AdminEmpresasTab() {
                 <Building2 className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm text-foreground truncate">{empresa.nome || 'Sem nome'}</p>
+                <p
+                  className="font-medium text-sm text-primary cursor-pointer hover:underline truncate"
+                  onClick={() => { setEmpresa(empresa.id, empresa.nome ?? ''); navigate('/crm'); }}
+                >{empresa.nome || 'Sem nome'}</p>
                 <p className="text-xs text-muted-foreground truncate">{empresa.numero_automacao || 'Sem número'}</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
