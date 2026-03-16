@@ -48,7 +48,7 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, nextOrd
   const handleSave = async () => {
     if (!form.nome.trim()) return setError('Nome é obrigatório');
     if (!form.label.trim()) return setError('Label é obrigatório');
-    if (!form.funil_id) return setError('Selecione o funil de destino');
+    // funil_id is optional — if not selected, Triagem will auto-create one
     if (form.palavras_chave.length === 0) return setError('Adicione pelo menos uma palavra-chave');
     if (!form.mensagem_resposta.trim()) return setError('Mensagem é obrigatória');
 
@@ -96,13 +96,16 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, nextOrd
           <div className="space-y-2">
             <Label className="font-semibold">Funil de destino</Label>
             <Select
-              value={form.funil_id ? String(form.funil_id) : ''}
-              onValueChange={(val) => setForm(f => ({ ...f, funil_id: Number(val) }))}
+              value={form.funil_id ? String(form.funil_id) : 'auto'}
+              onValueChange={(val) => setForm(f => ({ ...f, funil_id: val === 'auto' ? null : Number(val) }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o funil..." />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="auto">
+                  🔄 Criar funil automaticamente
+                </SelectItem>
                 {funis.map((funil) => (
                   <SelectItem key={funil.id} value={String(funil.id)}>
                     {funil.nome}
@@ -110,7 +113,11 @@ export function InterestModal({ open, onOpenChange, onSave, initialData, nextOrd
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">O lead será direcionado automaticamente para este funil ao escolher esse interesse.</p>
+            <p className="text-xs text-muted-foreground">
+              {form.funil_id
+                ? 'O lead será direcionado automaticamente para este funil ao escolher esse interesse.'
+                : 'Um novo funil será criado automaticamente com o nome do interesse e etapas padrão.'}
+            </p>
           </div>
 
           <div className="space-y-2">

@@ -116,11 +116,36 @@ export default function Triagem() {
   };
 
   const handleSaveInterest = async (formData: InterestFormData) => {
+    let funilId = formData.funil_id;
+
+    // Auto-create funnel if none selected (new interest only)
+    if (!funilId && !editingInterest && empresaId) {
+      const { data: newFunil, error: funilErr } = await supabase.from('funis').insert({
+        id_empresa: empresaId,
+        nome: formData.label,
+        tipo: 'custom',
+        ordem: 99,
+      }).select('id').single();
+
+      if (funilErr) throw new Error('Erro ao criar funil automático');
+
+      // Create default stages
+      const etapas = [
+        { id_funil: newFunil.id, nome: 'Novo', ordem: 1, cor: '#3B82F6' },
+        { id_funil: newFunil.id, nome: 'Qualificação', ordem: 2, cor: '#F59E0B' },
+        { id_funil: newFunil.id, nome: 'Proposta', ordem: 3, cor: '#8B5CF6' },
+        { id_funil: newFunil.id, nome: 'Fechamento', ordem: 4, cor: '#10B981' },
+      ];
+      await supabase.from('etapas_funil').insert(etapas);
+
+      funilId = newFunil.id;
+    }
+
     if (editingInterest) {
       const { error } = await supabase.from('lista_interesses').update({
         nome: formData.nome, label: formData.label, palavras_chave: formData.palavras_chave,
         mensagem_resposta: formData.mensagem_resposta, ordem: formData.ordem,
-        funil_id: formData.funil_id,
+        funil_id: funilId,
       }).eq('id', editingInterest.id);
       if (error) throw new Error('Erro ao atualizar interesse');
       toast({ title: 'Interesse atualizado!' });
@@ -128,7 +153,7 @@ export default function Triagem() {
       const { error } = await supabase.from('lista_interesses').insert({
         empresa_id: empresaId!, nome: formData.nome, label: formData.label,
         palavras_chave: formData.palavras_chave, mensagem_resposta: formData.mensagem_resposta,
-        ordem: formData.ordem, ativo: true, funil_id: formData.funil_id,
+        ordem: formData.ordem, ativo: true, funil_id: funilId,
       });
       if (error) {
         if (error.message?.includes('unique') || error.message?.includes('duplicate'))
