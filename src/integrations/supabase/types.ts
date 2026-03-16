@@ -2732,45 +2732,6 @@ export type Database = {
           },
         ]
       }
-      user_empresa_geral: {
-        Row: {
-          convite_id: string | null
-          created_at: string | null
-          empresa_id: number | null
-          role: string | null
-          user_id: string | null
-        }
-        Insert: {
-          convite_id?: string | null
-          created_at?: string | null
-          empresa_id?: number | null
-          role?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          convite_id?: string | null
-          created_at?: string | null
-          empresa_id?: number | null
-          role?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_empresa_convite_id_fkey"
-            columns: ["convite_id"]
-            isOneToOne: false
-            referencedRelation: "convites"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_empresa_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas_geral"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Functions: {
       aceitar_convite:
