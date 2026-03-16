@@ -141,6 +141,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
         </NavLink>
 
         {/* CRM */}
+        {moduloCrm && (
         <Collapsible defaultOpen={isCrmActive}>
           <CollapsibleTrigger className={cn('flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isCrmActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
             <div className="flex items-center gap-3"><Handshake className="h-5 w-5" /> CRM</div>
@@ -151,10 +152,13 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
             <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} onClick={onNavigate} />
           </CollapsibleContent>
         </Collapsible>
+        )}
 
+        {moduloIA && (
         <NavLink to="/base-conhecimento" onClick={onNavigate} className={({ isActive }) => cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors', isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground')}>
           <BookOpen className="h-5 w-5" /> Base de conhecimento
         </NavLink>
+        )}
 
         {/* Configurações */}
         <Collapsible defaultOpen={location.pathname.startsWith('/configuracoes') || location.pathname === '/meu-time'}>
