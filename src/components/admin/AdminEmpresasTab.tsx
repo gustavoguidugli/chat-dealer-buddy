@@ -149,7 +149,10 @@ export function AdminEmpresasTab() {
                 <Building2 className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm text-foreground truncate">{empresa.nome || 'Sem nome'}</p>
+                <p
+                  className="font-medium text-sm text-primary cursor-pointer hover:underline truncate"
+                  onClick={() => { setEmpresa(empresa.id, empresa.nome ?? ''); navigate('/crm'); }}
+                >{empresa.nome || 'Sem nome'}</p>
                 <p className="text-xs text-muted-foreground truncate">{empresa.numero_automacao || 'Sem número'}</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
