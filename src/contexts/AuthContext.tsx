@@ -15,6 +15,8 @@ interface AuthContextType {
   empresaId: number | null;
   empresaNome: string | null;
   semEmpresa: boolean;
+  moduloCrm: boolean;
+  moduloIA: boolean;
   setEmpresa: (id: number, nome: string) => void;
   loading: boolean;
   signOut: () => Promise<void>;
@@ -23,6 +25,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function fetchModulos(empresaId: number): Promise<{ crm: boolean; ia: boolean }> {
+  const { data } = await supabase
+    .from('config_empresas_geral')
+    .select('crm_is_ativo, triagem_is_ativo')
+    .eq('id_empresa', empresaId)
+    .maybeSingle();
+
+  return {
+    crm: data?.crm_is_ativo ?? false,
+    ia: data?.triagem_is_ativo ?? false,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -30,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [empresaNome, setEmpresaNome] = useState<string | null>(null);
   const [semEmpresa, setSemEmpresa] = useState(false);
+  const [moduloCrm, setModuloCrm] = useState(false);
+  const [moduloIA, setModuloIA] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,6 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setEmpresaId(null);
           setEmpresaNome(null);
           setSemEmpresa(false);
+          setModuloCrm(false);
+          setModuloIA(false);
           setLoading(false);
         }
       }
@@ -54,17 +73,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const superAdmin = SUPER_ADMIN_EMAILS.includes(currentUser.email ?? '');
 
       if (superAdmin) {
-        // Super admins are always company admins
         setIsCompanyAdmin(true);
         const savedId = localStorage.getItem('eco_empresa_id');
         const savedNome = localStorage.getItem('eco_empresa_nome');
         if (savedId) {
-          setEmpresaId(Number(savedId));
+          const id = Number(savedId);
+          setEmpresaId(id);
           setEmpresaNome(savedNome);
+          const mods = await fetchModulos(id);
+          setModuloCrm(mods.crm);
+          setModuloIA(mods.ia);
         }
         setSemEmpresa(false);
       } else {
-        // Regular users: get empresa + role from user_empresa
         const { data: mapping } = await supabase
           .from('user_empresa')
           .select('empresa_id, role')
@@ -75,19 +96,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setEmpresaId(mapping.empresa_id);
           setSemEmpresa(false);
 
-          // Determine admin from role
           const role = mapping.role ?? 'member';
           setIsCompanyAdmin(role === 'admin' || role === 'super_admin');
 
-          const { data: emp } = await supabase
-            .from('empresas_geral')
-            .select('nome')
-            .eq('id', mapping.empresa_id)
-            .single();
+          const [{ data: emp }, mods] = await Promise.all([
+            supabase.from('empresas_geral').select('nome').eq('id', mapping.empresa_id).single(),
+            fetchModulos(mapping.empresa_id),
+          ]);
           setEmpresaNome(emp?.nome ?? null);
+          setModuloCrm(mods.crm);
+          setModuloIA(mods.ia);
         } else {
           setIsCompanyAdmin(false);
           setSemEmpresa(true);
+          setModuloCrm(false);
+          setModuloIA(false);
         }
       }
     } catch (err) {
@@ -110,12 +133,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchUserData]);
 
-  const setEmpresa = (id: number, nome: string) => {
+  const setEmpresa = async (id: number, nome: string) => {
     setEmpresaId(id);
     setEmpresaNome(nome);
     setSemEmpresa(false);
     localStorage.setItem('eco_empresa_id', String(id));
     localStorage.setItem('eco_empresa_nome', nome);
+    const mods = await fetchModulos(id);
+    setModuloCrm(mods.crm);
+    setModuloIA(mods.ia);
   };
 
   const handleSignOut = async () => {
@@ -128,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, session, isCompanyAdmin, isSuperAdmin: SUPER_ADMIN_EMAILS.includes(user?.email ?? ''),
       empresaId, empresaNome, semEmpresa,
+      moduloCrm, moduloIA,
       setEmpresa, loading, signOut: handleSignOut,
       refreshUserData,
     }}>

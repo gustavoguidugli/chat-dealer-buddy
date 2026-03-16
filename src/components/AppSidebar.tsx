@@ -103,7 +103,7 @@ function CompactNavItem({ to, icon: Icon, label, onClick }: { to: string; icon: 
 
 /* ─── Full sidebar content (expanded) ─── */
 function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
-  const { user, isSuperAdmin, empresaNome, signOut } = useAuth();
+  const { user, isSuperAdmin, empresaNome, signOut, moduloCrm, moduloIA } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isCrmActive = location.pathname.startsWith('/crm');
