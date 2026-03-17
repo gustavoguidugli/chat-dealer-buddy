@@ -89,11 +89,7 @@ export function LeadCardComponent({ lead, isDragging, isOverlay, listaInteresses
     setSavingInteresse(true);
 
     try {
-      // 1. Save to campos_extras
-      const newExtras = { ...(lead.campos_extras || {}), interesse: val };
-      await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
-
-      // 2. Historico
+      // 1. Historico
       const previousValue = currentInteresse;
       if (previousValue !== val) {
         const newLabel = listaInteresses?.find(i => i.nome === val)?.label || val;
@@ -108,7 +104,8 @@ export function LeadCardComponent({ lead, isDragging, isOverlay, listaInteresses
         });
       }
 
-      // 3. Sync to contatos_geral
+      // 2. Sync to contatos_geral — this triggers mover_lead_por_interesse() in DB
+      // which handles moving the lead to the correct funnel automatically
       try {
         let contatoGeralId = lead.id_contato_geral;
         if (!contatoGeralId && lead.whatsapp) {
@@ -129,33 +126,9 @@ export function LeadCardComponent({ lead, isDragging, isOverlay, listaInteresses
         console.warn('Falha ao sincronizar interesse com contatos_geral:', e);
       }
 
-      // 4. Move to matching funnel via lista_interesses.funil_id
-      try {
-        const selectedInteresse = listaInteresses?.find(i => i.nome === val);
-        const targetFunilId = selectedInteresse?.funil_id;
-
-        if (targetFunilId && targetFunilId !== lead.id_funil) {
-          const { data: firstEtapa } = await supabase
-            .from('etapas_funil')
-            .select('id')
-            .eq('id_funil', targetFunilId)
-            .eq('ativo', true)
-            .order('ordem')
-            .limit(1)
-            .maybeSingle();
-
-          if (firstEtapa) {
-            await supabase.from('leads_crm').update({
-              id_funil: targetFunilId,
-              id_etapa_atual: firstEtapa.id,
-              data_entrada_etapa_atual: new Date().toISOString(),
-            }).eq('id', lead.id);
-            toast({ title: 'Lead movido para o funil correspondente' });
-          }
-        }
-      } catch (e) {
-        console.warn('Falha ao mover lead para funil:', e);
-      }
+      // 3. Save to campos_extras (informational, after trigger has moved the lead)
+      const newExtras = { ...(lead.campos_extras || {}), interesse: val };
+      await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
 
       onLeadChanged?.();
     } catch (e) {
