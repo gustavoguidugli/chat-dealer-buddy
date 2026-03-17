@@ -511,7 +511,7 @@ Deno.serve(async (req) => {
           console.log("[complete_onboarding] New user created:", userId);
         }
 
-        // 2. Accept invite via RPC
+        console.log("[complete_onboarding] Step 2: Accepting invite...");
         const { data: acceptResult, error: acceptError } = await adminClient.rpc("aceitar_convite", {
           p_convite_id: convite_id,
           p_user_id: userId,
