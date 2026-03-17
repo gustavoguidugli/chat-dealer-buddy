@@ -35,14 +35,30 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
 
       if (error) throw error;
 
-      // 2. Create invite with email if provided
+      // 2. Create invite with email if provided and send email via Resend
       if (emailConvite.trim()) {
-        await supabase.from('convites').insert({
+        const { data: conviteData } = await supabase.from('convites').insert({
           empresa_id: empresa.id,
-          tipo: 'link',
+          tipo: 'email',
           max_usos: 1,
           email_destino: emailConvite.trim().toLowerCase(),
-        });
+          expira_em: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+        }).select('id').single();
+
+        // Send branded invitation email via Resend
+        if (conviteData?.id) {
+          try {
+            await supabase.functions.invoke('send-invitation-email', {
+              body: {
+                convite_id: conviteData.id,
+                email_destino: emailConvite.trim().toLowerCase(),
+                empresa_nome: nome.trim(),
+              },
+            });
+          } catch (emailErr) {
+            console.error('Failed to send invitation email:', emailErr);
+          }
+        }
       }
 
       // 3. Create additional code-type invite
