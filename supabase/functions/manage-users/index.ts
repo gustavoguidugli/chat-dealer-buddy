@@ -536,27 +536,44 @@ Deno.serve(async (req) => {
         const finalRole = acceptData.role || role || "member";
         console.log("[complete_onboarding] Invite accepted. empresa_id:", finalEmpresaId, "role:", finalRole);
 
+        // Map role for legacy tables that use 'user' instead of 'member'
+        const legacyRole = finalRole === "member" ? "user" : finalRole;
+
         // 3. Upsert usuarios
         console.log("[complete_onboarding] Step 3: Upserting usuarios...");
-        await adminClient.from("usuarios").upsert({
+        const { error: usuariosErr } = await adminClient.from("usuarios").upsert({
           uuid: userId,
           email,
           primeiro_nome,
           sobrenome,
           nome: `${primeiro_nome} ${sobrenome}`.trim(),
           id_empresa: finalEmpresaId,
-          nivel_acesso: finalRole,
+          nivel_acesso: legacyRole,
           onboarding_completed: true,
         }, { onConflict: "uuid" });
+        if (usuariosErr) {
+          console.error("[complete_onboarding] Step 3 failed:", usuariosErr.message);
+          return new Response(JSON.stringify({ error: "Erro ao salvar perfil: " + usuariosErr.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
         // 4. Insert usuario_time
         console.log("[complete_onboarding] Step 4: Inserting usuario_time...");
-        await adminClient.from("usuario_time").insert({
+        const { error: timeErr } = await adminClient.from("usuario_time").insert({
           id_usuario: userId,
           id_empresa: finalEmpresaId,
-          role: finalRole,
+          role: legacyRole,
           status_membro: "active",
         });
+        if (timeErr) {
+          console.error("[complete_onboarding] Step 4 failed:", timeErr.message);
+          return new Response(JSON.stringify({ error: "Erro ao vincular ao time: " + timeErr.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
         // 5. Update convite status
         console.log("[complete_onboarding] Step 5: Updating convite status...");
