@@ -172,17 +172,16 @@ export function AdminDiagnosticoTab() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {!row.crmAtivo && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => ativarCrm(row.id)}
-                        disabled={fixing === row.id}
-                        className="text-xs"
-                      >
-                        <Wrench className="h-3 w-3 mr-1" /> Ativar CRM
-                      </Button>
-                    )}
+                    <Button
+                      variant={row.crmAtivo ? 'ghost' : 'ghost'}
+                      size="sm"
+                      onClick={() => toggleCrm(row.id, row.crmAtivo)}
+                      disabled={fixing === row.id}
+                      className={`text-xs ${row.crmAtivo ? 'text-destructive hover:text-destructive' : ''}`}
+                    >
+                      <Wrench className="h-3 w-3 mr-1" />
+                      {row.crmAtivo ? 'Desativar CRM' : 'Ativar CRM'}
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
