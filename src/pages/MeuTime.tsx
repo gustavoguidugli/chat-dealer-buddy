@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { MoreHorizontal, UserPlus, Shield, ShieldAlert, RefreshCw, XCircle, Eye, RotateCcw, Link2 } from 'lucide-react';
+import { MoreHorizontal, UserPlus, Shield, ShieldAlert, RefreshCw, XCircle, Eye, RotateCcw, Link2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { InviteTeamModal } from '@/components/InviteTeamModal';
@@ -53,6 +54,8 @@ const conviteStatusColor: Record<string, string> = {
   canceled: 'bg-destructive/20 text-destructive border-destructive/30',
 };
 
+const COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes
+
 export default function MeuTime() {
   const { user, empresaId, empresaNome, isCompanyAdmin, isSuperAdmin } = useAuth();
   const { toast } = useToast();
@@ -64,6 +67,8 @@ export default function MeuTime() {
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [newRole, setNewRole] = useState('member');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'cancel' | 'resend'; convite: Convite } | null>(null);
 
   const fetchMembers = useCallback(async () => {
     if (!empresaId) return;
@@ -117,10 +122,25 @@ export default function MeuTime() {
     return m.nome ?? m.email ?? '—';
   };
 
+  // Check cooldown for a given email
+  const checkCooldown = (email: string): number => {
+    const emailLower = email.toLowerCase();
+    const allForEmail = convites.filter(c => c.email_destino?.toLowerCase() === emailLower);
+    if (allForEmail.length === 0) return 0;
+    const mostRecent = allForEmail.reduce((latest, c) => {
+      const t = new Date(c.created_at).getTime();
+      return t > latest ? t : latest;
+    }, 0);
+    const elapsed = Date.now() - mostRecent;
+    if (elapsed < COOLDOWN_MS) {
+      return Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+    }
+    return 0;
+  };
+
   // Member actions
   const handleChangeRole = async () => {
     if (!selectedMember || !empresaId) return;
-    // Sync role in user_empresa (the authoritative table for RLS)
     const { error: rpcError } = await supabase.rpc('update_user_role', {
       p_user_id: selectedMember.id_usuario,
       p_empresa_id: empresaId,
@@ -130,7 +150,6 @@ export default function MeuTime() {
       toast({ title: 'Erro ao alterar permissão', description: rpcError.message, variant: 'destructive' });
       return;
     }
-    // Also sync usuario_time for display consistency
     await supabase.from('usuario_time').update({ role: newRole }).eq('id', selectedMember.id);
     await logAudit('role_changed', 'usuario_time', String(selectedMember.id), { new_role: newRole });
     toast({ title: 'Permissão alterada com sucesso' });
@@ -159,57 +178,89 @@ export default function MeuTime() {
     fetchMembers();
   };
 
-  // Convite actions
+  // Convite actions with confirmation
   const handleCancelConvite = async (c: Convite) => {
-    await supabase.from('convites').update({ status_convite: 'canceled', canceled_at: new Date().toISOString() }).eq('id', c.id);
-    await logAudit('invite_canceled', 'convites', c.id);
-    toast({ title: 'Convite cancelado' });
-    fetchConvites();
+    setActionLoading(c.id);
+    try {
+      await supabase.from('convites').update({ status_convite: 'canceled', canceled_at: new Date().toISOString() }).eq('id', c.id);
+      await logAudit('invite_canceled', 'convites', c.id);
+      toast({ title: 'Convite cancelado' });
+      fetchConvites();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleResendConvite = async (c: Convite) => {
     if (!empresaId || !user) return;
 
-    // Cancel the old invite
-    await supabase.from('convites').update({
-      status_convite: 'canceled',
-      canceled_at: new Date().toISOString(),
-    }).eq('id', c.id);
-
-    // Create a new invite
-    const newExpiry = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
-    const { data: newConvite, error } = await supabase.from('convites').insert({
-      empresa_id: empresaId,
-      email_destino: c.email_destino,
-      role: c.role,
-      tipo: 'email',
-      expira_em: newExpiry,
-      criado_por: user.id,
-      status_convite: 'pending',
-      ativo: true,
-      max_usos: 1,
-    }).select('id').single();
-
-    if (error || !newConvite) {
-      toast({ title: 'Erro ao reenviar convite', variant: 'destructive' });
+    // Check cooldown
+    const waitSeconds = checkCooldown(c.email_destino);
+    if (waitSeconds > 0) {
+      toast({
+        title: 'Aguarde para reenviar',
+        description: `Aguarde ${waitSeconds} segundos antes de reenviar para este e-mail.`,
+        variant: 'destructive',
+      });
       return;
     }
 
-    // Send email
+    setActionLoading(c.id);
     try {
-      await supabase.functions.invoke('send-invitation-email', {
-        body: {
-          convite_id: newConvite.id,
-          email_destino: c.email_destino,
-          empresa_nome: empresaNome ?? 'Eco Ice',
-          role: c.role,
-        },
-      });
-    } catch { /* ignore */ }
+      // Cancel the old invite
+      await supabase.from('convites').update({
+        status_convite: 'canceled',
+        canceled_at: new Date().toISOString(),
+      }).eq('id', c.id);
 
-    await logAudit('invite_resent', 'convites', newConvite.id);
-    toast({ title: 'Convite reenviado' });
-    fetchConvites();
+      // Create a new invite
+      const newExpiry = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+      const { data: newConvite, error } = await supabase.from('convites').insert({
+        empresa_id: empresaId,
+        email_destino: c.email_destino,
+        role: c.role,
+        tipo: 'email',
+        expira_em: newExpiry,
+        criado_por: user.id,
+        status_convite: 'pending',
+        ativo: true,
+        max_usos: 1,
+      }).select('id').single();
+
+      if (error || !newConvite) {
+        toast({ title: 'Erro ao reenviar convite', variant: 'destructive' });
+        return;
+      }
+
+      // Send email
+      try {
+        await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            convite_id: newConvite.id,
+            email_destino: c.email_destino,
+            empresa_nome: empresaNome ?? 'Eco Ice',
+            role: c.role,
+          },
+        });
+      } catch { /* ignore */ }
+
+      await logAudit('invite_resent', 'convites', newConvite.id);
+      toast({ title: 'Convite reenviado' });
+      fetchConvites();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const executeConfirmAction = async () => {
+    if (!confirmAction) return;
+    const { type, convite } = confirmAction;
+    setConfirmAction(null);
+    if (type === 'cancel') {
+      await handleCancelConvite(convite);
+    } else {
+      await handleResendConvite(convite);
+    }
   };
 
   return (
@@ -336,17 +387,29 @@ export default function MeuTime() {
                             }}>
                               <Link2 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Reenviar" onClick={() => handleResendConvite(c)}>
-                              <RefreshCw className="h-4 w-4" />
+                            <Button
+                              variant="ghost" size="icon" className="h-8 w-8" title="Reenviar"
+                              disabled={actionLoading === c.id}
+                              onClick={() => setConfirmAction({ type: 'resend', convite: c })}
+                            >
+                              {actionLoading === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Cancelar" onClick={() => handleCancelConvite(c)}>
+                            <Button
+                              variant="ghost" size="icon" className="h-8 w-8" title="Cancelar"
+                              disabled={actionLoading === c.id}
+                              onClick={() => setConfirmAction({ type: 'cancel', convite: c })}
+                            >
                               <XCircle className="h-4 w-4" />
                             </Button>
                           </div>
                         )}
                         {c.status_convite === 'expired' && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Reenviar" onClick={() => handleResendConvite(c)}>
-                            <RefreshCw className="h-4 w-4" />
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8" title="Reenviar"
+                            disabled={actionLoading === c.id}
+                            onClick={() => setConfirmAction({ type: 'resend', convite: c })}
+                          >
+                            {actionLoading === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                           </Button>
                         )}
                         {c.status_convite === 'accepted' && (
@@ -355,8 +418,12 @@ export default function MeuTime() {
                           </Button>
                         )}
                         {c.status_convite === 'canceled' && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Recriar" onClick={() => handleResendConvite(c)}>
-                            <RotateCcw className="h-4 w-4" />
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8" title="Recriar"
+                            disabled={actionLoading === c.id}
+                            onClick={() => setConfirmAction({ type: 'resend', convite: c })}
+                          >
+                            {actionLoading === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
                           </Button>
                         )}
                       </TableCell>
@@ -387,6 +454,29 @@ export default function MeuTime() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Confirmation AlertDialog for cancel/resend */}
+        <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmAction?.type === 'cancel' ? 'Cancelar convite' : 'Reenviar convite'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmAction?.type === 'cancel'
+                  ? `Tem certeza que deseja cancelar o convite para ${confirmAction?.convite.email_destino}? Esta ação não pode ser desfeita.`
+                  : `Deseja reenviar o convite para ${confirmAction?.convite.email_destino}? Um novo e-mail será enviado com um link atualizado.`
+                }
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Não, voltar</AlertDialogCancel>
+              <AlertDialogAction onClick={executeConfirmAction}>
+                {confirmAction?.type === 'cancel' ? 'Sim, cancelar' : 'Sim, reenviar'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <InviteTeamModal
           open={inviteModalOpen}

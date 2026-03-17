@@ -21,6 +21,7 @@ interface InviteTeamModalProps {
 }
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes
 
 export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamModalProps) {
   const { user, empresaId, empresaNome } = useAuth();
@@ -29,21 +30,44 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
   const [sending, setSending] = useState(false);
   const [existingMembers, setExistingMembers] = useState<string[]>([]);
   const [pendingInvites, setPendingInvites] = useState<string[]>([]);
+  const [recentInvites, setRecentInvites] = useState<Record<string, number>>({}); // email -> timestamp
 
   useEffect(() => {
     if (!open || !empresaId) return;
     setRows([{ email: '', role: 'member', error: '' }]);
 
-    // Load existing members and pending invites for validation
+    // Load existing members, pending invites, and recent invite timestamps
     (async () => {
-      const [membersRes, invitesRes] = await Promise.all([
+      const twoMinAgo = new Date(Date.now() - COOLDOWN_MS).toISOString();
+      const [membersRes, invitesRes, recentRes] = await Promise.all([
         supabase.rpc('get_team_members', { p_empresa_id: empresaId }),
         supabase.from('convites').select('email_destino').eq('empresa_id', empresaId).eq('status_convite', 'pending'),
+        supabase.from('convites').select('email_destino, created_at').eq('empresa_id', empresaId).gte('created_at', twoMinAgo).order('created_at', { ascending: false }),
       ]);
       setExistingMembers((membersRes.data ?? []).map((m: any) => m.email?.toLowerCase()).filter(Boolean));
       setPendingInvites((invitesRes.data ?? []).map((c: any) => c.email_destino?.toLowerCase()).filter(Boolean));
+      
+      // Build map of most recent invite per email
+      const recent: Record<string, number> = {};
+      for (const c of (recentRes.data ?? []) as any[]) {
+        const email = c.email_destino?.toLowerCase();
+        if (email && !recent[email]) {
+          recent[email] = new Date(c.created_at).getTime();
+        }
+      }
+      setRecentInvites(recent);
     })();
   }, [open, empresaId]);
+
+  const getCooldownSeconds = (email: string): number => {
+    const ts = recentInvites[email.toLowerCase()];
+    if (!ts) return 0;
+    const elapsed = Date.now() - ts;
+    if (elapsed < COOLDOWN_MS) {
+      return Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+    }
+    return 0;
+  };
 
   const validate = (idx: number, allRows: InviteRow[]): string => {
     const email = allRows[idx].email.trim().toLowerCase();
@@ -53,6 +77,8 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
     if (dupes.length > 0) return 'E-mail duplicado';
     if (existingMembers.includes(email)) return 'Já é membro do time';
     if (pendingInvites.includes(email)) return 'Já tem um convite pendente';
+    const cooldown = getCooldownSeconds(email);
+    if (cooldown > 0) return `Aguarde ${cooldown}s para reenviar`;
     return '';
   };
 
@@ -60,7 +86,6 @@ export function InviteTeamModal({ open, onOpenChange, onSuccess }: InviteTeamMod
     setRows(prev => {
       const updated = [...prev];
       updated[idx] = { ...updated[idx], [field]: value };
-      // Revalidate all rows on email change
       if (field === 'email') {
         return updated.map((r, i) => ({ ...r, error: validate(i, updated) }));
       }
