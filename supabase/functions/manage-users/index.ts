@@ -577,25 +577,28 @@ Deno.serve(async (req) => {
 
         // 5. Update convite status
         console.log("[complete_onboarding] Step 5: Updating convite status...");
-        await adminClient.from("convites").update({
+        const { error: conviteErr } = await adminClient.from("convites").update({
           status_convite: "accepted",
           accepted_at: new Date().toISOString(),
           accepted_by_user_id: userId,
         }).eq("id", convite_id);
+        if (conviteErr) console.error("[complete_onboarding] Step 5 warning:", conviteErr.message);
 
         // 6. Upsert user_empresa_geral
-        await adminClient.from("user_empresa_geral").upsert({
+        const { error: ueGeralErr } = await adminClient.from("user_empresa_geral").upsert({
           user_id: userId,
           empresa_id: finalEmpresaId,
         }, { onConflict: "user_id" });
+        if (ueGeralErr) console.error("[complete_onboarding] Step 6 warning:", ueGeralErr.message);
 
         // 7. Audit log
-        await adminClient.from("audit_logs").insert({
+        const { error: auditErr } = await adminClient.from("audit_logs").insert({
           actor_user_id: userId,
           action: "onboarding_completed",
           entity_type: "convites",
           entity_id: convite_id,
         });
+        if (auditErr) console.error("[complete_onboarding] Step 7 warning:", auditErr.message);
 
         console.log("[complete_onboarding] SUCCESS — user:", userId, "empresa:", finalEmpresaId);
         return new Response(JSON.stringify({ success: true, user_id: userId, empresa_id: finalEmpresaId }), {
