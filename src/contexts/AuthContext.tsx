@@ -76,21 +76,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setSemEmpresa(false);
       } else {
-        const { data: mapping, error } = await supabase
+        const { data: mappings, error } = await supabase
           .from('user_empresa')
           .select('empresa_id, role')
-          .eq('user_id', currentUser.id)
-          .maybeSingle();
+          .eq('user_id', currentUser.id);
 
         if (error) {
           console.error('Error fetching user_empresa:', error);
-          // RLS or network error — don't mark as semEmpresa yet, stay loading
+          setLoading(false);
           return;
         }
 
-        if (mapping?.empresa_id) {
+        if (mappings && mappings.length > 0) {
+          // If user has a saved preference and it's still valid, use it
+          const savedId = localStorage.getItem('eco_empresa_id');
+          const preferred = savedId
+            ? mappings.find((m) => m.empresa_id === Number(savedId))
+            : null;
+          const mapping = preferred ?? mappings[0];
+
           setEmpresaId(mapping.empresa_id);
           setSemEmpresa(false);
+          localStorage.setItem('eco_empresa_id', String(mapping.empresa_id));
 
           const role = mapping.role ?? 'member';
           setIsCompanyAdmin(role === 'admin' || role === 'super_admin');
@@ -100,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             fetchModulos(mapping.empresa_id),
           ]);
           setEmpresaNome(emp?.nome ?? null);
+          localStorage.setItem('eco_empresa_nome', emp?.nome ?? '');
           setModuloCrm(mods.crm);
           setModuloIA(mods.ia);
         } else {
