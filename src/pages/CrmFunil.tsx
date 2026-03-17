@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { getLeadDisplayName } from '@/lib/lead-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -444,7 +445,7 @@ export default function CrmFunil() {
                           setSearchQuery('');
                         }}
                       >
-                        <span className="text-sm font-medium text-foreground">{r.nome}</span>
+                        <span className="text-sm font-medium text-foreground">{getLeadDisplayName(r.nome, r.whatsapp)}</span>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           {r.empresa_cliente && <span>{r.empresa_cliente}</span>}
                           {(r.funis as any)?.nome && (

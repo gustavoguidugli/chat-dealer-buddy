@@ -1,155 +1,112 @@
 
+## Audit — Block 1 ✅ (Completed)
 
-# Plano: Identificação visual do lead por nome + telefone clicável para WhatsApp
+1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
+2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
+3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
+4. **`copy-company-config`** — Now copies and remaps `funil_id`
+
+## Audit — Block 2 ✅ (Completed)
+
+1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
+
+### Accepted Architectural Limitations (SDR Tables)
+
+The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
+
+- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
+- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
+- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
+- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
+- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
+
+**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
+
+## Audit — Block 3 ✅ (Completed)
+
+### Automação de funis para novas empresas e interesses
+
+1. **Trigger `criar_funis_padrao()`** — Novo trigger `AFTER INSERT ON empresas_geral` que cria automaticamente 4 funis padrão (Triagem, Máquina de Gelo, Purificador, Outros) com suas respectivas etapas. Executa antes de `inserir_interesses_padrao` via nomenclatura alfabética (`a_criar_funis_padrao`).
+
+2. **`copy-company-config`** — Atualizada para copiar `funis` + `etapas_funil` da empresa template antes dos interesses, com remapeamento correto de IDs. Reutiliza funis criados pelo trigger quando o `tipo` já existe no destino.
+
+3. **`Triagem.tsx` + `InterestModal.tsx`** — Criação automática de funil ao adicionar novo interesse sem funil selecionado. O modal agora oferece opção "Criar funil automaticamente" como padrão, com etapas (Novo, Qualificação, Proposta, Fechamento).
 
 ---
 
-## BLOCO 1 — Diagnóstico do problema
+## Arquitetura: Empresa ↔ Funil
 
-### Estado atual
-
-A coluna `nome` **já existe** na tabela `leads_crm` e é uma propriedade padrão. O trigger `criar_lead_triagem` preenche `nome` com `COALESCE(p_nome, v_nome_lead, p_whatsapp)` — ou seja, faz fallback para o WhatsApp quando não há nome disponível. O modal `NovoNegocioModal` também exige `nome` como campo obrigatório.
-
-**O problema não é estrutural — é de dados de origem.** Quando um contato chega via chatbot sem `nome_lead` nem `whatsapp_padrao_pipedrive`, o trigger usa o próprio número de WhatsApp como nome. Resultado: o campo `nome` na tabela contém o telefone, e toda a UI exibe o telefone como se fosse o nome.
-
-### Onde o telefone aparece como identificação principal
-
-1. **Card Kanban** (`LeadCardComponent.tsx`, linha 215): `{lead.nome}` — exibe o valor que veio do banco, que é o telefone
-2. **Drawer cabeçalho** (`LeadDrawer.tsx`, linha 796): `EditableLeadName` — mostra `lead.nome`
-3. **Busca global** (`CrmFunil.tsx`, linha 447): `{r.nome}` nos resultados
-4. **Avatar** (`LeadCardComponent.tsx`, linha 211): `getInitials(lead.nome)` — gera iniciais do telefone
-
-### Hipótese principal
-
-O telefone aparece como nome porque o trigger define `nome = whatsapp` quando não há nome real. Não é um bug de renderização — é uma decisão de fallback no provisionamento.
-
-### Hipóteses secundárias
-
-- Contatos importados sem nome preenchido (dados legados)
-- `contatos_geral.nome_lead` vazio na origem (chatbot não coleta nome)
-
-### Tipo de problema
-
-Combinação de **provisionamento** (trigger fallback) + **renderização** (nenhum componente distingue entre "nome real" e "nome = telefone") + **UX** (telefone no drawer não é clicável para WhatsApp).
-
----
-
-## BLOCO 2 — Fluxo atual (AS-IS)
+### Modelo de dados
 
 ```text
-CRIAÇÃO DO LEAD (trigger):
-  contatos_geral.INSERT → criar_lead_triagem()
-    nome = COALESCE(p_nome, contatos_geral.nome_lead, whatsapp_padrao_pipedrive, p_whatsapp)
-    → se nenhum nome real existe, nome = número de telefone
+empresas_geral (id)
+  └── funis (id_empresa = empresas_geral.id)
+        ├── tipo: 'triagem' | 'maquina_gelo' | 'purificador' | 'outros' | 'custom'
+        └── etapas_funil (id_funil = funis.id)
 
-CRIAÇÃO DO LEAD (manual):
-  NovoNegocioModal → campo "Nome" obrigatório
-  → usuário digita o nome manualmente
-
-RENDERIZAÇÃO:
-  Card (LeadCardComponent): lead.nome direto, sem fallback
-  Drawer (LeadDrawer): EditableLeadName com lead.nome
-  Busca (CrmFunil): r.nome direto
-
-TELEFONE NO DRAWER:
-  Exibido como texto simples em "Número de telefone"
-  NÃO é clicável — não abre WhatsApp
+  └── lista_interesses (empresa_id = empresas_geral.id)
+        └── funil_id → funis.id  (FK direto — mapeia interesse → funil)
 ```
 
----
+Os IDs **não são sincronizados** — cada empresa recebe funis com IDs sequenciais independentes (auto-increment). A vinculação é feita por **foreign key** (`funis.id_empresa` e `lista_interesses.funil_id`), nunca por nome ou convenção.
 
-## BLOCO 3 — Estado esperado (TO-BE)
+### Fluxo completo: criação de empresa
 
-1. `leads_crm.nome` continua como propriedade padrão — já existe
-2. Quando `nome` contém um nome real → exibir como identificação principal
-3. Quando `nome` é igual ao WhatsApp (ou está vazio) → exibir o telefone formatado como fallback
-4. O telefone no drawer deve ser clicável com link `https://wa.me/{número_normalizado}`
-5. O avatar deve gerar iniciais com base no nome real; quando é telefone, usar ícone genérico
-6. A lógica deve ser uma função utilitária reutilizável, não duplicada em cada componente
+```text
+INSERT INTO empresas_geral (nome = 'Nova Empresa')
+  │
+  ├─ Trigger 1: a_criar_funis_padrao()
+  │    Cria 4 funis com etapas:
+  │    ┌──────────────────┬──────────────┬────────────────────────────┐
+  │    │ Funil            │ tipo         │ Etapas                     │
+  │    ├──────────────────┼──────────────┼────────────────────────────┤
+  │    │ Sem interesse    │ triagem      │ Novos, Em atendimento      │
+  │    │ Máquina de Gelo  │ maquina_gelo │ Novo, Qualif., Prop., Fech.│
+  │    │ Purificador      │ purificador  │ Novo, Qualif., Prop., Fech.│
+  │    │ Outros interesses│ outros       │ Novo, Em atendimento       │
+  │    └──────────────────┴──────────────┴────────────────────────────┘
+  │
+  ├─ Trigger 2: inserir_interesses_padrao()
+  │    Cria 3 interesses e vincula ao funil pelo tipo:
+  │    UPDATE lista_interesses SET funil_id = funis.id
+  │      WHERE funis.tipo = lista_interesses.nome
+  │
+  └─ Trigger 3: criar_convite_inicial()
+```
 
----
+### Fluxo: novo contato WhatsApp → lead
 
-## BLOCO 4 — Plano de correção em etapas
+```text
+INSERT INTO contatos_geral (whatsapp, empresa_id)
+  └─ Trigger: trg_criar_lead_apos_contato
+       └─ criar_lead_triagem(whatsapp, empresa_id)
+            ├─ SELECT id FROM funis WHERE tipo='triagem' AND id_empresa=X
+            ├─ SELECT id FROM etapas_funil WHERE id_funil=Y ORDER BY ordem LIMIT 1
+            └─ INSERT INTO leads_crm (id_funil=Y, id_etapa_atual=Z)
+```
 
-### Etapa 1 — Criar função utilitária de resolução de identidade do lead
+### Fluxo: interesse identificado → mover lead
 
-**Objetivo:** Centralizar a lógica de "qual texto exibir como nome" e "quais iniciais usar".
+```text
+UPDATE contatos_geral SET interesse = 'maquina_gelo'
+  └─ Trigger: mover_lead_por_interesse()
+       ├─ SELECT funil_id FROM lista_interesses WHERE nome='maquina_gelo' AND empresa_id=X
+       ├─ SELECT id FROM etapas_funil WHERE id_funil=N ORDER BY ordem LIMIT 1
+       └─ UPDATE leads_crm SET id_funil=N, id_etapa_atual=primeira_etapa
+```
 
-**Implementação:**
-- Criar em `src/lib/lead-utils.ts`:
-  - `getLeadDisplayName(nome, whatsapp)` → retorna nome real ou telefone formatado
-  - `isPhoneAsName(nome, whatsapp)` → detecta se o nome é na verdade o telefone (comparando dígitos)
-  - `getLeadInitials(nome, whatsapp)` → retorna iniciais do nome real, ou fallback como "?" / ícone
-  - `buildWhatsAppLink(whatsapp)` → retorna `https://wa.me/55XXXXXXXXX` normalizado
+### Fluxo: copy-company-config (empresa template)
 
-**Risco:** Nenhum — código novo, sem alterar existente.
-**Validação:** Testes unitários com cenários: nome real, nome = telefone, nome vazio, telefone null.
+1. Copia funis da empresa fonte → cria novos na destino (IDs novos)
+2. Monta `funilIdRemap` (ID fonte → ID destino)
+3. Copia interesses e remapeia `funil_id` usando o map
 
-### Etapa 2 — Atualizar LeadCardComponent
+### Resumo
 
-**Objetivo:** Usar nome real como título, fallback para telefone formatado. Avatar com iniciais corretas.
-
-**Componentes:** `LeadCardComponent.tsx`
-- Linha 215: trocar `{lead.nome}` por `{getLeadDisplayName(lead.nome, lead.whatsapp)}`
-- Linha 211: trocar `getInitials(lead.nome)` por `getLeadInitials(lead.nome, lead.whatsapp)`
-
-**Risco:** Baixo — apenas visual.
-**Validação:** Cards com nome real exibem nome; cards com nome = telefone exibem telefone formatado.
-
-### Etapa 3 — Atualizar LeadDrawer (cabeçalho + telefone clicável)
-
-**Objetivo:** Nome editável no cabeçalho + telefone como link para WhatsApp.
-
-**Componentes:** `LeadDrawer.tsx`
-- Cabeçalho (linha 796): `EditableLeadName` já edita `nome` — funciona corretamente
-- Telefone (linhas 1037-1044): transformar o texto em link clicável `<a href={buildWhatsAppLink(...)} target="_blank">`
-- Adicionar ícone de WhatsApp ao lado do número para indicar que é clicável
-
-**Risco:** Baixo — adição de link, sem alterar lógica existente.
-**Validação:** Clicar no telefone abre `wa.me` em nova aba.
-
-### Etapa 4 — Atualizar busca global
-
-**Objetivo:** Resultados da busca exibem nome real ou telefone formatado.
-
-**Componentes:** `CrmFunil.tsx`, linha 447
-- Trocar `{r.nome}` por `{getLeadDisplayName(r.nome, r.whatsapp)}`
-
-**Risco:** Nenhum.
-**Validação:** Buscar por telefone retorna resultado com display correto.
-
-### Etapa 5 — Validação end-to-end
-
-**Verificações:**
-1. Lead com nome real → card mostra nome, drawer mostra nome editável, telefone clicável abaixo
-2. Lead com nome = telefone → card mostra telefone formatado, drawer permite editar nome, telefone clicável
-3. WhatsApp link funciona com diferentes formatos de número
-4. Funciona para todas as empresas (Termall, AquaSampa, etc.)
-
----
-
-## BLOCO 5 — Critérios de aceite
-
-1. Existe função utilitária centralizada para resolução de identidade do lead
-2. Leads com nome real preenchido exibem o nome como identificação principal no card, drawer e busca
-3. Leads cujo nome é o próprio telefone continuam exibindo o telefone formatado (sem regressão visual)
-4. O telefone no drawer é clicável e abre WhatsApp (`wa.me`)
-5. Avatar exibe iniciais do nome real; quando é telefone, exibe fallback visual adequado
-6. A lógica é consistente entre empresas e não depende de dados específicos
-7. Não há alteração de schema — a coluna `nome` já existe e é usada corretamente
-
----
-
-## BLOCO 6 — Recomendação final
-
-**Recomendação: Ajuste pontual**
-
-**Justificativa:**
-- A coluna `nome` já existe como propriedade padrão em `leads_crm`
-- O trigger de provisionamento já tenta preencher com nome real (fallback para telefone é aceitável)
-- O problema é exclusivamente de **renderização** e **UX** — nenhuma alteração de schema ou banco é necessária
-- A criação de uma função utilitária centraliza a lógica e previne inconsistência futura
-- O telefone clicável é uma adição de UX simples com `wa.me`
-
-Não há risco de reincidência porque a lógica de fallback visual será centralizada em uma função reutilizável, independente do valor que vier do banco.
-
+| Pergunta | Resposta |
+|---|---|
+| IDs são iguais entre empresa e funil? | Não. São independentes (auto-increment) |
+| Como se vinculam? | `funis.id_empresa` = FK para `empresas_geral.id` |
+| Como interesse sabe qual funil? | `lista_interesses.funil_id` = FK direto para `funis.id` |
+| Como lead entra no CRM? | `criar_lead_triagem` busca funil com `tipo='triagem'` da empresa |
+| Como lead muda de funil? | `mover_lead_por_interesse` consulta `lista_interesses.funil_id` |

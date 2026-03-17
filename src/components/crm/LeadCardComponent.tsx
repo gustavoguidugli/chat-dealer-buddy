@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { ChevronRight, AlertTriangle, Play, Plus, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getLeadDisplayName, getLeadInitials } from '@/lib/lead-utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { User } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,9 +31,7 @@ function formatCurrency(value: number | null) {
   return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
 }
 
-function getInitials(name: string) {
-  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-}
+// getInitials is no longer needed — using getLeadInitials from lead-utils
 
 function getActivityStatus(dataVencimento: string): 'overdue' | 'today' | 'future' {
   const now = new Date();
@@ -208,11 +208,14 @@ export function LeadCardComponent({ lead, isDragging, isOverlay, listaInteresses
           <div className="flex items-center gap-2.5">
             <Avatar className="h-8 w-8 shrink-0">
               <AvatarFallback className="text-[11px] font-semibold bg-accent/15 text-accent">
-                {getInitials(lead.nome)}
+                {(() => {
+                  const initials = getLeadInitials(lead.nome, lead.whatsapp);
+                  return initials || <User className="h-3.5 w-3.5" />;
+                })()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-semibold text-foreground truncate">{lead.nome}</h4>
+              <h4 className="text-sm font-semibold text-foreground truncate">{getLeadDisplayName(lead.nome, lead.whatsapp)}</h4>
               {lead.empresa_cliente && (
                 <p className="text-[11px] text-muted-foreground truncate">{lead.empresa_cliente}</p>
               )}
