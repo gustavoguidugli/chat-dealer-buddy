@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { ChevronRight, AlertTriangle, Play, Plus, Tag } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -308,8 +309,11 @@ export function LeadCardComponent({ lead, isDragging, isOverlay, listaInteresses
                 onValueChange={handleInteresseChange}
                 disabled={savingInteresse}
               >
-                <SelectTrigger className="h-7 text-[11px] border-dashed border-border/60 bg-transparent hover:bg-muted/50 px-2 gap-1.5">
-                  <Tag className="h-3 w-3 text-muted-foreground shrink-0" />
+                <SelectTrigger className={cn(
+                  "h-7 text-[11px] bg-transparent hover:bg-muted/50 px-2 gap-1.5",
+                  currentInteresse ? "border-solid border-primary/40" : "border-dashed border-border/60"
+                )}>
+                  <Tag className={cn("h-3 w-3 shrink-0", currentInteresse ? "text-primary" : "text-muted-foreground")} />
                   <SelectValue placeholder="Definir interesse" />
                 </SelectTrigger>
                 <SelectContent>
