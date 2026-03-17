@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       faq_labels_copied: 0,
       config_copied: false,
       interests_copied: 0,
+      campos_copied: 0,
     };
 
     // 1. Copy Funis + Etapas (MUST come before interests for funil_id remapping)
@@ -278,7 +279,52 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. Copy lista_interesses (using funilIdRemap from step 1)
+    // 6. Copy campos_customizados (dedup by slug)
+    const { data: sourceCampos } = await supabaseAdmin
+      .from("campos_customizados")
+      .select("nome, slug, tipo, ordem, ativo, obrigatorio, opcoes, id_funil")
+      .eq("id_empresa", source_company_id)
+      .eq("ativo", true);
+
+    if (sourceCampos && sourceCampos.length > 0) {
+      // Get existing campos in target to avoid duplicates
+      const { data: existingCampos } = await supabaseAdmin
+        .from("campos_customizados")
+        .select("slug")
+        .eq("id_empresa", target_company_id)
+        .eq("ativo", true);
+
+      const existingSlugs = new Set((existingCampos || []).map((c: any) => c.slug));
+
+      const newCampos = sourceCampos
+        .filter((c) => !existingSlugs.has(c.slug))
+        .map((c) => ({
+          nome: c.nome,
+          slug: c.slug,
+          tipo: c.tipo,
+          ordem: c.ordem,
+          ativo: c.ativo,
+          obrigatorio: c.obrigatorio,
+          opcoes: c.opcoes,
+          id_empresa: target_company_id,
+          id_funil: c.id_funil ? (funilIdRemap[c.id_funil] ?? null) : null,
+        }));
+
+      if (newCampos.length > 0) {
+        const { data: insertedCampos, error: camposErr } = await supabaseAdmin
+          .from("campos_customizados")
+          .insert(newCampos)
+          .select("id");
+
+        if (camposErr) {
+          console.error("Error copying campos_customizados:", camposErr);
+        } else {
+          results.campos_copied = insertedCampos?.length ?? 0;
+        }
+      }
+    }
+
+    // 7. Copy lista_interesses (using funilIdRemap from step 1)
     const { data: sourceInterests } = await supabaseAdmin
       .from("lista_interesses")
       .select("nome, label, palavras_chave, mensagem_resposta, ordem, ativo, funil_id")
