@@ -1,143 +1,112 @@
 
+## Audit — Block 1 ✅ (Completed)
 
-## Diagnóstico e Plano de Correção: Espelhamento de Leads no CRM
+1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
+2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
+3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
+4. **`copy-company-config`** — Now copies and remaps `funil_id`
+
+## Audit — Block 2 ✅ (Completed)
+
+1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
+
+### Accepted Architectural Limitations (SDR Tables)
+
+The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
+
+- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
+- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
+- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
+- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
+- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
+
+**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
+
+## Audit — Block 3 ✅ (Completed)
+
+### Automação de funis para novas empresas e interesses
+
+1. **Trigger `criar_funis_padrao()`** — Novo trigger `AFTER INSERT ON empresas_geral` que cria automaticamente 4 funis padrão (Triagem, Máquina de Gelo, Purificador, Outros) com suas respectivas etapas. Executa antes de `inserir_interesses_padrao` via nomenclatura alfabética (`a_criar_funis_padrao`).
+
+2. **`copy-company-config`** — Atualizada para copiar `funis` + `etapas_funil` da empresa template antes dos interesses, com remapeamento correto de IDs. Reutiliza funis criados pelo trigger quando o `tipo` já existe no destino.
+
+3. **`Triagem.tsx` + `InterestModal.tsx`** — Criação automática de funil ao adicionar novo interesse sem funil selecionado. O modal agora oferece opção "Criar funil automaticamente" como padrão, com etapas (Novo, Qualificação, Proposta, Fechamento).
 
 ---
 
-### BLOCO 1 — Diagnóstico do problema
+## Arquitetura: Empresa ↔ Funil
 
-**O que está acontecendo:** Quando um usuário altera o interesse de um lead pelo card no Kanban, o lead é movido de funil **duas vezes** — uma pelo frontend e outra pelo trigger do banco. Isso causa uma condição de corrida onde o estado intermediário é capturado pelo Realtime e renderizado como se fossem dois leads.
-
-**Hipótese principal: Double-move (frontend + trigger)**
-
-O fluxo em `LeadCardComponent.handleInteresseChange` (linha 87-165) executa:
-1. Atualiza `campos_extras` no `leads_crm` (com o interesse)
-2. Atualiza `contatos_geral.interesse` (linha 126)
-3. Move o lead para o funil correto via UPDATE direto em `leads_crm` (linhas 148-152)
-
-Porém, o passo 2 dispara o trigger `trigger_mover_lead_interesse` (na tabela `contatos_geral`), que executa `mover_lead_por_interesse()` — que **também** faz UPDATE no `leads_crm` para mover o lead.
-
-Resultado: dois UPDATEs concorrentes no `leads_crm`, gerando dois eventos Realtime. O `useFunilRealtime` processa ambos, e durante o intervalo entre eles o lead pode aparecer em dois funis/etapas.
-
-**Hipóteses secundárias:**
-- O Realtime captura o primeiro UPDATE (campos_extras) antes do segundo (move), fazendo o lead "piscar" na etapa antiga
-- Se o frontend move primeiro e o trigger move depois, eles competem e o estado pode oscilar
-
----
-
-### BLOCO 2 — Mapeamento do fluxo atual (AS-IS)
+### Modelo de dados
 
 ```text
-Usuário clica "Definir interesse" no card Kanban
-  │
-  ├─ 1. Frontend: UPDATE leads_crm SET campos_extras = {interesse: X}
-  │     → Realtime: evento UPDATE (lead ainda no funil antigo)
-  │
-  ├─ 2. Frontend: UPDATE contatos_geral SET interesse = X
-  │     → Trigger DB: mover_lead_por_interesse()
-  │       → UPDATE leads_crm SET id_funil, id_etapa_atual (move o lead)
-  │       → Realtime: evento UPDATE (lead agora no funil novo)
-  │
-  └─ 3. Frontend: UPDATE leads_crm SET id_funil, id_etapa_atual (move o lead DE NOVO)
-        → Realtime: evento UPDATE (mesmo resultado, mas gera um 3º evento)
+empresas_geral (id)
+  └── funis (id_empresa = empresas_geral.id)
+        ├── tipo: 'triagem' | 'maquina_gelo' | 'purificador' | 'outros' | 'custom'
+        └── etapas_funil (id_funil = funis.id)
+
+  └── lista_interesses (empresa_id = empresas_geral.id)
+        └── funil_id → funis.id  (FK direto — mapeia interesse → funil)
 ```
 
-O `useFunilRealtime` no handler de UPDATE (linha 99-123):
-- Remove o lead de todas as listas
-- Se `id_funil !== funilId`, não re-adiciona → lead "desaparece" do funil atual
-- Mas o funil de **destino** recebe o INSERT via Realtime e adiciona
+Os IDs **não são sincronizados** — cada empresa recebe funis com IDs sequenciais independentes (auto-increment). A vinculação é feita por **foreign key** (`funis.id_empresa` e `lista_interesses.funil_id`), nunca por nome ou convenção.
 
-O problema de "espelhamento" ocorre porque:
-- O evento 1 mantém o lead no funil original (apenas campos_extras mudou)
-- O evento 2 (trigger) move para o novo funil
-- O evento 3 (frontend) tenta mover novamente
+### Fluxo completo: criação de empresa
 
-Entre os eventos 1 e 2, o lead é renderizado no funil antigo. O funil novo recebe via evento 2. O funil antigo pode não processar a remoção a tempo.
+```text
+INSERT INTO empresas_geral (nome = 'Nova Empresa')
+  │
+  ├─ Trigger 1: a_criar_funis_padrao()
+  │    Cria 4 funis com etapas:
+  │    ┌──────────────────┬──────────────┬────────────────────────────┐
+  │    │ Funil            │ tipo         │ Etapas                     │
+  │    ├──────────────────┼──────────────┼────────────────────────────┤
+  │    │ Sem interesse    │ triagem      │ Novos, Em atendimento      │
+  │    │ Máquina de Gelo  │ maquina_gelo │ Novo, Qualif., Prop., Fech.│
+  │    │ Purificador      │ purificador  │ Novo, Qualif., Prop., Fech.│
+  │    │ Outros interesses│ outros       │ Novo, Em atendimento       │
+  │    └──────────────────┴──────────────┴────────────────────────────┘
+  │
+  ├─ Trigger 2: inserir_interesses_padrao()
+  │    Cria 3 interesses e vincula ao funil pelo tipo:
+  │    UPDATE lista_interesses SET funil_id = funis.id
+  │      WHERE funis.tipo = lista_interesses.nome
+  │
+  └─ Trigger 3: criar_convite_inicial()
+```
 
-**Propriedades:** As propriedades padrão (cidade, tipo_uso, consumo_mensal, etc.) estão misturadas entre `campos_extras` (JSONB), tabelas SDR e `contatos_geral`. Não há separação clara entre propriedades globais obrigatórias e customizadas por empresa.
+### Fluxo: novo contato WhatsApp → lead
 
----
+```text
+INSERT INTO contatos_geral (whatsapp, empresa_id)
+  └─ Trigger: trg_criar_lead_apos_contato
+       └─ criar_lead_triagem(whatsapp, empresa_id)
+            ├─ SELECT id FROM funis WHERE tipo='triagem' AND id_empresa=X
+            ├─ SELECT id FROM etapas_funil WHERE id_funil=Y ORDER BY ordem LIMIT 1
+            └─ INSERT INTO leads_crm (id_funil=Y, id_etapa_atual=Z)
+```
 
-### BLOCO 3 — Estado correto esperado (TO-BE)
+### Fluxo: interesse identificado → mover lead
 
-1. **Um lead = um estado ativo por vez.** Coluna `ativo=true` + `status='aberto'` + `id_funil` + `id_etapa_atual` define univocamente onde o lead está.
+```text
+UPDATE contatos_geral SET interesse = 'maquina_gelo'
+  └─ Trigger: mover_lead_por_interesse()
+       ├─ SELECT funil_id FROM lista_interesses WHERE nome='maquina_gelo' AND empresa_id=X
+       ├─ SELECT id FROM etapas_funil WHERE id_funil=N ORDER BY ordem LIMIT 1
+       └─ UPDATE leads_crm SET id_funil=N, id_etapa_atual=primeira_etapa
+```
 
-2. **Movimentação por interesse deve acontecer em UM único lugar** — ou o frontend move, ou o trigger move. Nunca ambos.
+### Fluxo: copy-company-config (empresa template)
 
-3. **Ao mudar interesse:**
-   - Frontend atualiza `contatos_geral.interesse` (para sincronizar com o chatbot/SDR)
-   - Trigger `mover_lead_por_interesse` faz o move no `leads_crm`
-   - Frontend **não** faz UPDATE adicional em `id_funil`/`id_etapa_atual`
-   - O Realtime propaga a mudança e o board atualiza naturalmente
+1. Copia funis da empresa fonte → cria novos na destino (IDs novos)
+2. Monta `funilIdRemap` (ID fonte → ID destino)
+3. Copia interesses e remapeia `funil_id` usando o map
 
-4. **Propriedades padrão** devem ser campos explícitos em `leads_crm` ou um schema fixo dentro de `campos_extras`, não dependendo de tabelas SDR para dados essenciais.
+### Resumo
 
----
-
-### BLOCO 4 — Plano de correção em etapas
-
-**Etapa 1: Eliminar o double-move no frontend**
-
-- **Objetivo:** Remover a lógica de move duplicada do frontend, delegando ao trigger
-- **Arquivos:** `src/components/crm/LeadCardComponent.tsx` (linhas 132-155), `src/components/crm/LeadDrawer.tsx` (lógica equivalente de interesse)
-- **Mudança:** Remover o bloco "4. Move to matching funnel" do `handleInteresseChange`. O trigger `mover_lead_por_interesse` já faz isso quando `contatos_geral.interesse` é atualizado.
-- **Risco:** Baixo. O trigger já funciona corretamente e é a fonte de verdade.
-- **Validação:** Alterar interesse de um lead no card → lead aparece apenas no funil destino, sem piscar no funil de origem.
-
-**Etapa 2: Garantir ordem correta das operações no frontend**
-
-- **Objetivo:** Garantir que `campos_extras` e `contatos_geral` são atualizados na ordem certa
-- **Arquivos:** `LeadCardComponent.tsx`, `LeadDrawer.tsx`
-- **Mudança:** Primeiro atualizar `contatos_geral.interesse` (dispara o trigger que move o lead), depois atualizar `campos_extras` (que é meramente informativo). Ou melhor: atualizar `contatos_geral` e deixar o trigger sincronizar `campos_extras` via `sync_contato_sdr_to_lead_crm`.
-- **Risco:** Baixo.
-- **Validação:** Verificar que apenas 1 evento Realtime de mudança de funil é gerado.
-
-**Etapa 3: Verificar e corrigir a lógica de renderização no board**
-
-- **Objetivo:** Garantir que o `useFunilRealtime` lida corretamente com o lead saindo do funil
-- **Arquivos:** `src/hooks/useFunilRealtime.ts`
-- **Mudança:** No handler de UPDATE, quando `newData.id_funil !== funilId`, o lead já é removido (linha 107). Isso está correto. Apenas validar que não há re-adição indevida.
-- **Risco:** Nenhum — é validação.
-- **Validação:** Log temporário para confirmar que o lead é removido uma única vez.
-
-**Etapa 4: Padronizar propriedades obrigatórias**
-
-- **Objetivo:** Definir um schema fixo de propriedades padrão que toda empresa/lead deve ter
-- **Arquivos:** `campos_customizados` (tabela), `LeadDrawer.tsx`, `NovoNegocioModal.tsx`
-- **Mudança:** Criar campos_customizados padrão no trigger `a_criar_funis_padrao` para toda nova empresa. No frontend, sempre renderizar esses campos independentemente da configuração.
-- **Risco:** Médio — afeta empresas existentes que podem não ter os campos.
-- **Validação:** Nova empresa criada deve ter campos obrigatórios visíveis no drawer do lead.
-
-**Etapa 5: Testes e validação**
-
-- **Objetivo:** Confirmar que o espelhamento foi eliminado
-- **Validação:**
-  - Lead na triagem → escolher interesse → lead sai da triagem e aparece APENAS no funil correto
-  - Mudar interesse novamente → lead move para o novo funil, sem duplicata
-  - Verificar no banco: `SELECT count(*) FROM leads_crm WHERE whatsapp = X AND ativo = true` deve retornar 1
-
----
-
-### BLOCO 5 — Regras de aceite
-
-1. Lead sem interesse definido aparece apenas na etapa inicial do funil de triagem
-2. Após escolher interesse, o lead **desaparece** do funil de triagem e aparece **apenas** no funil vinculado ao interesse
-3. Lead não pode aparecer simultaneamente em dois funis/etapas com `status='aberto'` e `ativo=true`
-4. Mudança de interesse move o **mesmo** lead (mesmo `id`), sem criar registro novo
-5. No banco: `SELECT count(*) FROM leads_crm WHERE whatsapp = ? AND id_empresa = ? AND ativo = true` sempre retorna ≤ 1
-6. O fluxo gera no máximo 1 evento Realtime de mudança de `id_funil` por operação de interesse
-
----
-
-### BLOCO 6 — Recomendação de implementação
-
-**Recomendo: Correção mínima (Etapas 1-3)**
-
-Justificativa:
-- A causa raiz é **clara e localizada**: o frontend faz um move que o trigger já faz. Basta remover as linhas 132-155 do `LeadCardComponent.tsx` e a lógica equivalente no `LeadDrawer.tsx`.
-- O trigger `mover_lead_por_interesse` já funciona corretamente — não precisa ser alterado.
-- O `useFunilRealtime` já trata corretamente leads que saem do funil (remove quando `id_funil !== funilId`).
-- A padronização de propriedades (Etapa 4) é uma melhoria separada e pode ser feita depois sem risco.
-
-**Esforço estimado:** Remover ~25 linhas de código em 2 arquivos. Risco muito baixo. Resolução imediata do espelhamento.
-
+| Pergunta | Resposta |
+|---|---|
+| IDs são iguais entre empresa e funil? | Não. São independentes (auto-increment) |
+| Como se vinculam? | `funis.id_empresa` = FK para `empresas_geral.id` |
+| Como interesse sabe qual funil? | `lista_interesses.funil_id` = FK direto para `funis.id` |
+| Como lead entra no CRM? | `criar_lead_triagem` busca funil com `tipo='triagem'` da empresa |
+| Como lead muda de funil? | `mover_lead_por_interesse` consulta `lista_interesses.funil_id` |
