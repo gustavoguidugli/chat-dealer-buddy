@@ -49,23 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [moduloIA, setModuloIA] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        if (!newSession?.user) {
-          setIsCompanyAdmin(false);
-          setEmpresaId(null);
-          setEmpresaNome(null);
-          setSemEmpresa(false);
-          setModuloCrm(false);
-          setModuloIA(false);
-          setLoading(false);
-        }
-      }
-    );
-    return () => subscription.unsubscribe();
+  const resetState = useCallback(() => {
+    setIsCompanyAdmin(false);
+    setEmpresaId(null);
+    setEmpresaNome(null);
+    setSemEmpresa(false);
+    setModuloCrm(false);
+    setModuloIA(false);
   }, []);
 
   const fetchUserData = useCallback(async (currentUser: User) => {
@@ -86,11 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setSemEmpresa(false);
       } else {
-        const { data: mapping } = await supabase
+        const { data: mapping, error } = await supabase
           .from('user_empresa')
           .select('empresa_id, role')
           .eq('user_id', currentUser.id)
           .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching user_empresa:', error);
+          // RLS or network error — don't mark as semEmpresa yet, stay loading
+          return;
+        }
 
         if (mapping?.empresa_id) {
           setEmpresaId(mapping.empresa_id);
@@ -100,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsCompanyAdmin(role === 'admin' || role === 'super_admin');
 
           const [{ data: emp }, mods] = await Promise.all([
-            supabase.from('empresas_geral').select('nome').eq('id', mapping.empresa_id).single(),
+            supabase.from('empresas_geral').select('nome').eq('id', mapping.empresa_id).maybeSingle(),
             fetchModulos(mapping.empresa_id),
           ]);
           setEmpresaNome(emp?.nome ?? null);
@@ -120,11 +116,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Bootstrap: get initial session, then listen for changes
   useEffect(() => {
-    if (!user) return;
-    setLoading(true);
-    fetchUserData(user);
-  }, [user?.id, fetchUserData]);
+    let mounted = true;
+
+    // 1. Get the initial session (awaits the token to be ready)
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      if (!mounted) return;
+      setSession(initialSession);
+      const initialUser = initialSession?.user ?? null;
+      setUser(initialUser);
+
+      if (initialUser) {
+        fetchUserData(initialUser);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // 2. Listen for subsequent auth changes (sign-in, sign-out, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        if (!mounted) return;
+        setSession(newSession);
+        const newUser = newSession?.user ?? null;
+        setUser(newUser);
+
+        if (!newUser) {
+          resetState();
+          setLoading(false);
+        } else {
+          // Defer fetchUserData to next tick so the Supabase client
+          // has the new JWT set internally before we make queries
+          setLoading(true);
+          setTimeout(() => {
+            if (mounted) fetchUserData(newUser);
+          }, 0);
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserData, resetState]);
 
   const refreshUserData = useCallback(async () => {
     if (user) {
