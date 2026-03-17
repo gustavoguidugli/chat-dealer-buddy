@@ -1,0 +1,1 @@
+DELETE FROM user_empresa WHERE user_id = 'c8ad6221-063f-4869-baeb-6eea4a285eaf' AND empresa_id = 17;
