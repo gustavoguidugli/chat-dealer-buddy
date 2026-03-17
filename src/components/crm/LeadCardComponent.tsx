@@ -208,11 +208,14 @@ export function LeadCardComponent({ lead, isDragging, isOverlay, listaInteresses
           <div className="flex items-center gap-2.5">
             <Avatar className="h-8 w-8 shrink-0">
               <AvatarFallback className="text-[11px] font-semibold bg-accent/15 text-accent">
-                {getInitials(lead.nome)}
+                {(() => {
+                  const initials = getLeadInitials(lead.nome, lead.whatsapp);
+                  return initials || <User className="h-3.5 w-3.5" />;
+                })()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-semibold text-foreground truncate">{lead.nome}</h4>
+              <h4 className="text-sm font-semibold text-foreground truncate">{getLeadDisplayName(lead.nome, lead.whatsapp)}</h4>
               {lead.empresa_cliente && (
                 <p className="text-[11px] text-muted-foreground truncate">{lead.empresa_cliente}</p>
               )}
