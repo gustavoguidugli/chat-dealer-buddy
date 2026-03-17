@@ -536,49 +536,69 @@ Deno.serve(async (req) => {
         const finalRole = acceptData.role || role || "member";
         console.log("[complete_onboarding] Invite accepted. empresa_id:", finalEmpresaId, "role:", finalRole);
 
+        // Map role for legacy tables that use 'user' instead of 'member'
+        const legacyRole = finalRole === "member" ? "user" : finalRole;
+
         // 3. Upsert usuarios
         console.log("[complete_onboarding] Step 3: Upserting usuarios...");
-        await adminClient.from("usuarios").upsert({
+        const { error: usuariosErr } = await adminClient.from("usuarios").upsert({
           uuid: userId,
           email,
           primeiro_nome,
           sobrenome,
           nome: `${primeiro_nome} ${sobrenome}`.trim(),
           id_empresa: finalEmpresaId,
-          nivel_acesso: finalRole,
+          nivel_acesso: legacyRole,
           onboarding_completed: true,
         }, { onConflict: "uuid" });
+        if (usuariosErr) {
+          console.error("[complete_onboarding] Step 3 failed:", usuariosErr.message);
+          return new Response(JSON.stringify({ error: "Erro ao salvar perfil: " + usuariosErr.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
         // 4. Insert usuario_time
         console.log("[complete_onboarding] Step 4: Inserting usuario_time...");
-        await adminClient.from("usuario_time").insert({
+        const { error: timeErr } = await adminClient.from("usuario_time").insert({
           id_usuario: userId,
           id_empresa: finalEmpresaId,
-          role: finalRole,
+          role: legacyRole,
           status_membro: "active",
         });
+        if (timeErr) {
+          console.error("[complete_onboarding] Step 4 failed:", timeErr.message);
+          return new Response(JSON.stringify({ error: "Erro ao vincular ao time: " + timeErr.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
         // 5. Update convite status
         console.log("[complete_onboarding] Step 5: Updating convite status...");
-        await adminClient.from("convites").update({
+        const { error: conviteErr } = await adminClient.from("convites").update({
           status_convite: "accepted",
           accepted_at: new Date().toISOString(),
           accepted_by_user_id: userId,
         }).eq("id", convite_id);
+        if (conviteErr) console.error("[complete_onboarding] Step 5 warning:", conviteErr.message);
 
         // 6. Upsert user_empresa_geral
-        await adminClient.from("user_empresa_geral").upsert({
+        const { error: ueGeralErr } = await adminClient.from("user_empresa_geral").upsert({
           user_id: userId,
           empresa_id: finalEmpresaId,
         }, { onConflict: "user_id" });
+        if (ueGeralErr) console.error("[complete_onboarding] Step 6 warning:", ueGeralErr.message);
 
         // 7. Audit log
-        await adminClient.from("audit_logs").insert({
+        const { error: auditErr } = await adminClient.from("audit_logs").insert({
           actor_user_id: userId,
           action: "onboarding_completed",
           entity_type: "convites",
           entity_id: convite_id,
         });
+        if (auditErr) console.error("[complete_onboarding] Step 7 warning:", auditErr.message);
 
         console.log("[complete_onboarding] SUCCESS — user:", userId, "empresa:", finalEmpresaId);
         return new Response(JSON.stringify({ success: true, user_id: userId, empresa_id: finalEmpresaId }), {

@@ -2734,9 +2734,10 @@ export type Database = {
       }
     }
     Functions: {
-      aceitar_convite:
-        | { Args: { p_convite_id: string }; Returns: Json }
-        | { Args: { p_convite_id: string; p_user_id?: string }; Returns: Json }
+      aceitar_convite: {
+        Args: { p_convite_id: string; p_user_id?: string }
+        Returns: Json
+      }
       buscar_faq_similar: {
         Args: {
           p_empresa_id: number

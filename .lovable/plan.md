@@ -1,71 +1,112 @@
 
+## Audit — Block 1 ✅ (Completed)
 
-# Relatório: Erro no Onboarding de Convites
+1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
+2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
+3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
+4. **`copy-company-config`** — Now copies and remaps `funil_id`
 
-## Problema identificado
+## Audit — Block 2 ✅ (Completed)
 
-O erro **"Erro ao completar onboarding"** ocorre por uma **incompatibilidade de valores de role** entre as tabelas do sistema.
+1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
 
-### Causa raiz
+### Accepted Architectural Limitations (SDR Tables)
 
-A tabela `usuario_time` possui um CHECK constraint que aceita apenas `['admin', 'user']`:
+The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
+
+- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
+- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
+- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
+- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
+- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
+
+**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
+
+## Audit — Block 3 ✅ (Completed)
+
+### Automação de funis para novas empresas e interesses
+
+1. **Trigger `criar_funis_padrao()`** — Novo trigger `AFTER INSERT ON empresas_geral` que cria automaticamente 4 funis padrão (Triagem, Máquina de Gelo, Purificador, Outros) com suas respectivas etapas. Executa antes de `inserir_interesses_padrao` via nomenclatura alfabética (`a_criar_funis_padrao`).
+
+2. **`copy-company-config`** — Atualizada para copiar `funis` + `etapas_funil` da empresa template antes dos interesses, com remapeamento correto de IDs. Reutiliza funis criados pelo trigger quando o `tipo` já existe no destino.
+
+3. **`Triagem.tsx` + `InterestModal.tsx`** — Criação automática de funil ao adicionar novo interesse sem funil selecionado. O modal agora oferece opção "Criar funil automaticamente" como padrão, com etapas (Novo, Qualificação, Proposta, Fechamento).
+
+---
+
+## Arquitetura: Empresa ↔ Funil
+
+### Modelo de dados
+
 ```text
-usuario_time.role CHECK: 'admin' | 'user'
+empresas_geral (id)
+  └── funis (id_empresa = empresas_geral.id)
+        ├── tipo: 'triagem' | 'maquina_gelo' | 'purificador' | 'outros' | 'custom'
+        └── etapas_funil (id_funil = funis.id)
+
+  └── lista_interesses (empresa_id = empresas_geral.id)
+        └── funil_id → funis.id  (FK direto — mapeia interesse → funil)
 ```
 
-Mas o fluxo de convites usa `'member'` como role padrão:
+Os IDs **não são sincronizados** — cada empresa recebe funis com IDs sequenciais independentes (auto-increment). A vinculação é feita por **foreign key** (`funis.id_empresa` e `lista_interesses.funil_id`), nunca por nome ou convenção.
+
+### Fluxo completo: criação de empresa
+
 ```text
-convites.role = 'member'
-aceitar_convite() retorna role = 'member'
-complete_onboarding insere 'member' em usuario_time → VIOLA CHECK → ERRO
+INSERT INTO empresas_geral (nome = 'Nova Empresa')
+  │
+  ├─ Trigger 1: a_criar_funis_padrao()
+  │    Cria 4 funis com etapas:
+  │    ┌──────────────────┬──────────────┬────────────────────────────┐
+  │    │ Funil            │ tipo         │ Etapas                     │
+  │    ├──────────────────┼──────────────┼────────────────────────────┤
+  │    │ Sem interesse    │ triagem      │ Novos, Em atendimento      │
+  │    │ Máquina de Gelo  │ maquina_gelo │ Novo, Qualif., Prop., Fech.│
+  │    │ Purificador      │ purificador  │ Novo, Qualif., Prop., Fech.│
+  │    │ Outros interesses│ outros       │ Novo, Em atendimento       │
+  │    └──────────────────┴──────────────┴────────────────────────────┘
+  │
+  ├─ Trigger 2: inserir_interesses_padrao()
+  │    Cria 3 interesses e vincula ao funil pelo tipo:
+  │    UPDATE lista_interesses SET funil_id = funis.id
+  │      WHERE funis.tipo = lista_interesses.nome
+  │
+  └─ Trigger 3: criar_convite_inicial()
 ```
 
-A tabela `user_empresa` aceita `['owner', 'admin', 'member']` — então funciona lá. Mas `usuario_time` espera `'user'` e não `'member'`.
+### Fluxo: novo contato WhatsApp → lead
 
-### Fluxo do erro
-
-1. Usuário recebe convite com `role: member`
-2. Preenche nome e senha, clica "Acessar Eco Ice"
-3. Edge function `manage-users` → `complete_onboarding`:
-   - Cria/encontra usuário no Auth ✓
-   - Atualiza senha ✓
-   - Chama `aceitar_convite()` → retorna `role: 'member'` ✓
-   - Upsert em `usuarios` ✓ (provavelmente)
-   - **INSERT em `usuario_time` com `role: 'member'` → FALHA** (CHECK constraint)
-4. Erro é capturado pelo catch genérico → retorna 500
-5. Frontend mostra "Erro ao completar onboarding"
-
-### Problema secundário
-
-A edge function **não verifica erros** nos passos 3-7 (após aceitar convite). Qualquer falha silenciosa nesses passos não é reportada de forma útil.
-
-## Plano de correção
-
-### 1. Corrigir mapeamento de role na Edge Function `manage-users`
-
-No caso `complete_onboarding`, ao inserir em `usuario_time`, mapear `'member'` para `'user'`:
-
-```js
-// Linha 554-558 - Step 4: inserting usuario_time
-role: finalRole === 'member' ? 'user' : finalRole,
+```text
+INSERT INTO contatos_geral (whatsapp, empresa_id)
+  └─ Trigger: trg_criar_lead_apos_contato
+       └─ criar_lead_triagem(whatsapp, empresa_id)
+            ├─ SELECT id FROM funis WHERE tipo='triagem' AND id_empresa=X
+            ├─ SELECT id FROM etapas_funil WHERE id_funil=Y ORDER BY ordem LIMIT 1
+            └─ INSERT INTO leads_crm (id_funil=Y, id_etapa_atual=Z)
 ```
 
-Também fazer o mesmo no campo `nivel_acesso` do upsert em `usuarios` (step 3), já que a tabela pode esperar `'user'` e não `'member'`.
+### Fluxo: interesse identificado → mover lead
 
-### 2. Adicionar tratamento de erros nos passos pós-aceitar
+```text
+UPDATE contatos_geral SET interesse = 'maquina_gelo'
+  └─ Trigger: mover_lead_por_interesse()
+       ├─ SELECT funil_id FROM lista_interesses WHERE nome='maquina_gelo' AND empresa_id=X
+       ├─ SELECT id FROM etapas_funil WHERE id_funil=N ORDER BY ordem LIMIT 1
+       └─ UPDATE leads_crm SET id_funil=N, id_etapa_atual=primeira_etapa
+```
 
-Adicionar verificação de `error` nos passos 3-7 da edge function para que falhas sejam reportadas com mensagens úteis em vez do genérico "Erro ao completar onboarding".
+### Fluxo: copy-company-config (empresa template)
 
-### 3. Remover a função duplicada `aceitar_convite`
+1. Copia funis da empresa fonte → cria novos na destino (IDs novos)
+2. Monta `funilIdRemap` (ID fonte → ID destino)
+3. Copia interesses e remapeia `funil_id` usando o map
 
-Existem **duas overloads** de `aceitar_convite` no banco:
-- `aceitar_convite(p_convite_id uuid)`
-- `aceitar_convite(p_convite_id uuid, p_user_id uuid DEFAULT NULL)`
+### Resumo
 
-Isso pode causar ambiguidade no PostgREST. A versão de 1 parâmetro é obsoleta e deve ser removida via migration.
-
-## Arquivos impactados
-
-- `supabase/functions/manage-users/index.ts` — corrigir mapeamento de role e adicionar error handling
-- Migration SQL — remover overload obsoleta de `aceitar_convite`
-
+| Pergunta | Resposta |
+|---|---|
+| IDs são iguais entre empresa e funil? | Não. São independentes (auto-increment) |
+| Como se vinculam? | `funis.id_empresa` = FK para `empresas_geral.id` |
+| Como interesse sabe qual funil? | `lista_interesses.funil_id` = FK direto para `funis.id` |
+| Como lead entra no CRM? | `criar_lead_triagem` busca funil com `tipo='triagem'` da empresa |
+| Como lead muda de funil? | `mover_lead_por_interesse` consulta `lista_interesses.funil_id` |
