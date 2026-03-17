@@ -418,19 +418,63 @@ Deno.serve(async (req) => {
       }
 
       case "complete_onboarding": {
-        const { user_id, convite_id, primeiro_nome, sobrenome, email, empresa_id, role } = body;
+        const { convite_id, primeiro_nome, sobrenome, email, empresa_id, role, password } = body;
 
-        if (!user_id || !convite_id) {
-          return new Response(JSON.stringify({ error: "Dados incompletos" }), {
+        if (!convite_id || !email || !password) {
+          return new Response(JSON.stringify({ error: "Dados incompletos (convite_id, email, password obrigatórios)" }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        // 1. Accept invite via RPC
+        // 1. Create user or update password if already exists
+        let userId: string;
+        const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: `${primeiro_nome} ${sobrenome}`.trim() },
+        });
+
+        if (createError) {
+          if (createError.message.includes("already been registered")) {
+            // User exists — find them and update their password
+            const { data: listData } = await adminClient.auth.admin.listUsers();
+            const existingUser = listData?.users?.find((u: any) => u.email === email);
+            if (!existingUser) {
+              return new Response(JSON.stringify({ error: "Usuário existe mas não foi encontrado" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            userId = existingUser.id;
+
+            // Update password so signInWithPassword works after
+            const { error: updateErr } = await adminClient.auth.admin.updateUserById(userId, {
+              password,
+              user_metadata: { full_name: `${primeiro_nome} ${sobrenome}`.trim() },
+            });
+            if (updateErr) {
+              console.error("Failed to update user password:", updateErr.message);
+              return new Response(JSON.stringify({ error: "Erro ao atualizar senha: " + updateErr.message }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+          } else {
+            return new Response(JSON.stringify({ error: createError.message }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } else {
+          userId = createData.user.id;
+        }
+
+        // 2. Accept invite via RPC
         const { data: acceptResult, error: acceptError } = await adminClient.rpc("aceitar_convite", {
           p_convite_id: convite_id,
-          p_user_id: user_id,
+          p_user_id: userId,
         });
 
         if (acceptError) {
@@ -451,9 +495,9 @@ Deno.serve(async (req) => {
         const finalEmpresaId = acceptData.empresa_id || empresa_id;
         const finalRole = acceptData.role || role || "member";
 
-        // 2. Upsert usuarios
+        // 3. Upsert usuarios
         await adminClient.from("usuarios").upsert({
-          uuid: user_id,
+          uuid: userId,
           email,
           primeiro_nome,
           sobrenome,
@@ -463,36 +507,36 @@ Deno.serve(async (req) => {
           onboarding_completed: true,
         }, { onConflict: "uuid" });
 
-        // 3. Insert usuario_time
+        // 4. Insert usuario_time
         await adminClient.from("usuario_time").insert({
-          id_usuario: user_id,
+          id_usuario: userId,
           id_empresa: finalEmpresaId,
           role: finalRole,
           status_membro: "active",
         });
 
-        // 4. Update convite status
+        // 5. Update convite status
         await adminClient.from("convites").update({
           status_convite: "accepted",
           accepted_at: new Date().toISOString(),
-          accepted_by_user_id: user_id,
+          accepted_by_user_id: userId,
         }).eq("id", convite_id);
 
-        // 5. Upsert user_empresa_geral
+        // 6. Upsert user_empresa_geral
         await adminClient.from("user_empresa_geral").upsert({
-          user_id,
+          user_id: userId,
           empresa_id: finalEmpresaId,
         }, { onConflict: "user_id" });
 
-        // 6. Audit log
+        // 7. Audit log
         await adminClient.from("audit_logs").insert({
-          actor_user_id: user_id,
+          actor_user_id: userId,
           action: "onboarding_completed",
           entity_type: "convites",
           entity_id: convite_id,
         });
 
-        return new Response(JSON.stringify({ success: true, empresa_id: finalEmpresaId }), {
+        return new Response(JSON.stringify({ success: true, user_id: userId, empresa_id: finalEmpresaId }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
