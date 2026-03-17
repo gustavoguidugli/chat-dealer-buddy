@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Building2, Stethoscope, ScrollText } from 'lucide-react';
@@ -10,6 +10,8 @@ import { AdminLogsTab } from '@/components/admin/AdminLogsTab';
 
 export default function AdminEmpresas() {
   const { isSuperAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'empresas';
 
   if (!isSuperAdmin) return <Navigate to="/home" replace />;
 
@@ -22,7 +24,7 @@ export default function AdminEmpresas() {
             <p className="text-sm text-muted-foreground mt-1">Gerencie empresas, diagnostique problemas e visualize logs</p>
           </div>
 
-          <Tabs defaultValue="empresas">
+          <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })}>
             <TabsList>
               <TabsTrigger value="empresas" className="gap-2">
                 <Building2 className="h-4 w-4" /> Empresas
