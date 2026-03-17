@@ -117,7 +117,7 @@ export function AdminDiagnosticoTab() {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: newValue ? 'CRM ativado com sucesso' : 'CRM desativado com sucesso' });
-      fetch();
+      await fetch();
     }
     setFixing(null);
   };
