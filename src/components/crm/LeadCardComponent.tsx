@@ -31,9 +31,7 @@ function formatCurrency(value: number | null) {
   return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
 }
 
-function getInitials(name: string) {
-  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-}
+// getInitials is no longer needed — using getLeadInitials from lead-utils
 
 function getActivityStatus(dataVencimento: string): 'overdue' | 'today' | 'future' {
   const now = new Date();
