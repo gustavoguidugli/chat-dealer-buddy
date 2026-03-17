@@ -42,6 +42,10 @@ export function AdminDiagnosticoTab() {
       ]);
 
       if (empresasRes.error) throw empresasRes.error;
+      if (configsRes.error) { toast({ title: 'Erro ao carregar configs', description: configsRes.error.message, variant: 'destructive' }); }
+      if (funisRes.error) { toast({ title: 'Erro ao carregar funis', description: funisRes.error.message, variant: 'destructive' }); }
+      if (contatosRes.error) { toast({ title: 'Erro ao carregar contatos', description: contatosRes.error.message, variant: 'destructive' }); }
+      if (leadsRes.error) { toast({ title: 'Erro ao carregar leads', description: leadsRes.error.message, variant: 'destructive' }); }
 
       const configMap = new Map<number, { crm: boolean; triagem: boolean }>();
       configsRes.data?.forEach(c => {
