@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
           .from("convites")
           .insert({
             empresa_id,
-            tipo: "link",
+            tipo: "email",
             max_usos: 1,
             email_destino: email.toLowerCase(),
             role: role || "member",
@@ -343,33 +343,38 @@ Deno.serve(async (req) => {
           });
         }
 
-        const baseUrl = body.redirect_base_url || "https://chat-dealer-buddy.lovable.app";
-        const acceptUrl = `${baseUrl}/aceitar-convite?convite_id=${convite.id}`;
+        // Get company name for the email template
+        const { data: empresaData } = await adminClient
+          .from("empresas_geral")
+          .select("nome")
+          .eq("id", empresa_id)
+          .single();
 
-        // Check if user already exists
-        const { data: listData } = await adminClient.auth.admin.listUsers();
-        const existingUser = listData?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-
-        if (existingUser) {
-          // For existing users, send a password reset email as a "notification"
-          // They already have an account, just need to accept the invite
-          await adminClient.auth.admin.generateLink({
-            type: "magiclink",
-            email: email.toLowerCase(),
-            options: {
-              redirectTo: acceptUrl,
+        // Send branded email via Resend using send-invitation-email
+        try {
+          const sendEmailRes = await fetch(`${supabaseUrl}/functions/v1/send-invitation-email`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${serviceRoleKey}`,
             },
-          });
-        } else {
-          // New user — invite creates the account and sends email
-          const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-            redirectTo: acceptUrl,
+            body: JSON.stringify({
+              convite_id: convite.id,
+              email_destino: email.toLowerCase(),
+              empresa_nome: empresaData?.nome || "Eco Ice",
+              role: role || "member",
+            }),
           });
 
-          if (inviteError) {
-            console.error("Invite email error:", inviteError.message);
-            // Don't fail - invite record was created
+          if (!sendEmailRes.ok) {
+            const errText = await sendEmailRes.text();
+            console.error("send-invitation-email error:", errText);
+          } else {
+            const emailResult = await sendEmailRes.json();
+            console.log("Invitation email sent successfully:", emailResult);
           }
+        } catch (emailErr) {
+          console.error("Failed to call send-invitation-email:", emailErr);
         }
 
         return new Response(JSON.stringify({ success: true, convite_id: convite.id }), {
