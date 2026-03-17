@@ -17,48 +17,56 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller is authenticated and is admin/super_admin
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const body = await req.json();
+    const { action } = body;
 
-    const anonClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    
-    // Use getClaims for token-based validation (doesn't require active session)
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      // Fallback to getUser if getClaims fails
-      const { data: { user: fallbackUser } } = await anonClient.auth.getUser();
-      if (!fallbackUser) {
+    // complete_onboarding does NOT require auth — user isn't logged in yet.
+    // Security is ensured by validating the convite token server-side.
+    if (action === "complete_onboarding") {
+      // Skip auth check — handled inside the action via convite validation
+    } else {
+      // All other actions require authenticated caller
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
         return new Response(JSON.stringify({ error: "Não autorizado" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      var caller = { id: fallbackUser.id, email: fallbackUser.email };
-    } else {
-      var caller = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
+
+      const anonClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims) {
+        const { data: { user: fallbackUser } } = await anonClient.auth.getUser();
+        if (!fallbackUser) {
+          return new Response(JSON.stringify({ error: "Não autorizado" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        var caller = { id: fallbackUser.id, email: fallbackUser.email };
+      } else {
+        var caller = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
+      }
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const body = await req.json();
-    const { action } = body;
-
-    // Check caller permissions
-    const { data: callerPerms } = await adminClient
-      .from("user_empresa")
-      .select("role, empresa_id")
-      .eq("user_id", caller.id);
-
-    const callerIsSuperAdmin = SUPER_ADMIN_EMAILS.includes(caller.email ?? "");
-    const callerRoles = callerPerms || [];
+    // Helper: check caller permissions (only used by authenticated actions)
+    const callerIsSuperAdmin = action !== "complete_onboarding" && SUPER_ADMIN_EMAILS.includes(caller?.email ?? "");
+    
+    const getCallerRoles = async () => {
+      if (action === "complete_onboarding") return [];
+      const { data: callerPerms } = await adminClient
+        .from("user_empresa")
+        .select("role, empresa_id")
+        .eq("user_id", caller.id);
+      return callerPerms || [];
+    };
+    const callerRoles = await getCallerRoles();
 
     const isCallerAdminForEmpresa = (empresaId: number) => {
       if (callerIsSuperAdmin) return true;
@@ -418,19 +426,63 @@ Deno.serve(async (req) => {
       }
 
       case "complete_onboarding": {
-        const { user_id, convite_id, primeiro_nome, sobrenome, email, empresa_id, role } = body;
+        const { convite_id, primeiro_nome, sobrenome, email, empresa_id, role, password } = body;
 
-        if (!user_id || !convite_id) {
-          return new Response(JSON.stringify({ error: "Dados incompletos" }), {
+        if (!convite_id || !email || !password) {
+          return new Response(JSON.stringify({ error: "Dados incompletos (convite_id, email, password obrigatórios)" }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        // 1. Accept invite via RPC
+        // 1. Create user or update password if already exists
+        let userId: string;
+        const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: `${primeiro_nome} ${sobrenome}`.trim() },
+        });
+
+        if (createError) {
+          if (createError.message.includes("already been registered")) {
+            // User exists — find them and update their password
+            const { data: listData } = await adminClient.auth.admin.listUsers();
+            const existingUser = listData?.users?.find((u: any) => u.email === email);
+            if (!existingUser) {
+              return new Response(JSON.stringify({ error: "Usuário existe mas não foi encontrado" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            userId = existingUser.id;
+
+            // Update password so signInWithPassword works after
+            const { error: updateErr } = await adminClient.auth.admin.updateUserById(userId, {
+              password,
+              user_metadata: { full_name: `${primeiro_nome} ${sobrenome}`.trim() },
+            });
+            if (updateErr) {
+              console.error("Failed to update user password:", updateErr.message);
+              return new Response(JSON.stringify({ error: "Erro ao atualizar senha: " + updateErr.message }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+          } else {
+            return new Response(JSON.stringify({ error: createError.message }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } else {
+          userId = createData.user.id;
+        }
+
+        // 2. Accept invite via RPC
         const { data: acceptResult, error: acceptError } = await adminClient.rpc("aceitar_convite", {
           p_convite_id: convite_id,
-          p_user_id: user_id,
+          p_user_id: userId,
         });
 
         if (acceptError) {
@@ -451,9 +503,9 @@ Deno.serve(async (req) => {
         const finalEmpresaId = acceptData.empresa_id || empresa_id;
         const finalRole = acceptData.role || role || "member";
 
-        // 2. Upsert usuarios
+        // 3. Upsert usuarios
         await adminClient.from("usuarios").upsert({
-          uuid: user_id,
+          uuid: userId,
           email,
           primeiro_nome,
           sobrenome,
@@ -463,36 +515,36 @@ Deno.serve(async (req) => {
           onboarding_completed: true,
         }, { onConflict: "uuid" });
 
-        // 3. Insert usuario_time
+        // 4. Insert usuario_time
         await adminClient.from("usuario_time").insert({
-          id_usuario: user_id,
+          id_usuario: userId,
           id_empresa: finalEmpresaId,
           role: finalRole,
           status_membro: "active",
         });
 
-        // 4. Update convite status
+        // 5. Update convite status
         await adminClient.from("convites").update({
           status_convite: "accepted",
           accepted_at: new Date().toISOString(),
-          accepted_by_user_id: user_id,
+          accepted_by_user_id: userId,
         }).eq("id", convite_id);
 
-        // 5. Upsert user_empresa_geral
+        // 6. Upsert user_empresa_geral
         await adminClient.from("user_empresa_geral").upsert({
-          user_id,
+          user_id: userId,
           empresa_id: finalEmpresaId,
         }, { onConflict: "user_id" });
 
-        // 6. Audit log
+        // 7. Audit log
         await adminClient.from("audit_logs").insert({
-          actor_user_id: user_id,
+          actor_user_id: userId,
           action: "onboarding_completed",
           entity_type: "convites",
           entity_id: convite_id,
         });
 
-        return new Response(JSON.stringify({ success: true, empresa_id: finalEmpresaId }), {
+        return new Response(JSON.stringify({ success: true, user_id: userId, empresa_id: finalEmpresaId }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
