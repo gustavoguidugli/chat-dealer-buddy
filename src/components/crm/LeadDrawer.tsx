@@ -1267,35 +1267,10 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                       // Get previous value for history
                                       const previousValue = dadosContato.interesse || lead.campos_extras?.interesse || null;
 
-                                      // 1. ALWAYS save to leads_crm.campos_extras first (primary storage)
-                                      const newExtras = { ...(lead.campos_extras || {}), [storageKey]: val };
-                                      await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
-                                      setLead({ ...lead, campos_extras: newExtras });
-
-                                      // 2. Register change in historico_lead
-                                      if (previousValue !== val) {
-                                        const interesseLabel = listaInteresses.find(i => i.nome === val)?.label || val;
-                                        const previousLabel = listaInteresses.find(i => i.nome === previousValue)?.label || previousValue || 'Não definido';
-                                        
-                                        await supabase.from('historico_lead').insert({
-                                          id_lead: lead.id,
-                                          id_empresa: lead.id_empresa,
-                                          tipo_evento: 'campo_alterado',
-                                          descricao: `Interesse alterado de "${previousLabel}" para "${interesseLabel}"`,
-                                          usuario_id: user?.id || null,
-                                          metadados: {
-                                            campo: 'interesse',
-                                            valor_anterior: previousValue,
-                                            valor_novo: val,
-                                          },
-                                        });
-                                      }
-
-                                      // 3. Best-effort sync to contatos_geral (don't block on failure)
+                                      // 1. Sync to contatos_geral FIRST (triggers mover_lead_por_interesse)
                                       try {
                                         let contatoGeralId = lead.id_contato_geral;
                                         
-                                        // If no id_contato_geral, try to find by whatsapp with multiple variants
                                         if (!contatoGeralId && lead.whatsapp) {
                                           const raw = lead.whatsapp.replace(/\D/g, '');
                                           const variants = [
@@ -1314,10 +1289,8 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                           
                                           if (contatoData) {
                                             contatoGeralId = contatoData.id;
-                                            // Save id_contato_geral to lead for future use
                                             await supabase.from('leads_crm').update({ id_contato_geral: contatoGeralId }).eq('id', lead.id);
                                             
-                                            // If contato_geral has no empresa_id, set it
                                             if (!contatoData.empresa_id) {
                                               await supabase.from('contatos_geral').update({ empresa_id: lead.id_empresa }).eq('id', contatoGeralId);
                                             }
@@ -1334,9 +1307,33 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                                         console.warn('Falha ao sincronizar interesse com contatos_geral:', e);
                                       }
 
-                                      // 4. Funnel move is handled by DB trigger mover_lead_por_interesse()
-                                      // triggered by contatos_geral.interesse update above
-                                      fetchMeta();
+                                      // 2. Save to leads_crm.campos_extras (after trigger has moved the lead)
+                                      const newExtras = { ...(lead.campos_extras || {}), [storageKey]: val };
+                                      await supabase.from('leads_crm').update({ campos_extras: newExtras }).eq('id', lead.id);
+                                      setLead({ ...lead, campos_extras: newExtras });
+
+                                      // 3. Register change in historico_lead
+                                      if (previousValue !== val) {
+                                        const interesseLabel = listaInteresses.find(i => i.nome === val)?.label || val;
+                                        const previousLabel = listaInteresses.find(i => i.nome === previousValue)?.label || previousValue || 'Não definido';
+                                        
+                                        await supabase.from('historico_lead').insert({
+                                          id_lead: lead.id,
+                                          id_empresa: lead.id_empresa,
+                                          tipo_evento: 'campo_alterado',
+                                          descricao: `Interesse alterado de "${previousLabel}" para "${interesseLabel}"`,
+                                          usuario_id: user?.id || null,
+                                          metadados: {
+                                            campo: 'interesse',
+                                            valor_anterior: previousValue,
+                                            valor_novo: val,
+                                          },
+                                        });
+                                      }
+
+                                      // 4. Wait briefly for DB trigger to complete, then refresh
+                                      await new Promise(resolve => setTimeout(resolve, 400));
+                                      await fetchMeta();
                                       onLeadChanged?.();
                                     }}
                                   >
