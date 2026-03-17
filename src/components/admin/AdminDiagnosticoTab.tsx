@@ -107,15 +107,16 @@ export function AdminDiagnosticoTab() {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const ativarCrm = async (empresaId: number) => {
+  const toggleCrm = async (empresaId: number, currentValue: boolean) => {
     setFixing(empresaId);
+    const newValue = !currentValue;
     const { error } = await supabase
       .from('config_empresas_geral')
-      .upsert({ id_empresa: empresaId, crm_is_ativo: true }, { onConflict: 'id_empresa' });
+      .upsert({ id_empresa: empresaId, crm_is_ativo: newValue }, { onConflict: 'id_empresa' });
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'CRM ativado com sucesso' });
+      toast({ title: newValue ? 'CRM ativado com sucesso' : 'CRM desativado com sucesso' });
       fetch();
     }
     setFixing(null);
