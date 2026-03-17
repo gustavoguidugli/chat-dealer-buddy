@@ -17,48 +17,56 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller is authenticated and is admin/super_admin
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const body = await req.json();
+    const { action } = body;
 
-    const anonClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    
-    // Use getClaims for token-based validation (doesn't require active session)
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      // Fallback to getUser if getClaims fails
-      const { data: { user: fallbackUser } } = await anonClient.auth.getUser();
-      if (!fallbackUser) {
+    // complete_onboarding does NOT require auth — user isn't logged in yet.
+    // Security is ensured by validating the convite token server-side.
+    if (action === "complete_onboarding") {
+      // Skip auth check — handled inside the action via convite validation
+    } else {
+      // All other actions require authenticated caller
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
         return new Response(JSON.stringify({ error: "Não autorizado" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      var caller = { id: fallbackUser.id, email: fallbackUser.email };
-    } else {
-      var caller = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
+
+      const anonClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims) {
+        const { data: { user: fallbackUser } } = await anonClient.auth.getUser();
+        if (!fallbackUser) {
+          return new Response(JSON.stringify({ error: "Não autorizado" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        var caller = { id: fallbackUser.id, email: fallbackUser.email };
+      } else {
+        var caller = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
+      }
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const body = await req.json();
-    const { action } = body;
-
-    // Check caller permissions
-    const { data: callerPerms } = await adminClient
-      .from("user_empresa")
-      .select("role, empresa_id")
-      .eq("user_id", caller.id);
-
-    const callerIsSuperAdmin = SUPER_ADMIN_EMAILS.includes(caller.email ?? "");
-    const callerRoles = callerPerms || [];
+    // Helper: check caller permissions (only used by authenticated actions)
+    const callerIsSuperAdmin = action !== "complete_onboarding" && SUPER_ADMIN_EMAILS.includes(caller?.email ?? "");
+    
+    const getCallerRoles = async () => {
+      if (action === "complete_onboarding") return [];
+      const { data: callerPerms } = await adminClient
+        .from("user_empresa")
+        .select("role, empresa_id")
+        .eq("user_id", caller.id);
+      return callerPerms || [];
+    };
+    const callerRoles = await getCallerRoles();
 
     const isCallerAdminForEmpresa = (empresaId: number) => {
       if (callerIsSuperAdmin) return true;

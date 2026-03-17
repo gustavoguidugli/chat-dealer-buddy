@@ -80,50 +80,29 @@ export default function Onboarding() {
     setSubmitting(true);
 
     try {
-      // 1. Sign up (or sign in if user already exists)
-      let newUserId: string | undefined;
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: conviteData.email_destino,
-        password,
-      });
-      if (signUpError) {
-        if (signUpError.message?.includes('User already registered')) {
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: conviteData.email_destino,
-            password,
-          });
-          if (signInError) throw signInError;
-          newUserId = signInData.user?.id;
-        } else {
-          throw signUpError;
-        }
-      } else {
-        newUserId = signUpData.user?.id;
-      }
-      if (!newUserId) throw new Error('Não foi possível criar a conta');
-
-      // 2. Accept invite + setup via Edge Function (runs with service role, bypasses RLS)
+      // 1. Delegate user creation/password to backend (handles new + existing users)
       const { data: efResult, error: efError } = await supabase.functions.invoke('manage-users', {
         body: {
           action: 'complete_onboarding',
-          user_id: newUserId,
           convite_id: conviteData.id,
           primeiro_nome: firstName.trim(),
           sobrenome: lastName.trim(),
           email: conviteData.email_destino,
           empresa_id: conviteData.empresa_id,
           role: conviteData.role,
+          password,
         },
       });
-      if (efError) throw new Error('Erro ao vincular conta à empresa');
+      if (efError) throw new Error('Erro ao completar onboarding');
       const efData = efResult as { success?: boolean; error?: string };
       if (!efData?.success) throw new Error(efData?.error || 'Erro ao completar onboarding');
 
-      // 7. Re-login to refresh session
-      await supabase.auth.signInWithPassword({
+      // 2. Now sign in — password is guaranteed correct (backend just set it)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: conviteData.email_destino,
         password,
       });
+      if (signInError) throw signInError;
 
       toast({ title: 'Conta criada com sucesso!' });
       navigate('/home', { replace: true });
