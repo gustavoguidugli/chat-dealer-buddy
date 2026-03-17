@@ -450,8 +450,10 @@ Deno.serve(async (req) => {
 
       case "complete_onboarding": {
         const { convite_id, primeiro_nome, sobrenome, email, empresa_id, role, password } = body;
+        console.log("[complete_onboarding] START", { convite_id, email, empresa_id, role });
 
         if (!convite_id || !email || !password) {
+          console.error("[complete_onboarding] Missing required fields");
           return new Response(JSON.stringify({ error: "Dados incompletos (convite_id, email, password obrigatórios)" }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -460,6 +462,7 @@ Deno.serve(async (req) => {
 
         // 1. Create user or update password if already exists
         let userId: string;
+        console.log("[complete_onboarding] Step 1: Creating user in Auth...");
         const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
           email,
           password,
@@ -469,30 +472,35 @@ Deno.serve(async (req) => {
 
         if (createError) {
           if (createError.message.includes("already been registered")) {
-            // User exists — find them and update their password
-            const { data: listData } = await adminClient.auth.admin.listUsers();
-            const existingUser = listData?.users?.find((u: any) => u.email === email);
-            if (!existingUser) {
+            console.log("[complete_onboarding] User already exists, looking up by email via RPC...");
+            // Use DB function instead of listUsers() to avoid GoTrue banned_until scan bug
+            const { data: foundUserId, error: lookupErr } = await adminClient.rpc("get_user_id_by_email", { p_email: email });
+            if (lookupErr || !foundUserId) {
+              console.error("[complete_onboarding] User lookup failed:", lookupErr?.message);
               return new Response(JSON.stringify({ error: "Usuário existe mas não foi encontrado" }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
               });
             }
-            userId = existingUser.id;
+            userId = foundUserId;
+            console.log("[complete_onboarding] Found user:", userId);
 
             // Update password so signInWithPassword works after
+            console.log("[complete_onboarding] Updating password via Admin API...");
             const { error: updateErr } = await adminClient.auth.admin.updateUserById(userId, {
               password,
               user_metadata: { full_name: `${primeiro_nome} ${sobrenome}`.trim() },
             });
             if (updateErr) {
-              console.error("Failed to update user password:", updateErr.message);
+              console.error("[complete_onboarding] Failed to update password:", updateErr.message);
               return new Response(JSON.stringify({ error: "Erro ao atualizar senha: " + updateErr.message }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
               });
             }
+            console.log("[complete_onboarding] Password updated successfully");
           } else {
+            console.error("[complete_onboarding] createUser failed:", createError.message);
             return new Response(JSON.stringify({ error: createError.message }), {
               status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -500,9 +508,10 @@ Deno.serve(async (req) => {
           }
         } else {
           userId = createData.user.id;
+          console.log("[complete_onboarding] New user created:", userId);
         }
 
-        // 2. Accept invite via RPC
+        console.log("[complete_onboarding] Step 2: Accepting invite...");
         const { data: acceptResult, error: acceptError } = await adminClient.rpc("aceitar_convite", {
           p_convite_id: convite_id,
           p_user_id: userId,
@@ -525,8 +534,10 @@ Deno.serve(async (req) => {
 
         const finalEmpresaId = acceptData.empresa_id || empresa_id;
         const finalRole = acceptData.role || role || "member";
+        console.log("[complete_onboarding] Invite accepted. empresa_id:", finalEmpresaId, "role:", finalRole);
 
         // 3. Upsert usuarios
+        console.log("[complete_onboarding] Step 3: Upserting usuarios...");
         await adminClient.from("usuarios").upsert({
           uuid: userId,
           email,
@@ -539,6 +550,7 @@ Deno.serve(async (req) => {
         }, { onConflict: "uuid" });
 
         // 4. Insert usuario_time
+        console.log("[complete_onboarding] Step 4: Inserting usuario_time...");
         await adminClient.from("usuario_time").insert({
           id_usuario: userId,
           id_empresa: finalEmpresaId,
@@ -547,6 +559,7 @@ Deno.serve(async (req) => {
         });
 
         // 5. Update convite status
+        console.log("[complete_onboarding] Step 5: Updating convite status...");
         await adminClient.from("convites").update({
           status_convite: "accepted",
           accepted_at: new Date().toISOString(),
@@ -567,6 +580,7 @@ Deno.serve(async (req) => {
           entity_id: convite_id,
         });
 
+        console.log("[complete_onboarding] SUCCESS — user:", userId, "empresa:", finalEmpresaId);
         return new Response(JSON.stringify({ success: true, user_id: userId, empresa_id: finalEmpresaId }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
