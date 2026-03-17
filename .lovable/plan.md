@@ -1,147 +1,112 @@
 
+## Audit — Block 1 ✅ (Completed)
 
-# Plano: Controle de Repetição e Confirmação em Convites
+1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
+2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
+3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
+4. **`copy-company-config`** — Now copies and remaps `funil_id`
+
+## Audit — Block 2 ✅ (Completed)
+
+1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
+
+### Accepted Architectural Limitations (SDR Tables)
+
+The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
+
+- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
+- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
+- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
+- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
+- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
+
+**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
+
+## Audit — Block 3 ✅ (Completed)
+
+### Automação de funis para novas empresas e interesses
+
+1. **Trigger `criar_funis_padrao()`** — Novo trigger `AFTER INSERT ON empresas_geral` que cria automaticamente 4 funis padrão (Triagem, Máquina de Gelo, Purificador, Outros) com suas respectivas etapas. Executa antes de `inserir_interesses_padrao` via nomenclatura alfabética (`a_criar_funis_padrao`).
+
+2. **`copy-company-config`** — Atualizada para copiar `funis` + `etapas_funil` da empresa template antes dos interesses, com remapeamento correto de IDs. Reutiliza funis criados pelo trigger quando o `tipo` já existe no destino.
+
+3. **`Triagem.tsx` + `InterestModal.tsx`** — Criação automática de funil ao adicionar novo interesse sem funil selecionado. O modal agora oferece opção "Criar funil automaticamente" como padrão, com etapas (Novo, Qualificação, Proposta, Fechamento).
 
 ---
 
-## BLOCO 1 — Diagnóstico Objetivo
+## Arquitetura: Empresa ↔ Funil
 
-### Como o fluxo funciona hoje
-
-Existem **3 pontos de criação** de convites e **2 ações sensíveis** sobre convites existentes:
-
-**Criação:**
-1. `InviteTeamModal` (Meu Time) — verifica pendentes pelo `status_convite = 'pending'`, mas não verifica tempo desde o último envio
-2. `InviteModal` (Admin) — nenhuma validação de duplicata ou intervalo
-3. `CreateCompanyModal` (Admin cria empresa) — nenhuma validação
-
-**Ações sensíveis:**
-- `handleCancelConvite` em `MeuTime.tsx` (linha 163) — execução direta, sem confirmação
-- `handleResendConvite` em `MeuTime.tsx` (linha 170) — execução direta, sem confirmação. Cria novo convite + cancela o antigo imediatamente
-
-### Hipótese principal
-Não existe nenhuma trava de intervalo mínimo em nenhuma camada (frontend, backend ou banco). A única proteção é a validação do `InviteTeamModal` que bloqueia emails com convite `pending`, mas isso não impede reenvio rápido (que cancela o antigo e cria novo) nem convites via `InviteModal`/`CreateCompanyModal`.
-
-### Hipóteses secundárias
-1. O reenvio rápido gera múltiplos registros cancelados + novos pendentes, poluindo o histórico
-2. Cancelar e reenviar são cliques diretos em ícones pequenos, sem feedback ou confirmação — risco alto de ação acidental
-3. Não há proteção contra duplo-clique (o botão não é desabilitado durante a operação)
-
-### Tipo de problema
-**Combinação de camadas** — falta regra de negócio (intervalo mínimo) e falta UX de segurança (confirmação).
-
----
-
-## BLOCO 2 — Fluxo Atual (AS-IS)
+### Modelo de dados
 
 ```text
-CRIAÇÃO (InviteTeamModal):
-  1. Abre modal → carrega pendingInvites (status=pending)
-  2. Validação frontend: bloqueia se email já tem pending
-  3. INSERT convites (sem checar tempo desde último envio)
-  4. Chama send-invitation-email
-  → LACUNA: não verifica se houve convite nos últimos 2min
+empresas_geral (id)
+  └── funis (id_empresa = empresas_geral.id)
+        ├── tipo: 'triagem' | 'maquina_gelo' | 'purificador' | 'outros' | 'custom'
+        └── etapas_funil (id_funil = funis.id)
 
-CRIAÇÃO (InviteModal - Admin):
-  1. Chama manage-users action convidar_usuario
-  → LACUNA: nenhuma validação de duplicata ou intervalo
-
-REENVIAR (MeuTime.tsx handleResendConvite):
-  1. UPDATE convite antigo → canceled
-  2. INSERT novo convite → pending
-  3. Chama send-invitation-email
-  → LACUNA: nenhum intervalo mínimo, nenhuma confirmação
-  → LACUNA: sem loading state no botão (risco de duplo-clique)
-
-CANCELAR (MeuTime.tsx handleCancelConvite):
-  1. UPDATE convite → canceled
-  → LACUNA: nenhuma confirmação antes da execução
-  → LACUNA: sem loading state
+  └── lista_interesses (empresa_id = empresas_geral.id)
+        └── funil_id → funis.id  (FK direto — mapeia interesse → funil)
 ```
 
-### Onde o sistema deveria proteger e não protege
-1. **Antes de inserir/reenviar**: checar `created_at` do último convite para o mesmo email na mesma empresa
-2. **Antes de cancelar/reenviar**: exigir confirmação explícita
-3. **Durante a execução**: desabilitar botões para evitar duplo-clique
+Os IDs **não são sincronizados** — cada empresa recebe funis com IDs sequenciais independentes (auto-increment). A vinculação é feita por **foreign key** (`funis.id_empresa` e `lista_interesses.funil_id`), nunca por nome ou convenção.
 
----
+### Fluxo completo: criação de empresa
 
-## BLOCO 3 — Estado Esperado (TO-BE)
+```text
+INSERT INTO empresas_geral (nome = 'Nova Empresa')
+  │
+  ├─ Trigger 1: a_criar_funis_padrao()
+  │    Cria 4 funis com etapas:
+  │    ┌──────────────────┬──────────────┬────────────────────────────┐
+  │    │ Funil            │ tipo         │ Etapas                     │
+  │    ├──────────────────┼──────────────┼────────────────────────────┤
+  │    │ Sem interesse    │ triagem      │ Novos, Em atendimento      │
+  │    │ Máquina de Gelo  │ maquina_gelo │ Novo, Qualif., Prop., Fech.│
+  │    │ Purificador      │ purificador  │ Novo, Qualif., Prop., Fech.│
+  │    │ Outros interesses│ outros       │ Novo, Em atendimento       │
+  │    └──────────────────┴──────────────┴────────────────────────────┘
+  │
+  ├─ Trigger 2: inserir_interesses_padrao()
+  │    Cria 3 interesses e vincula ao funil pelo tipo:
+  │    UPDATE lista_interesses SET funil_id = funis.id
+  │      WHERE funis.tipo = lista_interesses.nome
+  │
+  └─ Trigger 3: criar_convite_inicial()
+```
 
-1. Para o mesmo email + empresa, novo convite ou reenvio só é permitido se o último convite (qualquer status) foi criado há mais de 2 minutos
-2. A validação de intervalo existe no frontend (UX imediata) e no backend (segurança real)
-3. Cancelar convite exige confirmação via AlertDialog antes da execução
-4. Reenviar convite exige confirmação via AlertDialog antes da execução
-5. Botões são desabilitados durante operações assíncronas
-6. Feedback claro quando o intervalo mínimo não foi atingido (ex: "Aguarde X segundos para reenviar")
+### Fluxo: novo contato WhatsApp → lead
 
----
+```text
+INSERT INTO contatos_geral (whatsapp, empresa_id)
+  └─ Trigger: trg_criar_lead_apos_contato
+       └─ criar_lead_triagem(whatsapp, empresa_id)
+            ├─ SELECT id FROM funis WHERE tipo='triagem' AND id_empresa=X
+            ├─ SELECT id FROM etapas_funil WHERE id_funil=Y ORDER BY ordem LIMIT 1
+            └─ INSERT INTO leads_crm (id_funil=Y, id_etapa_atual=Z)
+```
 
-## BLOCO 4 — Plano de Correção em Etapas
+### Fluxo: interesse identificado → mover lead
 
-### Etapa 1 — Validação de intervalo no backend (`manage-users`)
+```text
+UPDATE contatos_geral SET interesse = 'maquina_gelo'
+  └─ Trigger: mover_lead_por_interesse()
+       ├─ SELECT funil_id FROM lista_interesses WHERE nome='maquina_gelo' AND empresa_id=X
+       ├─ SELECT id FROM etapas_funil WHERE id_funil=N ORDER BY ordem LIMIT 1
+       └─ UPDATE leads_crm SET id_funil=N, id_etapa_atual=primeira_etapa
+```
 
-**Objetivo:** Na action `convidar_usuario`, antes de criar o convite, checar se existe convite para o mesmo email+empresa com `created_at` nos últimos 2 minutos.
-**Verificação:** Query `convites WHERE email_destino = X AND empresa_id = Y AND created_at > now() - 2min`.
-**Componente:** `supabase/functions/manage-users/index.ts`
-**Risco:** Baixo — adição de query de leitura antes do insert.
-**Validação:** Tentar criar convite duplicado em < 2min → erro retornado.
+### Fluxo: copy-company-config (empresa template)
 
-### Etapa 2 — Validação de intervalo no frontend (InviteTeamModal + MeuTime reenvio)
+1. Copia funis da empresa fonte → cria novos na destino (IDs novos)
+2. Monta `funilIdRemap` (ID fonte → ID destino)
+3. Copia interesses e remapeia `funil_id` usando o map
 
-**Objetivo:** Antes de submeter novo convite ou reenviar, verificar `created_at` do último convite para aquele email.
-**Componente:** `InviteTeamModal.tsx` (validação no `validate`), `MeuTime.tsx` (no `handleResendConvite`)
-**Mudança:** Carregar último `created_at` por email ao abrir o modal. Mostrar erro inline "Aguarde X segundos" se < 2min.
-**Risco:** Baixo.
-**Validação:** Tentar reenviar imediatamente → botão bloqueado com mensagem.
+### Resumo
 
-### Etapa 3 — AlertDialog de confirmação para cancelar e reenviar
-
-**Objetivo:** Adicionar confirmação explícita antes de cancelar ou reenviar convite.
-**Componente:** `MeuTime.tsx`
-**Mudança:** Adicionar estado `confirmAction` com tipo (`cancel` | `resend`) e o convite alvo. Renderizar `AlertDialog` com mensagem contextual. Executar a ação apenas após confirmação.
-**Risco:** Baixo — mudança puramente de UX.
-**Validação:** Clicar cancelar/reenviar → AlertDialog aparece → só executa ao confirmar.
-
-### Etapa 4 — Loading state nos botões de ação
-
-**Objetivo:** Impedir duplo-clique desabilitando botões durante operações.
-**Componente:** `MeuTime.tsx`
-**Mudança:** Adicionar estado `actionLoading` (string | null) com o ID do convite em execução. Desabilitar botões correspondentes.
-**Risco:** Nenhum.
-
-### Etapa 5 — Validação e deploy
-
-**Verificações:**
-1. Criar convite → esperar < 2min → tentar criar outro para mesmo email → bloqueado
-2. Reenviar → confirmação aparece → confirmar → convite reenviado
-3. Cancelar → confirmação aparece → confirmar → convite cancelado
-4. Duplo-clique rápido → apenas uma execução
-5. Após 2min → novo convite permitido normalmente
-
----
-
-## BLOCO 5 — Critérios de Aceite
-
-1. O sistema impede novo convite para o mesmo email antes de 2 minutos — tanto no frontend quanto no backend
-2. Usuário recebe feedback claro com tempo restante quando tenta enviar cedo demais
-3. Cancelar convite exige confirmação explícita via AlertDialog
-4. Reenviar convite exige confirmação explícita via AlertDialog
-5. Botões são desabilitados durante operações assíncronas
-6. O fluxo continua funcional e sem fricção desnecessária após o intervalo mínimo
-7. Nenhuma ação sensível é executada com clique único direto
-
----
-
-## BLOCO 6 — Recomendação Final
-
-**Recomendação: Correção intermediária**
-
-**Justificativa:**
-- O problema é uma combinação de falta de regra de negócio (intervalo) e falta de UX de segurança (confirmação)
-- A correção envolve 2 arquivos principais (`MeuTime.tsx` e `InviteTeamModal.tsx`) + 1 edge function (`manage-users`)
-- A validação de intervalo no backend garante que a proteção não depende apenas do frontend
-- Os AlertDialogs usam componentes já existentes no projeto (`alert-dialog.tsx` do shadcn)
-- Não requer mudanças no banco de dados — a query usa colunas já existentes (`email_destino`, `empresa_id`, `created_at`)
-- Risco de reincidência sem correção: alto — qualquer clique acidental ou repetição rápida gera convites duplicados
-
+| Pergunta | Resposta |
+|---|---|
+| IDs são iguais entre empresa e funil? | Não. São independentes (auto-increment) |
+| Como se vinculam? | `funis.id_empresa` = FK para `empresas_geral.id` |
+| Como interesse sabe qual funil? | `lista_interesses.funil_id` = FK direto para `funis.id` |
+| Como lead entra no CRM? | `criar_lead_triagem` busca funil com `tipo='triagem'` da empresa |
+| Como lead muda de funil? | `mover_lead_por_interesse` consulta `lista_interesses.funil_id` |

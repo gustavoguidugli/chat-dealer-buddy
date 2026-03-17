@@ -328,6 +328,29 @@ Deno.serve(async (req) => {
           });
         }
 
+        // Check 2-minute cooldown for same email + empresa
+        const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const { data: recentInvites } = await adminClient
+          .from("convites")
+          .select("created_at")
+          .eq("empresa_id", empresa_id)
+          .eq("email_destino", email.toLowerCase())
+          .gte("created_at", twoMinAgo)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (recentInvites && recentInvites.length > 0) {
+          const lastSent = new Date(recentInvites[0].created_at).getTime();
+          const waitSeconds = Math.ceil((lastSent + 2 * 60 * 1000 - Date.now()) / 1000);
+          return new Response(JSON.stringify({ 
+            error: `Aguarde ${waitSeconds} segundos antes de enviar outro convite para este e-mail`,
+            cooldown_seconds: waitSeconds,
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
         // Create invite record with 72h expiration
         const expiry = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
         const { data: convite, error: conviteError } = await adminClient
