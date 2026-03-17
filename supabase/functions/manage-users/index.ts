@@ -534,8 +534,10 @@ Deno.serve(async (req) => {
 
         const finalEmpresaId = acceptData.empresa_id || empresa_id;
         const finalRole = acceptData.role || role || "member";
+        console.log("[complete_onboarding] Invite accepted. empresa_id:", finalEmpresaId, "role:", finalRole);
 
         // 3. Upsert usuarios
+        console.log("[complete_onboarding] Step 3: Upserting usuarios...");
         await adminClient.from("usuarios").upsert({
           uuid: userId,
           email,
@@ -548,6 +550,7 @@ Deno.serve(async (req) => {
         }, { onConflict: "uuid" });
 
         // 4. Insert usuario_time
+        console.log("[complete_onboarding] Step 4: Inserting usuario_time...");
         await adminClient.from("usuario_time").insert({
           id_usuario: userId,
           id_empresa: finalEmpresaId,
@@ -556,6 +559,7 @@ Deno.serve(async (req) => {
         });
 
         // 5. Update convite status
+        console.log("[complete_onboarding] Step 5: Updating convite status...");
         await adminClient.from("convites").update({
           status_convite: "accepted",
           accepted_at: new Date().toISOString(),
@@ -576,6 +580,7 @@ Deno.serve(async (req) => {
           entity_id: convite_id,
         });
 
+        console.log("[complete_onboarding] SUCCESS — user:", userId, "empresa:", finalEmpresaId);
         return new Response(JSON.stringify({ success: true, user_id: userId, empresa_id: finalEmpresaId }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
