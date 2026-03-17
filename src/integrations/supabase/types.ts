@@ -2782,6 +2782,7 @@ export type Database = {
         }[]
       }
       get_user_empresa_id: { Args: { user_uuid: string }; Returns: number }
+      get_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_usuarios_empresa: {
         Args: { empresa_id_param: number }
         Returns: {
