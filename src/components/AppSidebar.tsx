@@ -150,6 +150,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
           <CollapsibleContent className="pl-8 space-y-0.5 mt-0.5">
             <SubmenuLink to="/crm" label="Funil" icon={Target} onClick={onNavigate} />
             <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} onClick={onNavigate} />
+            <SubmenuLink to="/crm/dashboards" label="Dashboards" icon={BarChart2} onClick={onNavigate} />
           </CollapsibleContent>
         </Collapsible>
         )}
