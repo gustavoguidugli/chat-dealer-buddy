@@ -480,20 +480,19 @@ export function useLeadsByEtiqueta(empresaId: number | null, filters: DashboardF
   const fetch = useCallback(async () => {
     if (!empresaId || !filters) return;
     setLoading(true);
-    const { start, end } = getDateRange(filters.period, filters.startDate, filters.endDate);
 
     const { data: etiquetas } = await supabase.from('etiquetas_card').select('id, nome, cor').eq('id_empresa', empresaId).eq('ativo', true);
     if (!etiquetas?.length) { setData([]); setLoading(false); return; }
 
-    const { data: leadsEtiq } = await supabase.from('lead_etiquetas').select('id_etiqueta, id_lead').in('id_etiqueta', etiquetas.map(e => e.id));
+    const { data: leadsEtiq } = await supabase.from('lead_etiquetas').select('id_etiqueta, id_lead').eq('id_empresa', empresaId).in('id_etiqueta', etiquetas.map(e => e.id));
 
-    // Filter leads by period
     const leadIds = [...new Set(leadsEtiq?.map(le => le.id_lead) ?? [])];
     if (!leadIds.length) { setData([]); setLoading(false); return; }
 
-    let qLeads = supabase.from('leads_crm').select('id').eq('id_empresa', empresaId)
-      .gte('data_criacao', start.toISOString()).lte('data_criacao', end.toISOString()).in('id', leadIds.slice(0, 500));
+    // No date filter — etiquetas are lead attributes, not time-based events
+    let qLeads = supabase.from('leads_crm').select('id').eq('id_empresa', empresaId).eq('ativo', true).in('id', leadIds.slice(0, 500));
     if (filters.funilIds.length) qLeads = qLeads.in('id_funil', filters.funilIds);
+    if (filters.agenteIds.length) qLeads = qLeads.in('proprietario_id', filters.agenteIds);
     const { data: validLeads } = await qLeads;
     const validSet = new Set(validLeads?.map(l => l.id));
 
