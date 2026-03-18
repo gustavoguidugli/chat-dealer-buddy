@@ -72,6 +72,9 @@ const App = () => (
             <Route path="/crm/atividades" element={
               <ProtectedRoute><CrmAtividades /></ProtectedRoute>
             } />
+            <Route path="/crm/dashboards" element={
+              <ProtectedRoute><CrmDashboards /></ProtectedRoute>
+            } />
             <Route path="/admin/empresas" element={
               <ProtectedRoute><AdminEmpresas /></ProtectedRoute>
             } />

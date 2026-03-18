@@ -225,6 +225,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
         <CollapsedSubmenu icon={Handshake} label="CRM" isActive={isCrmActive} defaultTo="/crm">
           <SubmenuLink to="/crm" label="Funil" icon={Target} />
           <SubmenuLink to="/crm/atividades" label="Atividades" icon={CheckSquare} />
+          <SubmenuLink to="/crm/dashboards" label="Dashboards" icon={BarChart2} />
         </CollapsedSubmenu>
         )}
 
