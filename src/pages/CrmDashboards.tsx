@@ -385,7 +385,7 @@ export default function CrmDashboards() {
                 <div className="flex flex-wrap gap-3 mt-2 justify-center">
                   {motivosPerda.map((m, i) => (
                     <div key={m.motivo} className="flex items-center gap-1.5 text-xs">
-                      <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: MOTIVOS_COLORS[i % MOTIVOS_COLORS.length] }} />
                       <span className="text-muted-foreground">{m.motivo}</span>
                       <span className="font-medium">{m.total}</span>
                       <span className="text-muted-foreground">({motivosTotal > 0 ? Math.round((m.total / motivosTotal) * 100) : 0}%)</span>
