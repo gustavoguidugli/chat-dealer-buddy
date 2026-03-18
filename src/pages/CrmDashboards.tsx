@@ -377,7 +377,7 @@ export default function CrmDashboards() {
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie data={motivosPerda} dataKey="total" nameKey="motivo" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2}>
-                      {motivosPerda.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                      {motivosPerda.map((_, i) => <Cell key={i} fill={MOTIVOS_COLORS[i % MOTIVOS_COLORS.length]} />)}
                     </Pie>
                     <RechartsTooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }} />
                   </PieChart>
