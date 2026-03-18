@@ -702,9 +702,9 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     setConcluirAtividadeId(null);
   };
 
-  const handleSaveField = async (slug: string) => {
+  const handleSaveField = async (keyOrSlug: string) => {
     if (!lead) return;
-    const newExtras = { ...(lead.campos_extras || {}), [slug]: editingValue };
+    const newExtras = { ...(lead.campos_extras || {}), [keyOrSlug]: editingValue };
     await supabase.from('leads_crm').update({
       campos_extras: newExtras,
     }).eq('id', lead.id);
@@ -712,14 +712,14 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
     // Sync SDR tables for mapped fields
     const sdrFields = ['gasto_mensal', 'consumo_mensal', 'dias_semana', 'cidade', 'tipo_uso'];
-    if (sdrFields.includes(slug) && lead.whatsapp) {
+    if (sdrFields.includes(keyOrSlug) && lead.whatsapp) {
       const raw = lead.whatsapp.replace(/\D/g, '');
       const whatsappLookup = raw.startsWith('55') ? raw : '55' + raw;
       const interesse = dadosContato.interesse || lead.campos_extras?.interesse || null;
       try {
         await supabase.rpc('update_contato_sdr_field', {
           p_whatsapp: whatsappLookup,
-          p_campo: slug,
+          p_campo: keyOrSlug,
           p_valor: editingValue,
           p_interesse: interesse,
         });
