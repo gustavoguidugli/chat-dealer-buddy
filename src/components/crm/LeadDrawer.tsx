@@ -702,9 +702,9 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     setConcluirAtividadeId(null);
   };
 
-  const handleSaveField = async (slug: string) => {
+  const handleSaveField = async (keyOrSlug: string) => {
     if (!lead) return;
-    const newExtras = { ...(lead.campos_extras || {}), [slug]: editingValue };
+    const newExtras = { ...(lead.campos_extras || {}), [keyOrSlug]: editingValue };
     await supabase.from('leads_crm').update({
       campos_extras: newExtras,
     }).eq('id', lead.id);

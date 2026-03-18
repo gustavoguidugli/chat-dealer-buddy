@@ -87,9 +87,9 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
 
       // Fallback: enrich from SDR tables if campos_extras is missing data
       if (whatsappLookup) {
-        const hasMissingSdrData = !dados.cidade && !dados.tipo_uso && !dados.consumo_mensal && !dados.gasto_mensal && !dados.dias_semana
+        const needsSdrFallback = !dados.cidade || !dados.tipo_uso || dados.consumo_mensal == null || dados.gasto_mensal == null || dados.dias_semana == null
 
-        if (hasMissingSdrData) {
+        if (needsSdrFallback) {
           const [sdrMaqRes, sdrPurRes] = await Promise.all([
             supabase
               .from('contatos_sdr_maquinagelo')
