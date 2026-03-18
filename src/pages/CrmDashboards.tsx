@@ -164,6 +164,9 @@ export default function CrmDashboards() {
   const { data: leadsByEtiqueta, loading: loadingEtiqueta } = useLeadsByEtiqueta(empresaId, appliedFilters);
   const { data: leadsByFunil, loading: loadingByFunil } = useLeadsByFunil(empresaId, appliedFilters);
   const { data: leadsByOrigem, loading: loadingOrigem } = useLeadsByOrigem(empresaId, appliedFilters);
+  const { data: leadsByFunilAgrupado, loading: loadingFunilAgrupado } = useLeadsByFunilAgrupado(empresaId, appliedFilters);
+
+  const isMultiFunil = !appliedFilters || appliedFilters.funilIds.length !== 1;
 
   // Funnel chart data (for conversion visual)
   const funnelChartData = useMemo(() => {
