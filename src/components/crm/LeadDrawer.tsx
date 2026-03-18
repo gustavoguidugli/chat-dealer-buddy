@@ -414,7 +414,19 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
 
       setFunilNome(funilRes.data?.nome || '');
       setEtapas(etapasRes.data || []);
-      setCampos((camposRes.data || []) as CampoCustomizado[]);
+      // Deduplicação defensiva: priorizar campo do funil sobre global
+      const camposRaw = (camposRes.data || []) as CampoCustomizado[];
+      const camposUnicos = new Map<string, CampoCustomizado>();
+      const normNome = (n: string) =>
+        n.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      for (const c of camposRaw) {
+        const key = normNome(c.nome);
+        const existing = camposUnicos.get(key);
+        if (!existing || (c.id_funil !== null && existing.id_funil === null)) {
+          camposUnicos.set(key, c);
+        }
+      }
+      setCampos(Array.from(camposUnicos.values()));
       setListaInteresses(interessesRes.data || []);
     }
 
