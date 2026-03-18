@@ -1,46 +1,36 @@
 
 
-# Diagnóstico: Informações não visíveis no detalhe do lead para Termal
+# Plan: Fix 3 Dashboard Issues
 
-## Investigação realizada
+## Correction 1 — "Leads por etapa" chart with multiple funnels
 
-Auditei completamente o fluxo de dados para a empresa Termal (id=2, `empresas_geral`):
+**Problem**: When "Todos os funis" is selected, stages from different funnels overlap with duplicate names.
 
-**Dados encontrados no banco:**
-- 6 campos customizados globais (`id_funil=NULL`): Interesse, Cidade, Tipo de Uso, Consumo Mensal, Gasto Mensal, Dias por Semana
-- 4 funis ativos: Sem interesse (4), Purificador (5), Máquina de gelo (14), Outros interesses (15)
-- Leads existem com dados SDR parciais (maioria com `campos_extras = {}`)
-- RLS usa `get_empresas_usuario()` que funciona tanto para admins quanto para usuários regulares
+**Changes in `useDashboardData.ts`**:
+- Modify `useLeadsByEtapa` to also return `funilNome` and `funilId` per etapa
+- Add a new hook `useLeadsByFunilAgrupado` that returns `{ nome: string; cor: string; total: number; id: number }[]` — total active leads grouped by funil (for the multi-funil view)
 
-**Código analisado:**
-- `LeadDrawer.tsx` linha 412: query busca campos com `.or('id_funil.is.null,id_funil.eq.${l.id_funil}')` — correto para campos globais
-- `useLeadRealtime.ts` linha 90: fallback SDR com lógica OR — correto
-- Collapsible `camposAbertos` inicia como `true` — correto
-- Deduplicação defensiva — sem colisões para os 6 campos
+**Changes in `CrmDashboards.tsx`**:
+- When `appliedFilters.funilIds.length !== 1` (i.e., all funnels or 2+):
+  - Show a vertical bar chart grouped by **funil name** instead of etapas
+  - Each bar = total active leads in that funil, colored by `funis.cor`
+  - On bar click → update `pendingFunilIds` to that funil and auto-apply filters
+  - Show helper text below: "Selecione um funil específico no filtro para ver a distribuição por etapa."
+- When exactly 1 funil is selected → keep current horizontal bar chart by etapa (existing behavior)
+- Apply same logic to the "Funil de conversão" chart in Section 2
 
-**Resultado: O código está estruturalmente correto.** A query, o RLS, a renderização e o fallback SDR devem funcionar para Termal. Não consigo reproduzir o bug sem autenticação (a tela de login bloqueia o acesso no browser de teste).
+## Correction 2 — "Leads por etiqueta" query fix
 
-## Hipóteses em aberto
+**Changes in `useDashboardData.ts` → `useLeadsByEtiqueta`**:
+- Remove date filtering (`data_criacao BETWEEN`) from the leads query
+- Add `.eq('ativo', true)` filter on leads
+- Keep only funil and agent filters
+- This ensures etiquetas show for all active leads, not just those created in the period
 
-Sem poder reproduzir, existem 3 hipóteses possíveis:
+## Correction 3 — Colors in charts
 
-1. **O drawer abre mas todos os campos mostram "-"** — porque os leads de Termal têm `campos_extras = {}` e muitos não têm dados SDR. Isso não é um bug, é ausência de dados.
-
-2. **O drawer não abre ou mostra "Carregando..." infinitamente** — possível erro silencioso em uma das queries paralelas (`Promise.all` na linha 409).
-
-3. **Erro de JS não capturado** — alguma propriedade `null` causando crash silencioso no render.
-
-## O que preciso para avançar
-
-Para diagnosticar com precisão, preciso que você:
-
-1. **Faça login no preview** para que eu possa testar via browser automation
-2. **OU** me diga exatamente o que aparece quando abre o detalhe do lead:
-   - O painel lateral abre?
-   - Mostra "Carregando..." para sempre?
-   - Abre mas os campos aparecem sem valor (mostrando "-")?
-   - Abre mas a seção "Campos" está vazia / fechada?
-   - Aparece algum erro na tela?
-
-Com essa informação, consigo propor uma correção direcionada.
+**Changes in `CrmDashboards.tsx`**:
+- **Etapa charts**: Already using `e.cor` via `<Cell>` — this is correct. The `useLeadsByEtapa` hook already returns `cor` from `etapas_funil.cor`. No change needed here (already working with `{leadsByEtapa.map((e, i) => <Cell key={i} fill={e.cor} />)}`).
+- **"Motivos de perda" donut**: Replace `DONUT_COLORS` with a dedicated `MOTIVOS_COLORS` palette: `['#E24B4A', '#BA7517', '#378ADD', '#1D9E75', '#7F77DD', '#D85A30', '#888780']`
+- **"Leads por funil" donut**: Already uses `f.cor` from `funis.cor` — no change needed.
 
