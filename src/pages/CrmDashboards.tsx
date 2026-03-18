@@ -21,6 +21,7 @@ import {
   useFunis, useTeamMembers, useLeadKpis, useLeadsByPeriod, useLeadsByEtapa,
   useMotivosPerda, useFunnelKpis, useActivityKpis, useActivitiesByType,
   useActivitiesByAgent, useLeadsByEtiqueta, useLeadsByFunil, useLeadsByOrigem,
+  useLeadsByFunilAgrupado,
 } from '@/hooks/useDashboardData';
 
 const PERIOD_OPTIONS: { value: PeriodPreset; label: string }[] = [
