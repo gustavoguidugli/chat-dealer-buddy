@@ -336,21 +336,40 @@ export default function CrmDashboards() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-            <ChartCard title="Funil de conversão" loading={loadingLeadsByEtapa} isEmpty={!funnelChartData.length}>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={funnelChartData} layout="vertical" margin={{ left: 20, right: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
-                  <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={100} className="fill-muted-foreground" />
-                  <RechartsTooltip
-                    contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }}
-                    formatter={(value: number, name: string, props: any) => [`${value} leads (${props.payload.convPct}%)`, 'Leads']}
-                  />
-                  <Bar dataKey="total" name="Leads" radius={[0, 4, 4, 0]}>
-                    {funnelChartData.map((e, i) => <Cell key={i} fill={e.cor} fillOpacity={1 - i * 0.08} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <ChartCard title="Funil de conversão" loading={isMultiFunil ? loadingFunilAgrupado : loadingLeadsByEtapa} isEmpty={isMultiFunil ? !leadsByFunilAgrupado.length : !funnelChartData.length}>
+              {isMultiFunil ? (
+                <>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={leadsByFunilAgrupado} margin={{ bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="nome" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                      <YAxis tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
+                      <RechartsTooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }} />
+                      <Bar dataKey="total" name="Leads" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(data: any) => {
+                        if (data?.id) { setPendingFunilIds([data.id]); markDirty(); setTimeout(applyFilters, 50); }
+                      }}>
+                        {leadsByFunilAgrupado.map((f, i) => <Cell key={i} fill={f.cor} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="text-xs text-muted-foreground text-center mt-2">Selecione um funil específico no filtro para ver a distribuição por etapa.</p>
+                </>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={funnelChartData} layout="vertical" margin={{ left: 20, right: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis type="number" tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
+                    <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={100} className="fill-muted-foreground" />
+                    <RechartsTooltip
+                      contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }}
+                      formatter={(value: number, name: string, props: any) => [`${value} leads (${props.payload.convPct}%)`, 'Leads']}
+                    />
+                    <Bar dataKey="total" name="Leads" radius={[0, 4, 4, 0]}>
+                      {funnelChartData.map((e, i) => <Cell key={i} fill={e.cor} fillOpacity={1 - i * 0.08} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </ChartCard>
 
             <ChartCard title="Motivos de perda" loading={loadingMotivos} isEmpty={!motivosPerda.length}>
