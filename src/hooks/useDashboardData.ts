@@ -168,7 +168,7 @@ export function useLeadsByPeriod(empresaId: number | null, filters: DashboardFil
 }
 
 // ─── Leads by etapa (bar chart) ───
-export interface LeadsByEtapa { nome: string; total: number; cor: string; ordem: number }
+export interface LeadsByEtapa { nome: string; total: number; cor: string; ordem: number; funilId?: number; funilNome?: string }
 
 export function useLeadsByEtapa(empresaId: number | null, filters: DashboardFilters | null) {
   const [data, setData] = useState<LeadsByEtapa[]>([]);
@@ -178,8 +178,8 @@ export function useLeadsByEtapa(empresaId: number | null, filters: DashboardFilt
     if (!empresaId || !filters) return;
     setLoading(true);
 
-    // Get etapas
-    let qEtapas = supabase.from('etapas_funil').select('id, nome, cor, ordem, id_funil').eq('ativo', true);
+    // Get etapas with funil info
+    let qEtapas = supabase.from('etapas_funil').select('id, nome, cor, ordem, id_funil, funis!inner(id, nome)').eq('ativo', true);
     if (filters.funilIds.length) qEtapas = qEtapas.in('id_funil', filters.funilIds);
 
     const { data: etapas } = await qEtapas;
@@ -195,7 +195,48 @@ export function useLeadsByEtapa(empresaId: number | null, filters: DashboardFilt
     const countMap: Record<number, number> = {};
     leads?.forEach(l => { countMap[l.id_etapa_atual] = (countMap[l.id_etapa_atual] || 0) + 1; });
 
-    setData(etapas.map(e => ({ nome: e.nome, total: countMap[e.id] || 0, cor: e.cor || '#3B82F6', ordem: e.ordem })).sort((a, b) => a.ordem - b.ordem));
+    setData(etapas.map(e => {
+      const funil = e.funis as any;
+      return {
+        nome: e.nome,
+        total: countMap[e.id] || 0,
+        cor: e.cor || '#3B82F6',
+        ordem: e.ordem,
+        funilId: e.id_funil,
+        funilNome: funil?.nome ?? '',
+      };
+    }).sort((a, b) => a.ordem - b.ordem));
+    setLoading(false);
+  }, [empresaId, filters]);
+
+  useEffect(() => { fetch(); }, [fetch]);
+  return { data, loading };
+}
+
+// ─── Leads grouped by funil (for multi-funil view) ───
+export interface LeadsByFunilAgrupado { id: number; nome: string; cor: string; total: number }
+
+export function useLeadsByFunilAgrupado(empresaId: number | null, filters: DashboardFilters | null) {
+  const [data, setData] = useState<LeadsByFunilAgrupado[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    if (!empresaId || !filters) return;
+    setLoading(true);
+
+    const { data: funis } = await supabase.from('funis').select('id, nome, cor').eq('id_empresa', empresaId).eq('ativo', true).order('ordem');
+    if (!funis?.length) { setData([]); setLoading(false); return; }
+
+    let q = supabase.from('leads_crm').select('id_funil')
+      .eq('id_empresa', empresaId).eq('status', 'aberto').eq('ativo', true);
+    if (filters.funilIds.length) q = q.in('id_funil', filters.funilIds);
+    if (filters.agenteIds.length) q = q.in('proprietario_id', filters.agenteIds);
+
+    const { data: leads } = await q;
+    const countMap: Record<number, number> = {};
+    leads?.forEach(l => { countMap[l.id_funil] = (countMap[l.id_funil] || 0) + 1; });
+
+    setData(funis.map(f => ({ id: f.id, nome: f.nome, cor: f.cor || '#3B82F6', total: countMap[f.id] || 0 })));
     setLoading(false);
   }, [empresaId, filters]);
 
@@ -439,20 +480,19 @@ export function useLeadsByEtiqueta(empresaId: number | null, filters: DashboardF
   const fetch = useCallback(async () => {
     if (!empresaId || !filters) return;
     setLoading(true);
-    const { start, end } = getDateRange(filters.period, filters.startDate, filters.endDate);
 
     const { data: etiquetas } = await supabase.from('etiquetas_card').select('id, nome, cor').eq('id_empresa', empresaId).eq('ativo', true);
     if (!etiquetas?.length) { setData([]); setLoading(false); return; }
 
-    const { data: leadsEtiq } = await supabase.from('lead_etiquetas').select('id_etiqueta, id_lead').in('id_etiqueta', etiquetas.map(e => e.id));
+    const { data: leadsEtiq } = await supabase.from('lead_etiquetas').select('id_etiqueta, id_lead').eq('id_empresa', empresaId).in('id_etiqueta', etiquetas.map(e => e.id));
 
-    // Filter leads by period
     const leadIds = [...new Set(leadsEtiq?.map(le => le.id_lead) ?? [])];
     if (!leadIds.length) { setData([]); setLoading(false); return; }
 
-    let qLeads = supabase.from('leads_crm').select('id').eq('id_empresa', empresaId)
-      .gte('data_criacao', start.toISOString()).lte('data_criacao', end.toISOString()).in('id', leadIds.slice(0, 500));
+    // No date filter — etiquetas are lead attributes, not time-based events
+    let qLeads = supabase.from('leads_crm').select('id').eq('id_empresa', empresaId).eq('ativo', true).in('id', leadIds.slice(0, 500));
     if (filters.funilIds.length) qLeads = qLeads.in('id_funil', filters.funilIds);
+    if (filters.agenteIds.length) qLeads = qLeads.in('proprietario_id', filters.agenteIds);
     const { data: validLeads } = await qLeads;
     const validSet = new Set(validLeads?.map(l => l.id));
 

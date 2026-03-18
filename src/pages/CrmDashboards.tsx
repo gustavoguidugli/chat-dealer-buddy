@@ -21,6 +21,7 @@ import {
   useFunis, useTeamMembers, useLeadKpis, useLeadsByPeriod, useLeadsByEtapa,
   useMotivosPerda, useFunnelKpis, useActivityKpis, useActivitiesByType,
   useActivitiesByAgent, useLeadsByEtiqueta, useLeadsByFunil, useLeadsByOrigem,
+  useLeadsByFunilAgrupado,
 } from '@/hooks/useDashboardData';
 
 const PERIOD_OPTIONS: { value: PeriodPreset; label: string }[] = [
@@ -32,6 +33,7 @@ const PERIOD_OPTIONS: { value: PeriodPreset; label: string }[] = [
 ];
 
 const DONUT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#84CC16'];
+const MOTIVOS_COLORS = ['#E24B4A', '#BA7517', '#378ADD', '#1D9E75', '#7F77DD', '#D85A30', '#888780'];
 
 // ─── KPI Card ───
 function KpiCard({ label, value, icon: Icon, loading, suffix, color }: {
@@ -162,6 +164,9 @@ export default function CrmDashboards() {
   const { data: leadsByEtiqueta, loading: loadingEtiqueta } = useLeadsByEtiqueta(empresaId, appliedFilters);
   const { data: leadsByFunil, loading: loadingByFunil } = useLeadsByFunil(empresaId, appliedFilters);
   const { data: leadsByOrigem, loading: loadingOrigem } = useLeadsByOrigem(empresaId, appliedFilters);
+  const { data: leadsByFunilAgrupado, loading: loadingFunilAgrupado } = useLeadsByFunilAgrupado(empresaId, appliedFilters);
+
+  const isMultiFunil = !appliedFilters || appliedFilters.funilIds.length !== 1;
 
   // Funnel chart data (for conversion visual)
   const funnelChartData = useMemo(() => {
@@ -287,18 +292,37 @@ export default function CrmDashboards() {
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Leads por etapa do funil" loading={loadingLeadsByEtapa} isEmpty={!leadsByEtapa.length}>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={leadsByEtapa} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
-                  <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={100} className="fill-muted-foreground" />
-                  <RechartsTooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }} />
-                  <Bar dataKey="total" name="Leads">
-                    {leadsByEtapa.map((e, i) => <Cell key={i} fill={e.cor} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <ChartCard title={isMultiFunil ? "Leads por funil" : "Leads por etapa do funil"} loading={isMultiFunil ? loadingFunilAgrupado : loadingLeadsByEtapa} isEmpty={isMultiFunil ? !leadsByFunilAgrupado.length : !leadsByEtapa.length}>
+              {isMultiFunil ? (
+                <>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={leadsByFunilAgrupado} margin={{ bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="nome" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                      <YAxis tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
+                      <RechartsTooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }} />
+                      <Bar dataKey="total" name="Leads" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(data: any) => {
+                        if (data?.id) { setPendingFunilIds([data.id]); markDirty(); setTimeout(applyFilters, 50); }
+                      }}>
+                        {leadsByFunilAgrupado.map((f, i) => <Cell key={i} fill={f.cor} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="text-xs text-muted-foreground text-center mt-2">Selecione um funil específico no filtro para ver a distribuição por etapa.</p>
+                </>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={leadsByEtapa} layout="vertical" margin={{ left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis type="number" tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
+                    <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={100} className="fill-muted-foreground" />
+                    <RechartsTooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }} />
+                    <Bar dataKey="total" name="Leads">
+                      {leadsByEtapa.map((e, i) => <Cell key={i} fill={e.cor} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </ChartCard>
           </div>
 
@@ -312,21 +336,40 @@ export default function CrmDashboards() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-            <ChartCard title="Funil de conversão" loading={loadingLeadsByEtapa} isEmpty={!funnelChartData.length}>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={funnelChartData} layout="vertical" margin={{ left: 20, right: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
-                  <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={100} className="fill-muted-foreground" />
-                  <RechartsTooltip
-                    contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }}
-                    formatter={(value: number, name: string, props: any) => [`${value} leads (${props.payload.convPct}%)`, 'Leads']}
-                  />
-                  <Bar dataKey="total" name="Leads" radius={[0, 4, 4, 0]}>
-                    {funnelChartData.map((e, i) => <Cell key={i} fill={e.cor} fillOpacity={1 - i * 0.08} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <ChartCard title="Funil de conversão" loading={isMultiFunil ? loadingFunilAgrupado : loadingLeadsByEtapa} isEmpty={isMultiFunil ? !leadsByFunilAgrupado.length : !funnelChartData.length}>
+              {isMultiFunil ? (
+                <>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={leadsByFunilAgrupado} margin={{ bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="nome" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                      <YAxis tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
+                      <RechartsTooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }} />
+                      <Bar dataKey="total" name="Leads" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(data: any) => {
+                        if (data?.id) { setPendingFunilIds([data.id]); markDirty(); setTimeout(applyFilters, 50); }
+                      }}>
+                        {leadsByFunilAgrupado.map((f, i) => <Cell key={i} fill={f.cor} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="text-xs text-muted-foreground text-center mt-2">Selecione um funil específico no filtro para ver a distribuição por etapa.</p>
+                </>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={funnelChartData} layout="vertical" margin={{ left: 20, right: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis type="number" tick={{ fontSize: 12 }} className="fill-muted-foreground" allowDecimals={false} />
+                    <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={100} className="fill-muted-foreground" />
+                    <RechartsTooltip
+                      contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }}
+                      formatter={(value: number, name: string, props: any) => [`${value} leads (${props.payload.convPct}%)`, 'Leads']}
+                    />
+                    <Bar dataKey="total" name="Leads" radius={[0, 4, 4, 0]}>
+                      {funnelChartData.map((e, i) => <Cell key={i} fill={e.cor} fillOpacity={1 - i * 0.08} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </ChartCard>
 
             <ChartCard title="Motivos de perda" loading={loadingMotivos} isEmpty={!motivosPerda.length}>
@@ -334,7 +377,7 @@ export default function CrmDashboards() {
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie data={motivosPerda} dataKey="total" nameKey="motivo" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2}>
-                      {motivosPerda.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                      {motivosPerda.map((_, i) => <Cell key={i} fill={MOTIVOS_COLORS[i % MOTIVOS_COLORS.length]} />)}
                     </Pie>
                     <RechartsTooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(220 13% 91%)', fontSize: 13 }} />
                   </PieChart>
@@ -342,7 +385,7 @@ export default function CrmDashboards() {
                 <div className="flex flex-wrap gap-3 mt-2 justify-center">
                   {motivosPerda.map((m, i) => (
                     <div key={m.motivo} className="flex items-center gap-1.5 text-xs">
-                      <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: MOTIVOS_COLORS[i % MOTIVOS_COLORS.length] }} />
                       <span className="text-muted-foreground">{m.motivo}</span>
                       <span className="font-medium">{m.total}</span>
                       <span className="text-muted-foreground">({motivosTotal > 0 ? Math.round((m.total / motivosTotal) * 100) : 0}%)</span>

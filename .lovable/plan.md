@@ -1,36 +1,112 @@
 
+## Audit — Block 1 ✅ (Completed)
 
-# Plan: Fix 3 Dashboard Issues
+1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
+2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
+3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
+4. **`copy-company-config`** — Now copies and remaps `funil_id`
 
-## Correction 1 — "Leads por etapa" chart with multiple funnels
+## Audit — Block 2 ✅ (Completed)
 
-**Problem**: When "Todos os funis" is selected, stages from different funnels overlap with duplicate names.
+1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
 
-**Changes in `useDashboardData.ts`**:
-- Modify `useLeadsByEtapa` to also return `funilNome` and `funilId` per etapa
-- Add a new hook `useLeadsByFunilAgrupado` that returns `{ nome: string; cor: string; total: number; id: number }[]` — total active leads grouped by funil (for the multi-funil view)
+### Accepted Architectural Limitations (SDR Tables)
 
-**Changes in `CrmDashboards.tsx`**:
-- When `appliedFilters.funilIds.length !== 1` (i.e., all funnels or 2+):
-  - Show a vertical bar chart grouped by **funil name** instead of etapas
-  - Each bar = total active leads in that funil, colored by `funis.cor`
-  - On bar click → update `pendingFunilIds` to that funil and auto-apply filters
-  - Show helper text below: "Selecione um funil específico no filtro para ver a distribuição por etapa."
-- When exactly 1 funil is selected → keep current horizontal bar chart by etapa (existing behavior)
-- Apply same logic to the "Funil de conversão" chart in Section 2
+The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
 
-## Correction 2 — "Leads por etiqueta" query fix
+- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
+- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
+- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
+- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
+- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
 
-**Changes in `useDashboardData.ts` → `useLeadsByEtiqueta`**:
-- Remove date filtering (`data_criacao BETWEEN`) from the leads query
-- Add `.eq('ativo', true)` filter on leads
-- Keep only funil and agent filters
-- This ensures etiquetas show for all active leads, not just those created in the period
+**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
 
-## Correction 3 — Colors in charts
+## Audit — Block 3 ✅ (Completed)
 
-**Changes in `CrmDashboards.tsx`**:
-- **Etapa charts**: Already using `e.cor` via `<Cell>` — this is correct. The `useLeadsByEtapa` hook already returns `cor` from `etapas_funil.cor`. No change needed here (already working with `{leadsByEtapa.map((e, i) => <Cell key={i} fill={e.cor} />)}`).
-- **"Motivos de perda" donut**: Replace `DONUT_COLORS` with a dedicated `MOTIVOS_COLORS` palette: `['#E24B4A', '#BA7517', '#378ADD', '#1D9E75', '#7F77DD', '#D85A30', '#888780']`
-- **"Leads por funil" donut**: Already uses `f.cor` from `funis.cor` — no change needed.
+### Automação de funis para novas empresas e interesses
 
+1. **Trigger `criar_funis_padrao()`** — Novo trigger `AFTER INSERT ON empresas_geral` que cria automaticamente 4 funis padrão (Triagem, Máquina de Gelo, Purificador, Outros) com suas respectivas etapas. Executa antes de `inserir_interesses_padrao` via nomenclatura alfabética (`a_criar_funis_padrao`).
+
+2. **`copy-company-config`** — Atualizada para copiar `funis` + `etapas_funil` da empresa template antes dos interesses, com remapeamento correto de IDs. Reutiliza funis criados pelo trigger quando o `tipo` já existe no destino.
+
+3. **`Triagem.tsx` + `InterestModal.tsx`** — Criação automática de funil ao adicionar novo interesse sem funil selecionado. O modal agora oferece opção "Criar funil automaticamente" como padrão, com etapas (Novo, Qualificação, Proposta, Fechamento).
+
+---
+
+## Arquitetura: Empresa ↔ Funil
+
+### Modelo de dados
+
+```text
+empresas_geral (id)
+  └── funis (id_empresa = empresas_geral.id)
+        ├── tipo: 'triagem' | 'maquina_gelo' | 'purificador' | 'outros' | 'custom'
+        └── etapas_funil (id_funil = funis.id)
+
+  └── lista_interesses (empresa_id = empresas_geral.id)
+        └── funil_id → funis.id  (FK direto — mapeia interesse → funil)
+```
+
+Os IDs **não são sincronizados** — cada empresa recebe funis com IDs sequenciais independentes (auto-increment). A vinculação é feita por **foreign key** (`funis.id_empresa` e `lista_interesses.funil_id`), nunca por nome ou convenção.
+
+### Fluxo completo: criação de empresa
+
+```text
+INSERT INTO empresas_geral (nome = 'Nova Empresa')
+  │
+  ├─ Trigger 1: a_criar_funis_padrao()
+  │    Cria 4 funis com etapas:
+  │    ┌──────────────────┬──────────────┬────────────────────────────┐
+  │    │ Funil            │ tipo         │ Etapas                     │
+  │    ├──────────────────┼──────────────┼────────────────────────────┤
+  │    │ Sem interesse    │ triagem      │ Novos, Em atendimento      │
+  │    │ Máquina de Gelo  │ maquina_gelo │ Novo, Qualif., Prop., Fech.│
+  │    │ Purificador      │ purificador  │ Novo, Qualif., Prop., Fech.│
+  │    │ Outros interesses│ outros       │ Novo, Em atendimento       │
+  │    └──────────────────┴──────────────┴────────────────────────────┘
+  │
+  ├─ Trigger 2: inserir_interesses_padrao()
+  │    Cria 3 interesses e vincula ao funil pelo tipo:
+  │    UPDATE lista_interesses SET funil_id = funis.id
+  │      WHERE funis.tipo = lista_interesses.nome
+  │
+  └─ Trigger 3: criar_convite_inicial()
+```
+
+### Fluxo: novo contato WhatsApp → lead
+
+```text
+INSERT INTO contatos_geral (whatsapp, empresa_id)
+  └─ Trigger: trg_criar_lead_apos_contato
+       └─ criar_lead_triagem(whatsapp, empresa_id)
+            ├─ SELECT id FROM funis WHERE tipo='triagem' AND id_empresa=X
+            ├─ SELECT id FROM etapas_funil WHERE id_funil=Y ORDER BY ordem LIMIT 1
+            └─ INSERT INTO leads_crm (id_funil=Y, id_etapa_atual=Z)
+```
+
+### Fluxo: interesse identificado → mover lead
+
+```text
+UPDATE contatos_geral SET interesse = 'maquina_gelo'
+  └─ Trigger: mover_lead_por_interesse()
+       ├─ SELECT funil_id FROM lista_interesses WHERE nome='maquina_gelo' AND empresa_id=X
+       ├─ SELECT id FROM etapas_funil WHERE id_funil=N ORDER BY ordem LIMIT 1
+       └─ UPDATE leads_crm SET id_funil=N, id_etapa_atual=primeira_etapa
+```
+
+### Fluxo: copy-company-config (empresa template)
+
+1. Copia funis da empresa fonte → cria novos na destino (IDs novos)
+2. Monta `funilIdRemap` (ID fonte → ID destino)
+3. Copia interesses e remapeia `funil_id` usando o map
+
+### Resumo
+
+| Pergunta | Resposta |
+|---|---|
+| IDs são iguais entre empresa e funil? | Não. São independentes (auto-increment) |
+| Como se vinculam? | `funis.id_empresa` = FK para `empresas_geral.id` |
+| Como interesse sabe qual funil? | `lista_interesses.funil_id` = FK direto para `funis.id` |
+| Como lead entra no CRM? | `criar_lead_triagem` busca funil com `tipo='triagem'` da empresa |
+| Como lead muda de funil? | `mover_lead_por_interesse` consulta `lista_interesses.funil_id` |
