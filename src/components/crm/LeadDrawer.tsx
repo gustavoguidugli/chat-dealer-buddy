@@ -1234,7 +1234,6 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
                             gasto_mensal: 'gasto_mensal',
                             dias_semana: 'dias_semana',
                             dias_por_semana: 'dias_semana',
-                            interesse: 'interesse',
                           };
 
                           // Also map by campo.nome as fallback for mismatched slugs
