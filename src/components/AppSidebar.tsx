@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, BookOpen, LogOut, Menu, Snowflake, Building2,
   ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen, Handshake,
-  Settings, Users, UserCog,
+  Settings, Users, UserCog, BarChart2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
