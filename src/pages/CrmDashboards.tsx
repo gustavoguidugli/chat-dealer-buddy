@@ -33,6 +33,7 @@ const PERIOD_OPTIONS: { value: PeriodPreset; label: string }[] = [
 ];
 
 const DONUT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#84CC16'];
+const MOTIVOS_COLORS = ['#E24B4A', '#BA7517', '#378ADD', '#1D9E75', '#7F77DD', '#D85A30', '#888780'];
 
 // ─── KPI Card ───
 function KpiCard({ label, value, icon: Icon, loading, suffix, color }: {
