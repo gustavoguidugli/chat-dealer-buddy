@@ -73,7 +73,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       const whatsappLookup = contatoWhatsapp ?? whatsapp ?? contatoGeral?.whatsapp ?? null
 
       // Start with campos_extras from the lead as primary source
-      const camposExtras = lead?.campos_extras ?? {}
+      const camposExtras = leadData?.campos_extras ?? lead?.campos_extras ?? {}
 
       const dados: DadosContato = {
         interesse: currentInteresse,
