@@ -2732,6 +2732,23 @@ export type Database = {
           },
         ]
       }
+      vw_campos_duplicados: {
+        Row: {
+          campos: Json[] | null
+          id_empresa: number | null
+          nome_normalizado: string | null
+          total_campos: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campos_customizados_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas_geral"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       aceitar_convite: {
