@@ -17,6 +17,7 @@ import HorarioAtendimento from "./pages/HorarioAtendimento";
 import AdminEmpresas from "./pages/AdminEmpresas";
 import CrmFunil from "./pages/CrmFunil";
 import CrmAtividades from "./pages/CrmAtividades";
+import CrmDashboards from "./pages/CrmDashboards";
 import ConfigUsuarios from "./pages/ConfigUsuarios";
 import MeuTime from "./pages/MeuTime";
 import ConfigPerfil from "./pages/ConfigPerfil";
