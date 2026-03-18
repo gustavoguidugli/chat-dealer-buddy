@@ -673,10 +673,106 @@ export type Database = {
             foreignKeyName: "contatos_sdr_maquinagelo_id_empresa_fkey"
             columns: ["id_empresa"]
             isOneToOne: false
-            referencedRelation: "empresas_sdr_maquinagelo"
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
         ]
+      }
+      contatos_sdr_orfaos_arquivo: {
+        Row: {
+          archived_at: string | null
+          ativo: boolean | null
+          cidade: string | null
+          cnpj: string | null
+          consumo_diario: number | null
+          consumo_mensal: number | null
+          created_at: string | null
+          deal_id_pipedrive: string | null
+          dias_semana: number | null
+          dimensionamento_1: string | null
+          dimensionamento_2: string | null
+          enviou_modelos: boolean | null
+          etiqueta: string | null
+          gasto_mensal: number | null
+          id: string
+          id_original_bigint: number | null
+          id_original_uuid: string | null
+          imagens_enviadas: boolean | null
+          interesse: string | null
+          motivo_orfao: string | null
+          nome_lead: string | null
+          origem: string
+          source_app: string | null
+          stage: string | null
+          tipo_atendimento: string | null
+          tipo_uso: string | null
+          whatsapp: string | null
+          whatsapp_id: string | null
+          whatsapp_padrao_pipedrive: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          ativo?: boolean | null
+          cidade?: string | null
+          cnpj?: string | null
+          consumo_diario?: number | null
+          consumo_mensal?: number | null
+          created_at?: string | null
+          deal_id_pipedrive?: string | null
+          dias_semana?: number | null
+          dimensionamento_1?: string | null
+          dimensionamento_2?: string | null
+          enviou_modelos?: boolean | null
+          etiqueta?: string | null
+          gasto_mensal?: number | null
+          id?: string
+          id_original_bigint?: number | null
+          id_original_uuid?: string | null
+          imagens_enviadas?: boolean | null
+          interesse?: string | null
+          motivo_orfao?: string | null
+          nome_lead?: string | null
+          origem: string
+          source_app?: string | null
+          stage?: string | null
+          tipo_atendimento?: string | null
+          tipo_uso?: string | null
+          whatsapp?: string | null
+          whatsapp_id?: string | null
+          whatsapp_padrao_pipedrive?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          ativo?: boolean | null
+          cidade?: string | null
+          cnpj?: string | null
+          consumo_diario?: number | null
+          consumo_mensal?: number | null
+          created_at?: string | null
+          deal_id_pipedrive?: string | null
+          dias_semana?: number | null
+          dimensionamento_1?: string | null
+          dimensionamento_2?: string | null
+          enviou_modelos?: boolean | null
+          etiqueta?: string | null
+          gasto_mensal?: number | null
+          id?: string
+          id_original_bigint?: number | null
+          id_original_uuid?: string | null
+          imagens_enviadas?: boolean | null
+          interesse?: string | null
+          motivo_orfao?: string | null
+          nome_lead?: string | null
+          origem?: string
+          source_app?: string | null
+          stage?: string | null
+          tipo_atendimento?: string | null
+          tipo_uso?: string | null
+          whatsapp?: string | null
+          whatsapp_id?: string | null
+          whatsapp_padrao_pipedrive?: string | null
+        }
+        Relationships: []
       }
       contatos_sdr_purificador: {
         Row: {
@@ -726,7 +822,7 @@ export type Database = {
             foreignKeyName: "contatos_sdr_purificador_id_empresa_fkey"
             columns: ["id_empresa"]
             isOneToOne: false
-            referencedRelation: "empresas_sdr_purificador"
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
         ]
@@ -2344,14 +2440,14 @@ export type Database = {
             foreignKeyName: "sdr_buffer_mensagem_id_empresa_fkey"
             columns: ["id_empresa"]
             isOneToOne: false
-            referencedRelation: "empresas_sdr_maquinagelo"
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "sdr_buffer_mensagem_id_empresa_purificador_fkey"
             columns: ["id_empresa_purificador"]
             isOneToOne: false
-            referencedRelation: "empresas_sdr_purificador"
+            referencedRelation: "empresas_geral"
             referencedColumns: ["id"]
           },
         ]
