@@ -35,7 +35,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
     let contatoWhatsapp: string | null = null
 
     // Busca dados do contato_geral e SDR, usando campos_extras do lead como fonte primária
-    async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null) {
+    async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null, leadData?: any) {
       let currentInteresse = interesse ?? null
 
       let contatoGeral: {
@@ -73,7 +73,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       const whatsappLookup = contatoWhatsapp ?? whatsapp ?? contatoGeral?.whatsapp ?? null
 
       // Start with campos_extras from the lead as primary source
-      const camposExtras = lead?.campos_extras ?? {}
+      const camposExtras = leadData?.campos_extras ?? lead?.campos_extras ?? {}
 
       const dados: DadosContato = {
         interesse: currentInteresse,
@@ -139,7 +139,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       if (leadData) {
         contatoGeralId = leadData.id_contato_geral
         contatoWhatsapp = leadData.whatsapp
-        await fetchContatoData(contatoGeralId, contatoWhatsapp)
+        await fetchContatoData(contatoGeralId, contatoWhatsapp, undefined, leadData)
       }
 
       const { data: anotacoesData } = await supabase

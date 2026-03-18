@@ -1,73 +1,112 @@
 
+## Audit — Block 1 ✅ (Completed)
 
-# Plan: Fix Lead Data Display Across All Companies
+1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
+2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
+3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
+4. **`copy-company-config`** — Now copies and remaps `funil_id`
 
-## Problem Summary
+## Audit — Block 2 ✅ (Completed)
 
-Three issues prevent lead fields from displaying correctly:
+1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
 
-1. **Trigger `sync_contato_sdr_to_lead_crm` still has empresa ID mismatch** — it uses `NEW.id_empresa` from SDR tables to filter `leads_crm`, but SDR tables use a different ID system than `empresas_geral`. This causes new SDR data to never sync into `campos_extras`.
+### Accepted Architectural Limitations (SDR Tables)
 
-2. **Stale state bug in `useLeadRealtime.ts`** — `fetchContatoData` reads `lead?.campos_extras` from React state, but when called from `fetchData`, `setLead(leadData)` hasn't been applied yet, so `lead` is still `null` and `campos_extras` defaults to `{}`.
+The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
 
-3. **2 leads (empresa 1) have SDR data but empty `campos_extras`** — caused by the trigger mismatch. Need backfill.
+- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
+- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
+- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
+- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
+- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
 
-## Current Data State
+**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
 
-| Company | Leads WITH extras | Leads WITHOUT extras | Missing SDR data to backfill |
-|---------|-------------------|----------------------|------------------------------|
-| Empresa 1 | 2 | 4 | 2 (SDR exists, cross-empresa) |
-| Empresa 2 (Termall) | 13 | 65 | 0 (genuinely unqualified) |
-| Empresa 4 (AquaSampa) | 10 | 2 | 0 (genuinely unqualified) |
+## Audit — Block 3 ✅ (Completed)
 
-## Execution Plan
+### Automação de funis para novas empresas e interesses
 
-### Step 1: Fix stale state bug in `useLeadRealtime.ts`
+1. **Trigger `criar_funis_padrao()`** — Novo trigger `AFTER INSERT ON empresas_geral` que cria automaticamente 4 funis padrão (Triagem, Máquina de Gelo, Purificador, Outros) com suas respectivas etapas. Executa antes de `inserir_interesses_padrao` via nomenclatura alfabética (`a_criar_funis_padrao`).
 
-Pass `leadData` directly to `fetchContatoData` instead of reading from stale `lead` state. Change `fetchContatoData` to accept an optional `leadCamposExtras` parameter and use that on initial load.
+2. **`copy-company-config`** — Atualizada para copiar `funis` + `etapas_funil` da empresa template antes dos interesses, com remapeamento correto de IDs. Reutiliza funis criados pelo trigger quando o `tipo` já existe no destino.
 
-**File**: `src/hooks/useLeadRealtime.ts`
+3. **`Triagem.tsx` + `InterestModal.tsx`** — Criação automática de funil ao adicionar novo interesse sem funil selecionado. O modal agora oferece opção "Criar funil automaticamente" como padrão, com etapas (Novo, Qualificação, Proposta, Fechamento).
 
-### Step 2: Fix trigger `sync_contato_sdr_to_lead_crm`
+---
 
-Remove the `l.id_empresa = v_empresa_id` filter and instead match leads by whatsapp through `contatos_geral` only (which already ensures same-company scope via `empresa_id`). This way the trigger works regardless of SDR empresa ID.
+## Arquitetura: Empresa ↔ Funil
 
-**Migration SQL**: `CREATE OR REPLACE FUNCTION` with corrected WHERE clause.
+### Modelo de dados
 
-### Step 3: Backfill `campos_extras` for existing leads
+```text
+empresas_geral (id)
+  └── funis (id_empresa = empresas_geral.id)
+        ├── tipo: 'triagem' | 'maquina_gelo' | 'purificador' | 'outros' | 'custom'
+        └── etapas_funil (id_funil = funis.id)
 
-Run a one-time UPDATE to populate `campos_extras` for the 2 leads (IDs 106, 126) that have SDR data but empty `campos_extras`.
-
-**Data operation via insert tool**.
-
-### Technical Details
-
-**useLeadRealtime fix** (Step 1):
-```typescript
-// Change fetchContatoData signature to accept leadData
-async function fetchContatoData(idContatoGeral, whatsapp, interesse?, leadData?) {
-  // Use passed leadData instead of stale state
-  const camposExtras = leadData?.campos_extras ?? lead?.campos_extras ?? {}
-}
-
-// In fetchData, pass leadData
-await fetchContatoData(contatoGeralId, contatoWhatsapp, undefined, leadData)
+  └── lista_interesses (empresa_id = empresas_geral.id)
+        └── funil_id → funis.id  (FK direto — mapeia interesse → funil)
 ```
 
-**Trigger fix** (Step 2):
-```sql
--- Remove empresa filter, rely on contatos_geral.whatsapp match
-SELECT l.id, c.interesse, c.whatsapp_padrao_pipedrive
-FROM leads_crm l
-INNER JOIN contatos_geral c ON c.id = l.id_contato_geral
-WHERE c.whatsapp = NEW.whatsapp
-AND l.ativo = true
-LIMIT 1;
+Os IDs **não são sincronizados** — cada empresa recebe funis com IDs sequenciais independentes (auto-increment). A vinculação é feita por **foreign key** (`funis.id_empresa` e `lista_interesses.funil_id`), nunca por nome ou convenção.
+
+### Fluxo completo: criação de empresa
+
+```text
+INSERT INTO empresas_geral (nome = 'Nova Empresa')
+  │
+  ├─ Trigger 1: a_criar_funis_padrao()
+  │    Cria 4 funis com etapas:
+  │    ┌──────────────────┬──────────────┬────────────────────────────┐
+  │    │ Funil            │ tipo         │ Etapas                     │
+  │    ├──────────────────┼──────────────┼────────────────────────────┤
+  │    │ Sem interesse    │ triagem      │ Novos, Em atendimento      │
+  │    │ Máquina de Gelo  │ maquina_gelo │ Novo, Qualif., Prop., Fech.│
+  │    │ Purificador      │ purificador  │ Novo, Qualif., Prop., Fech.│
+  │    │ Outros interesses│ outros       │ Novo, Em atendimento       │
+  │    └──────────────────┴──────────────┴────────────────────────────┘
+  │
+  ├─ Trigger 2: inserir_interesses_padrao()
+  │    Cria 3 interesses e vincula ao funil pelo tipo:
+  │    UPDATE lista_interesses SET funil_id = funis.id
+  │      WHERE funis.tipo = lista_interesses.nome
+  │
+  └─ Trigger 3: criar_convite_inicial()
 ```
 
-**Backfill** (Step 3):
-```sql
-UPDATE leads_crm SET campos_extras = jsonb_build_object(...)
-WHERE id IN (106, 126);
+### Fluxo: novo contato WhatsApp → lead
+
+```text
+INSERT INTO contatos_geral (whatsapp, empresa_id)
+  └─ Trigger: trg_criar_lead_apos_contato
+       └─ criar_lead_triagem(whatsapp, empresa_id)
+            ├─ SELECT id FROM funis WHERE tipo='triagem' AND id_empresa=X
+            ├─ SELECT id FROM etapas_funil WHERE id_funil=Y ORDER BY ordem LIMIT 1
+            └─ INSERT INTO leads_crm (id_funil=Y, id_etapa_atual=Z)
 ```
 
+### Fluxo: interesse identificado → mover lead
+
+```text
+UPDATE contatos_geral SET interesse = 'maquina_gelo'
+  └─ Trigger: mover_lead_por_interesse()
+       ├─ SELECT funil_id FROM lista_interesses WHERE nome='maquina_gelo' AND empresa_id=X
+       ├─ SELECT id FROM etapas_funil WHERE id_funil=N ORDER BY ordem LIMIT 1
+       └─ UPDATE leads_crm SET id_funil=N, id_etapa_atual=primeira_etapa
+```
+
+### Fluxo: copy-company-config (empresa template)
+
+1. Copia funis da empresa fonte → cria novos na destino (IDs novos)
+2. Monta `funilIdRemap` (ID fonte → ID destino)
+3. Copia interesses e remapeia `funil_id` usando o map
+
+### Resumo
+
+| Pergunta | Resposta |
+|---|---|
+| IDs são iguais entre empresa e funil? | Não. São independentes (auto-increment) |
+| Como se vinculam? | `funis.id_empresa` = FK para `empresas_geral.id` |
+| Como interesse sabe qual funil? | `lista_interesses.funil_id` = FK direto para `funis.id` |
+| Como lead entra no CRM? | `criar_lead_triagem` busca funil com `tipo='triagem'` da empresa |
+| Como lead muda de funil? | `mover_lead_por_interesse` consulta `lista_interesses.funil_id` |
