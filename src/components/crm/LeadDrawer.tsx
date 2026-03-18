@@ -84,6 +84,7 @@ interface CampoCustomizado {
   opcoes: any;
   obrigatorio: boolean;
   ordem: number;
+  id_funil: number | null;
 }
 
 interface Anotacao {
