@@ -2870,27 +2870,6 @@ export type Database = {
         Args: { p_id_empresa: number; p_nome?: string; p_whatsapp: string }
         Returns: number
       }
-      diagnostico_setup_empresas: {
-        Args: never
-        Returns: {
-          campos_globais: number
-          empresa_id: number
-          empresa_nome: string
-          etapas_maquina: number
-          etapas_purificador: number
-          etapas_triagem: number
-          etiquetas_temp: number
-          funil_maquina: boolean
-          funil_outros: boolean
-          funil_purificador: boolean
-          funil_triagem: boolean
-          icones_ativ: number
-          interesses_sem_funil: number
-          interesses_total: number
-          ok: boolean
-          problemas: string[]
-        }[]
-      }
       get_empresas_usuario: { Args: never; Returns: number[] }
       get_etiquetas_by_empresa: {
         Args: { empresa_id: number }
@@ -2999,26 +2978,15 @@ export type Database = {
         Returns: Json
       }
       timestamp_sao_paulo: { Args: { ts: string }; Returns: string }
-      update_contato_sdr_field:
-        | {
-            Args: {
-              p_campo: string
-              p_interesse?: string
-              p_valor: string
-              p_whatsapp: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_campo: string
-              p_id_empresa?: number
-              p_interesse: string
-              p_valor: string
-              p_whatsapp: string
-            }
-            Returns: undefined
-          }
+      update_contato_sdr_field: {
+        Args: {
+          p_campo: string
+          p_interesse?: string
+          p_valor: string
+          p_whatsapp: string
+        }
+        Returns: undefined
+      }
       update_user_role: {
         Args: { p_empresa_id: number; p_new_role: string; p_user_id: string }
         Returns: boolean
