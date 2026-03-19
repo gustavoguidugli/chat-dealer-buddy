@@ -1,112 +1,83 @@
 
-## Audit — Block 1 ✅ (Completed)
 
-1. **Trigger `mover_lead_por_interesse()`** — Rewritten to use `lista_interesses.funil_id` dynamically
-2. **Trigger `inserir_interesses_padrao()`** — Now associates `funil_id` after inserting defaults
-3. **`GerenciarFaqs.tsx`** — Tabs now dynamic from `lista_interesses`
-4. **`copy-company-config`** — Now copies and remaps `funil_id`
+# Audit: Eco Ice (API Oficial) - Empresa ID 25
 
-## Audit — Block 2 ✅ (Completed)
+## Current Status
 
-1. **`useLeadRealtime.ts`** — Refactored to use `campos_extras` as primary SDR data source, SDR tables as fallback only. Removed hardcoded `if interesse === 'purificador'` logic.
+The diagnostic function reports `ok: true`, but deeper inspection reveals several issues that would impact the chatbot and CRM functionality.
 
-### Accepted Architectural Limitations (SDR Tables)
+## Issues Found
 
-The following items are tied to the separate SDR table architecture (`contatos_sdr_maquinagelo` / `contatos_sdr_purificador`). They function correctly for the two existing products but won't automatically support new product types without schema changes:
+### 1. Triagem funnel missing "Novos" stage (CRITICAL)
+The triagem funnel (ID 25) has only **1 active etapa** ("Descobrir interesse" at ordem 2). The two original etapas ("Ver problema", "Teste") are inactive. The standard pattern requires at least "Novos" as the first stage — without it, new leads enter directly at "Descobrir interesse", skipping the initial triage step.
 
-- `sync_contato_sdr_to_lead_crm()` — Uses `TG_TABLE_NAME` to determine product type
-- `update_contato_sdr_field()` — Uses `IF p_interesse = 'purificador'` to route to correct table
-- `resetar_lead_completo()` — Deletes from both SDR tables explicitly
-- `match_documents_qualificacao/pos_qualificacao/purificador` — Hardcoded `tipo_faq` filters (generic `buscar_faq_similar()` already exists as modular alternative)
-- `useLeadRealtime` SDR realtime channels — Subscribe to both fixed SDR tables
+**Fix**: Add a "Novos" etapa at ordem 0 for funil 25.
 
-**Future fix**: Unify SDR tables into a single `contatos_sdr` table with a `tipo_interesse` column. This requires coordinating with external chatbot/integration systems.
+### 2. Documents/embeddings table is empty (CRITICAL for AI)
+FAQs exist in `config_empresas_geral`:
+- `faq_qualificacao_maquina`: 10,289 chars
+- `faq_pos_qualificacao_maquina`: 9,308 chars
+- `faq_purificador`: 16,361 chars
+- `faq_geral_maquina`: **EMPTY** (0 chars)
 
-## Audit — Block 3 ✅ (Completed)
+But the `documents` table has **0 records** for empresa 25, and `faq_empresa` also has **0 records**. This means the AI chatbot **cannot perform semantic search** for this company — FAQs were configured but never vectorized.
 
-### Automação de funis para novas empresas e interesses
+**Fix**: Trigger the `gerar-embedding` edge function or `vetorizar_faq_texto` to process the existing FAQ content. Also flag that `faq_geral_maquina` is missing.
 
-1. **Trigger `criar_funis_padrao()`** — Novo trigger `AFTER INSERT ON empresas_geral` que cria automaticamente 4 funis padrão (Triagem, Máquina de Gelo, Purificador, Outros) com suas respectivas etapas. Executa antes de `inserir_interesses_padrao` via nomenclatura alfabética (`a_criar_funis_padrao`).
+### 3. Lead 237 has empty `campos_extras` (MINOR)
+The only lead (whatsapp `5543996971234`) is in the maquina_gelo funnel but has `campos_extras: {}`. No SDR record exists for this whatsapp in `contatos_sdr_maquinagelo`. This means the contact went through interest identification but the chatbot didn't complete qualification (no SDR data was collected). This is **expected behavior** — no data to sync.
 
-2. **`copy-company-config`** — Atualizada para copiar `funis` + `etapas_funil` da empresa template antes dos interesses, com remapeamento correto de IDs. Reutiliza funis criados pelo trigger quando o `tipo` já existe no destino.
+### 4. Duplicate inactive campos_customizados (COSMETIC)
+18 total records exist but only 6 are active. The 12 inactive ones are leftovers from previous copy-company-config operations. Not breaking, but clutters the database.
 
-3. **`Triagem.tsx` + `InterestModal.tsx`** — Criação automática de funil ao adicionar novo interesse sem funil selecionado. O modal agora oferece opção "Criar funil automaticamente" como padrão, com etapas (Novo, Qualificação, Proposta, Fechamento).
+**Fix**: Delete inactive duplicates.
 
----
+### 5. Missing `faq_geral_maquina` content
+This FAQ field is empty (0 chars) while the other three have content. If the chatbot expects general FAQ data, it won't find any.
 
-## Arquitetura: Empresa ↔ Funil
+**Fix**: Needs content from the user/template company.
 
-### Modelo de dados
+## What's Working Correctly
 
-```text
-empresas_geral (id)
-  └── funis (id_empresa = empresas_geral.id)
-        ├── tipo: 'triagem' | 'maquina_gelo' | 'purificador' | 'outros' | 'custom'
-        └── etapas_funil (id_funil = funis.id)
+| Component | Status |
+|-----------|--------|
+| 4 funis (triagem, maquina_gelo, purificador, outros) | OK |
+| 3 interesses with funil_id mapped | OK |
+| 6 global campos_customizados (active) | OK |
+| 3 temperature etiquetas | OK |
+| 5 activity icons | OK |
+| CRM enabled (`crm_is_ativo: true`) | OK |
+| Triagem enabled (`triagem_is_ativo: true`) | OK |
+| 2 users linked (admin + member) | OK |
+| `config_empresas_geral` record exists | OK |
 
-  └── lista_interesses (empresa_id = empresas_geral.id)
-        └── funil_id → funis.id  (FK direto — mapeia interesse → funil)
+## Execution Plan
+
+### Step 1: Add "Novos" etapa to triagem funnel
+SQL migration to insert a "Novos" etapa at ordem 0 for funil 25, and adjust existing "Descobrir interesse" to ordem 1.
+
+### Step 2: Clean up duplicate inactive campos
+Delete the 12 inactive `campos_customizados` records for empresa 25.
+
+### Step 3: Vectorize existing FAQs
+Call the `gerar-embedding` edge function or use `vetorizar_faq_texto` to process the 3 existing FAQ texts into the `documents` table so the chatbot can use them.
+
+### Step 4: Flag missing `faq_geral_maquina`
+Inform the user that this FAQ section is empty and needs content — cannot be auto-generated.
+
+### Technical Details
+
+```sql
+-- Step 1: Add Novos etapa
+INSERT INTO etapas_funil (id_funil, nome, ordem, ativo)
+VALUES (25, 'Novos', 0, true);
+
+UPDATE etapas_funil SET ordem = 1 WHERE id = 74; -- Descobrir interesse
+
+-- Step 2: Clean duplicates
+DELETE FROM campos_customizados
+WHERE id_empresa = 25 AND ativo = false;
 ```
 
-Os IDs **não são sincronizados** — cada empresa recebe funis com IDs sequenciais independentes (auto-increment). A vinculação é feita por **foreign key** (`funis.id_empresa` e `lista_interesses.funil_id`), nunca por nome ou convenção.
+Step 3 requires invoking the edge function `gerar-embedding` with each FAQ text block, or calling `vetorizar_faq_texto` RPC for each tipo. This will populate the `documents` table with embeddings.
 
-### Fluxo completo: criação de empresa
-
-```text
-INSERT INTO empresas_geral (nome = 'Nova Empresa')
-  │
-  ├─ Trigger 1: a_criar_funis_padrao()
-  │    Cria 4 funis com etapas:
-  │    ┌──────────────────┬──────────────┬────────────────────────────┐
-  │    │ Funil            │ tipo         │ Etapas                     │
-  │    ├──────────────────┼──────────────┼────────────────────────────┤
-  │    │ Sem interesse    │ triagem      │ Novos, Em atendimento      │
-  │    │ Máquina de Gelo  │ maquina_gelo │ Novo, Qualif., Prop., Fech.│
-  │    │ Purificador      │ purificador  │ Novo, Qualif., Prop., Fech.│
-  │    │ Outros interesses│ outros       │ Novo, Em atendimento       │
-  │    └──────────────────┴──────────────┴────────────────────────────┘
-  │
-  ├─ Trigger 2: inserir_interesses_padrao()
-  │    Cria 3 interesses e vincula ao funil pelo tipo:
-  │    UPDATE lista_interesses SET funil_id = funis.id
-  │      WHERE funis.tipo = lista_interesses.nome
-  │
-  └─ Trigger 3: criar_convite_inicial()
-```
-
-### Fluxo: novo contato WhatsApp → lead
-
-```text
-INSERT INTO contatos_geral (whatsapp, empresa_id)
-  └─ Trigger: trg_criar_lead_apos_contato
-       └─ criar_lead_triagem(whatsapp, empresa_id)
-            ├─ SELECT id FROM funis WHERE tipo='triagem' AND id_empresa=X
-            ├─ SELECT id FROM etapas_funil WHERE id_funil=Y ORDER BY ordem LIMIT 1
-            └─ INSERT INTO leads_crm (id_funil=Y, id_etapa_atual=Z)
-```
-
-### Fluxo: interesse identificado → mover lead
-
-```text
-UPDATE contatos_geral SET interesse = 'maquina_gelo'
-  └─ Trigger: mover_lead_por_interesse()
-       ├─ SELECT funil_id FROM lista_interesses WHERE nome='maquina_gelo' AND empresa_id=X
-       ├─ SELECT id FROM etapas_funil WHERE id_funil=N ORDER BY ordem LIMIT 1
-       └─ UPDATE leads_crm SET id_funil=N, id_etapa_atual=primeira_etapa
-```
-
-### Fluxo: copy-company-config (empresa template)
-
-1. Copia funis da empresa fonte → cria novos na destino (IDs novos)
-2. Monta `funilIdRemap` (ID fonte → ID destino)
-3. Copia interesses e remapeia `funil_id` usando o map
-
-### Resumo
-
-| Pergunta | Resposta |
-|---|---|
-| IDs são iguais entre empresa e funil? | Não. São independentes (auto-increment) |
-| Como se vinculam? | `funis.id_empresa` = FK para `empresas_geral.id` |
-| Como interesse sabe qual funil? | `lista_interesses.funil_id` = FK direto para `funis.id` |
-| Como lead entra no CRM? | `criar_lead_triagem` busca funil com `tipo='triagem'` da empresa |
-| Como lead muda de funil? | `mover_lead_por_interesse` consulta `lista_interesses.funil_id` |
