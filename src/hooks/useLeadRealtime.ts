@@ -60,12 +60,14 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }
 
       if (!contatoGeral && whatsapp) {
-        const { data: contatoGeralByWhatsapp } = await supabase
+        let query = supabase
           .from('contatos_geral')
           .select('id, interesse, whatsapp, whatsapp_padrao_pipedrive')
           .eq('whatsapp', whatsapp)
-          .limit(1)
-          .maybeSingle()
+        if (empresaId) {
+          query = query.eq('empresa_id', empresaId)
+        }
+        const { data: contatoGeralByWhatsapp } = await query.limit(1).maybeSingle()
         contatoGeral = contatoGeralByWhatsapp
       }
 
