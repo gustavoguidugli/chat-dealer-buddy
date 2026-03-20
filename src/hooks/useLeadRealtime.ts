@@ -40,6 +40,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
 
     // Busca dados do contato_geral e SDR, usando campos_extras do lead como fonte primária
     async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null, leadData?: any) {
+      const version = ++fetchVersionRef.current
       let currentInteresse = interesse ?? null
 
       let contatoGeral: {
