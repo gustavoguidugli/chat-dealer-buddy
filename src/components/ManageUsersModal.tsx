@@ -49,7 +49,7 @@ export function ManageUsersModal({ open, onOpenChange, empresa }: Props) {
           email: u.email,
           nome: u.nome || u.email?.split('@')[0] || '',
           role: u.role || 'member',
-          isSuperAdmin: SUPER_ADMIN_EMAILS.includes(u.email ?? ''),
+          isSuperAdmin: checkSuperAdmin(u.email),
         }))
       );
     } catch (err) {

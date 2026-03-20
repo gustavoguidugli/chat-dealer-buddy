@@ -192,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, isCompanyAdmin, isSuperAdmin: SUPER_ADMIN_EMAILS.includes(user?.email ?? ''),
+      user, session, isCompanyAdmin, isSuperAdmin: isSuperAdmin(user?.email),
       empresaId, empresaNome, semEmpresa,
       moduloCrm, moduloIA,
       setEmpresa, loading, signOut: handleSignOut,

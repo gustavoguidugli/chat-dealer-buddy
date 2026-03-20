@@ -99,7 +99,7 @@ export default function ConfigUsuarios() {
           email: u.email,
           nome: u.nome || u.email?.split('@')[0] || '',
           role: u.role || 'member',
-          isSuperAdmin: SUPER_ADMIN_EMAILS.includes(u.email ?? ''),
+          isSuperAdmin: checkSuperAdmin(u.email),
           ativo: !u.banned_until,
           ultimoAcesso: u.last_sign_in_at,
         }))
