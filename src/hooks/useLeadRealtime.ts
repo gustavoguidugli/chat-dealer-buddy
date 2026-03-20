@@ -183,6 +183,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         .select('*')
         .eq('id_lead', leadId)
         .order('data_vencimento')
+      if (cancelled) return
       setAtividades(atividadesData || [])
 
       const { data: historicoData } = await supabase
