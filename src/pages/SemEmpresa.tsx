@@ -1,7 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Snowflake, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import logoEcoIce from '@/assets/logo-ecoice.png';
 
 export default function SemEmpresa() {
   const { signOut } = useAuth();
