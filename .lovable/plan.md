@@ -1,77 +1,86 @@
 
 
-# Stage 4 — Cleanup (Items 4A, 4B, 4C, 4D)
+# Stage 5 — Remaining Cleanup Items
 
-## Item 4A — Add RPC diagnostics section to AdminDiagnosticoTab
+## Status Check
 
-**File**: `src/components/admin/AdminDiagnosticoTab.tsx`
+Items **already completed** in previous stages:
+- **L13** (Toast delay) — already 4000ms
+- **L14** (Remove Index.tsx) — already deleted
+- **L15** (/reset-password) — page already exists and works
+- **L12** (Kanban enrichLeads pontual) — `enrichSingleLead` already implemented and used for etiqueta/atividade changes; `enrichAllLeads` still runs on every lead change but this is the correct behavior since lead-level changes (new leads, status changes) require full re-mapping
 
-Add a new section below the existing health-check table that calls `supabase.rpc('diagnostico_setup_empresas')` and displays the results. The RPC already exists and returns typed data (empresa_id, empresa_nome, ok, funil booleans, numeric counts, problemas string array).
-
-Changes:
-- Add new state: `setupRows` for RPC results, `loadingSetup` boolean
-- Add `fetchSetup` callback that calls `supabase.rpc('diagnostico_setup_empresas')`
-- Call `fetchSetup` on mount alongside existing `fetch`
-- Render a second table section titled "Diagnóstico de Setup" with columns: Empresa, Status (green "OK" / red "Incompleto" badge), Problemas (comma-separated red text or "-")
-- Add its own "Atualizar" button
+Items **still to do**: L6, L7, L8, L9, L10, L11
 
 ---
 
-## Item 4B — Fix toast delay
+## L6 — CreateCompanyModal: use is_template + motivos_copied
 
-**File**: `src/hooks/use-toast.ts`, line 6
+**File**: `src/components/CreateCompanyModal.tsx`
 
-Change `TOAST_REMOVE_DELAY = 1000000` to `TOAST_REMOVE_DELAY = 4000`.
+1. Change template query (lines 76-81): replace `.neq('id', empresa.id).order('id', { ascending: true })` with `.eq('is_template', true)` to find the designated template company
+2. Update toast description (line 104): add `${r.motivos_copied || 0} motivos` to the copied items string
 
-One line.
+**File**: `supabase/functions/copy-company-config/index.ts`
 
----
-
-## Item 4C — Delete unused Index.tsx
-
-**File**: `src/pages/Index.tsx`
-
-Confirmed no imports reference this file. Delete it.
+3. Add `motivos_copied: 0` to the `results` object (line 74-83)
+4. Add a new section (after interests, before the response) that copies `motivos_perda` from source to target company, deduplicating by nome
 
 ---
 
-## Item 4D — Refactor LeadDrawer into 3 sub-components
+## L7 — AuthContext: validate superadmin empresa via DB
 
-The 2071-line `LeadDrawer.tsx` will be split into:
+**File**: `src/contexts/AuthContext.tsx`, lines 62-73
 
-### Structure analysis (from reading the file):
-- **Lines 807-1006**: Header section (name, etiquetas, funil/etapa selector, proprietario, ganho/perdido buttons, progress bar)
-- **Lines 1008-1421**: Left sidebar with fields (telefone, valor, campos customizados collapsible)
-- **Lines 1423-1776**: Center area with tabs (anotacoes tab with notes input + history, atividade tab)
+Currently superadmin trusts `localStorage` blindly without verifying the empresa exists in DB.
 
-### New files:
-
-1. **`src/components/crm/LeadDrawerHeader.tsx`**
-   - Receives: `lead`, `etapas`, `funilNome`, `allFunis`, `proprietarios`, `onLeadChanged`, and state setters for dialogs (ganho, perdido, reabrir, duplicar, excluir)
-   - Contains: `EditableLeadName` (moved here), name row, etiqueta selector, funil/etapa popover, owner popover, ganho/perdido/reabrir buttons, dropdown menu, progress bar
-   - All handler functions that belong to this section move here (handleOpenFunilEtapaPopover, handleTempFunilChange, handleSaveFunilEtapa, handleChangeProprietario)
-
-2. **`src/components/crm/LeadDrawerFields.tsx`**
-   - Receives: `lead`, `campos`, `dadosContato`, `listaInteresses`, `onLeadChanged`, `empresaId`
-   - Contains: telefone field, valor field, campos collapsible with custom fields, manage/add field popovers
-   - All handler functions for fields move here (handleAddField, handleUpdateField, handleDeleteField, handleSaveAllFields, field drag, SortableFieldItem)
-
-3. **`src/components/crm/LeadDrawerTimeline.tsx`**
-   - Receives: `lead`, `anotacoes`, `atividades`, `historico`, `realtimeAnexos`, `proprietarios`, `empresaId`, `onLeadChanged`
-   - Contains: Tabs component with anotacoes tab (input, file upload, pending activities, history with filter) and atividade tab
-   - All handler functions for notes/activities move here (handleSalvarAnotacao, handlePreviewFile, etc.)
-
-### LeadDrawer.tsx becomes:
-- Container with Sheet/SheetContent, ErrorBoundary, loading state
-- Imports and renders `<LeadDrawerHeader>`, `<LeadDrawerFields>`, `<LeadDrawerTimeline>`
-- Keeps the AlertDialog modals (ganho, perdido, reabrir, excluir, duplicar, etc.) since they depend on state shared across sections
-- Keeps the `useLeadRealtime` hook, `fetchMeta`, and shared state management
-
-No behavioral changes — purely structural reorganization.
+Change: when `savedId` exists, query `empresas_geral` to confirm the empresa exists before using it. If not found, clear localStorage and leave `empresaId` as null (superadmin will be redirected to company selector).
 
 ---
 
-## Execution order
+## L8 — Onboarding: ConviteData field issue
 
-4A first. Wait for confirmation. Then 4B, 4C, 4D sequentially.
+After reviewing the code, the `ConviteData` interface and its usage look correct — `id` maps to the RPC's UUID `id` field. However, the `role` field from the RPC returns values like `'member'` which the edge function already handles by mapping to `'user'`. No code change needed here.
+
+**If the user has a specific field bug in mind**, clarification is needed. Otherwise this item is already correct.
+
+---
+
+## L9 — DeleteEmpresaModal: update warning text
+
+**File**: `src/components/DeleteEmpresaModal.tsx`
+
+Update the bullet list (lines 80-86) to be more comprehensive, reflecting the actual tables deleted by `delete_empresa_completa` RPC (~26 tables). Add items like:
+- Todos os funis e etapas
+- Todas as atividades e histórico
+- Todas as configurações e FAQs
+- Todos os campos customizados
+
+---
+
+## L10 — Remove '2024' suffix from invite code
+
+**File**: `src/components/CreateCompanyModal.tsx`, line 65
+
+Change: `const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + '2024'`
+
+To: `const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + Date.now().toString(36).slice(-4).toUpperCase()`
+
+This generates a unique suffix based on timestamp instead of a static '2024'.
+
+---
+
+## L11 — useLeadRealtime: fix race condition
+
+**File**: `src/hooks/useLeadRealtime.ts`
+
+The `useEffect` on line 34 fetches data asynchronously but has no cancellation when `leadId` changes. If lead A is loading and user clicks lead B, lead A's data may overwrite lead B's state.
+
+Fix: add a `cancelled` flag (set to `true` in cleanup). Check `cancelled` before every `setState` call in `fetchData` and `fetchContatoData`. Reset state at the start of each effect run.
+
+---
+
+## Execution Order
+
+L6 → L7 → L9 → L10 → L11, one at a time. Skip L8 (already correct) and L12/L13/L14/L15 (already done).
 
