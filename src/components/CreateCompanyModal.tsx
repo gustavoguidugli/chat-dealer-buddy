@@ -73,14 +73,13 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       // 4. Copy config from template company
       try {
         // Get first company as template (excluding the one just created)
-        const { data: templateCompanies } = await supabase
+        const { data: templateCompany } = await supabase
           .from('empresas_geral')
           .select('id')
-          .neq('id', empresa.id)
-          .order('id', { ascending: true })
-          .limit(1);
+          .eq('is_template', true)
+          .maybeSingle();
 
-        const templateId = templateCompanies?.[0]?.id;
+        const templateId = templateCompany?.id;
 
         if (templateId) {
           const { data: copyResult, error: copyError } = await supabase.functions.invoke('copy-company-config', {
