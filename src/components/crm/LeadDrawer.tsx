@@ -1778,6 +1778,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
               </div>
             </>
           ) : null}
+          </ErrorBoundary>
         </SheetContent>
       </Sheet>
 
