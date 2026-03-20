@@ -140,9 +140,9 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       setLead(leadData)
 
       if (leadData) {
-        contatoGeralId = leadData.id_contato_geral
-        contatoWhatsapp = leadData.whatsapp
-        await fetchContatoData(contatoGeralId, contatoWhatsapp, undefined, leadData)
+        contatoGeralIdRef.current = leadData.id_contato_geral
+        contatoWhatsappRef.current = leadData.whatsapp
+        await fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current, undefined, leadData)
       }
 
       const { data: anotacoesData } = await supabase
