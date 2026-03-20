@@ -2870,6 +2870,10 @@ export type Database = {
         Args: { p_id_empresa: number; p_nome?: string; p_whatsapp: string }
         Returns: number
       }
+      delete_empresa_completa: {
+        Args: { p_empresa_id: number }
+        Returns: undefined
+      }
       diagnostico_setup_empresas: {
         Args: never
         Returns: {
