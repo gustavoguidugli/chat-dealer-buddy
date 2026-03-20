@@ -1,11 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { isSuperAdmin, SUPER_ADMIN_EMAILS } from '@/lib/constants';
 import type { User, Session } from '@supabase/supabase-js';
-
-const SUPER_ADMIN_EMAILS = [
-  'guidugli.gustavo@gmail.com',
-  'matheussenacarneiro2322@gmail.com',
-];
 
 interface AuthContextType {
   user: User | null;
