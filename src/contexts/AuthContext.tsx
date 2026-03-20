@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (currentUser: User) => {
     try {
-      const superAdmin = SUPER_ADMIN_EMAILS.includes(currentUser.email ?? '');
+      const superAdmin = isSuperAdmin(currentUser.email);
 
       if (superAdmin) {
         setIsCompanyAdmin(true);
