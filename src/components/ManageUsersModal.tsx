@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { isSuperAdmin as checkSuperAdmin } from '@/lib/constants';
+
 interface UsuarioEmpresa {
   id: string;
   email: string;
@@ -35,13 +37,11 @@ export function ManageUsersModal({ open, onOpenChange, empresa }: Props) {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const [{ data, error }, { data: superAdminIds }] = await Promise.all([
-        supabase.rpc('get_usuarios_empresa', { empresa_id_param: empresa.id }),
-        (supabase.rpc as any)('get_super_admin_user_ids'),
-      ]);
+      const { data, error } = await supabase.rpc('get_usuarios_empresa', {
+        empresa_id_param: empresa.id,
+      });
 
       if (error) throw error;
-      const superSet = new Set((superAdminIds || []) as unknown as string[]);
 
       setUsers(
         (data || []).map((u: any) => ({
@@ -49,7 +49,7 @@ export function ManageUsersModal({ open, onOpenChange, empresa }: Props) {
           email: u.email,
           nome: u.nome || u.email?.split('@')[0] || '',
           role: u.role || 'member',
-          isSuperAdmin: superSet.has(u.id),
+          isSuperAdmin: checkSuperAdmin(u.email),
         }))
       );
     } catch (err) {

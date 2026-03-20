@@ -1,2 +1,7 @@
-// Super admin checks are now handled via RPC get_is_super_admin() and the AuthContext.
-// This file is kept as a placeholder for future app-wide constants.
+export const SUPER_ADMIN_EMAILS = [
+  'guidugli.gustavo@gmail.com',
+  'matheussenacarneiro2322@gmail.com',
+];
+
+export const isSuperAdmin = (email?: string | null): boolean =>
+  SUPER_ADMIN_EMAILS.includes(email ?? '');

@@ -44,21 +44,18 @@ interface TabDef {
 }
 
 // Legacy mapping: for interests whose nome matches legacy products,
-// include old tipo_faq values so existing FAQs still appear correctly
+// map them to the old tipo_faq values so existing FAQs still appear correctly
 const LEGACY_TIPO_FAQ_MAP: Record<string, string[]> = {
   maquina_gelo: ['geral_maquina', 'qualificacao_maquina', 'pos_qualificacao_maquina'],
   purificador: ['purificador'],
 };
 
 function buildTipoFaqs(interestNome: string): string[] {
-  // Always include the interest nome itself + any legacy values
-  const legacy = LEGACY_TIPO_FAQ_MAP[interestNome] ?? [];
-  return [interestNome, ...legacy];
+  return LEGACY_TIPO_FAQ_MAP[interestNome] ?? [interestNome];
 }
 
 function resolveTipoFaqForInsert(tab: TabDef): string {
-  // Always save with the interest nome (first element), not legacy values
-  return tab.value;
+  return tab.tipoFaqs[0] ?? tab.value;
 }
 
 export default function GerenciarFaqs() {
@@ -91,23 +88,23 @@ export default function GerenciarFaqs() {
       .eq('ativo', true)
       .order('ordem', { ascending: true });
 
-    // Always start with a "Geral" tab
-    const geralTab: TabDef = { value: 'geral', label: 'Geral', tipoFaqs: ['geral'] };
-    const dynamicTabs: TabDef[] = [
-      geralTab,
-      ...(data || []).map((interest) => ({
+    if (data && data.length > 0) {
+      const dynamicTabs: TabDef[] = data.map((interest) => ({
         value: interest.nome,
-        label: interest.label || interest.nome,
+        label: `FAQ ${interest.label}`,
         tipoFaqs: buildTipoFaqs(interest.nome),
-      })),
-    ];
-    setTabs(dynamicTabs);
-    setActiveTab((prev) => {
-      if (!prev || !dynamicTabs.find((t) => t.value === prev)) {
-        return dynamicTabs[0].value;
-      }
-      return prev;
-    });
+      }));
+      setTabs(dynamicTabs);
+      setActiveTab((prev) => {
+        if (!prev || !dynamicTabs.find((t) => t.value === prev)) {
+          return dynamicTabs[0].value;
+        }
+        return prev;
+      });
+    } else {
+      setTabs([]);
+      setActiveTab('');
+    }
   }, [empresaId]);
 
   const fetchCompanyUsers = useCallback(async () => {

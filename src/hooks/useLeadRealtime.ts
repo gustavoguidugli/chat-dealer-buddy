@@ -30,7 +30,6 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
 
   const contatoGeralIdRef = useRef<number | null>(null)
   const contatoWhatsappRef = useRef<string | null>(null)
-  const fetchVersionRef = useRef(0)
 
   useEffect(() => {
     if (!leadId || !empresaId) return
@@ -40,7 +39,6 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
 
     // Busca dados do contato_geral e SDR, usando campos_extras do lead como fonte primária
     async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null, leadData?: any) {
-      const version = ++fetchVersionRef.current
       let currentInteresse = interesse ?? null
 
       let contatoGeral: {
@@ -60,14 +58,12 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }
 
       if (!contatoGeral && whatsapp) {
-        let query = supabase
+        const { data: contatoGeralByWhatsapp } = await supabase
           .from('contatos_geral')
           .select('id, interesse, whatsapp, whatsapp_padrao_pipedrive')
           .eq('whatsapp', whatsapp)
-        if (empresaId) {
-          query = query.eq('empresa_id', empresaId)
-        }
-        const { data: contatoGeralByWhatsapp } = await query.limit(1).maybeSingle()
+          .limit(1)
+          .maybeSingle()
         contatoGeral = contatoGeralByWhatsapp
       }
 
@@ -130,10 +126,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         }
       }
 
-      // Only apply if this is still the latest fetch
-      if (version === fetchVersionRef.current) {
-        setDadosContato(dados)
-      }
+      setDadosContato(dados)
     }
 
     // 1. Busca dados iniciais
