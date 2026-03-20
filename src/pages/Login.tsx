@@ -83,7 +83,7 @@ export default function Login() {
       <Card className="w-full max-w-md shadow-xl border-0">
         <CardHeader className="items-center pb-2">
           <img src={logoEcoIce} alt="Eco Ice" className="h-16 w-16 rounded-2xl object-contain mb-4" />
-          <h1 className="text-2xl font-bold text-foreground">EcoIce</h1>
+          <h1 className="text-2xl font-bold text-foreground">Eco Ice</h1>
           <p className="text-sm text-muted-foreground">
             {resetMode ? 'Recuperar senha' : 'Acesse sua conta'}
           </p>
