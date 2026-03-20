@@ -148,6 +148,8 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         .eq('id', leadId)
         .single()
 
+      if (cancelled) return
+
       setLead(leadData)
 
       if (leadData) {
