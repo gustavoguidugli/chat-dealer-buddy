@@ -182,5 +182,5 @@ export function useFunilRealtime(funilId: number, empresaId: number | null, etap
     }
   }, [funilId, empresaId, etapaId])
 
-  return { leads, setLeads, wonLeads, lostLeads, loading, etiquetaVersion, atividadeVersion }
+  return { leads, setLeads, wonLeads, lostLeads, loading, lastEtiquetaChange, lastAtividadeChange }
 }
