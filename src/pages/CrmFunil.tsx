@@ -616,19 +616,21 @@ export default function CrmFunil() {
               Nenhuma etapa configurada. Edite o funil para adicionar etapas.
             </div>
           ) : (
-            <KanbanBoard
-              etapas={etapas}
-              leadsByEtapa={leadsByEtapa}
-              wonLeads={filteredWonLeads}
-              lostLeads={filteredLostLeads}
-              onMoveLead={handleMoveLead}
-              onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
-              onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
-              onDropWon={(leadId) => setDragGanhoLeadId(leadId)}
-              onDropLost={(leadId) => setDragPerdidoLeadId(leadId)}
-              listaInteresses={listaInteresses}
-              onLeadChanged={() => setReloadKey((k) => k + 1)}
-            />
+            <ErrorBoundary>
+              <KanbanBoard
+                etapas={etapas}
+                leadsByEtapa={leadsByEtapa}
+                wonLeads={filteredWonLeads}
+                lostLeads={filteredLostLeads}
+                onMoveLead={handleMoveLead}
+                onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
+                onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
+                onDropWon={(leadId) => setDragGanhoLeadId(leadId)}
+                onDropLost={(leadId) => setDragPerdidoLeadId(leadId)}
+                listaInteresses={listaInteresses}
+                onLeadChanged={() => setReloadKey((k) => k + 1)}
+              />
+            </ErrorBoundary>
           )}
         </div>
       </div>
