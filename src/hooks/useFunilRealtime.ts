@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 
+export interface RealtimeChangeInfo {
+  version: number
+  leadId: number | null
+}
+
 /**
  * Hook para sincronizar o funil em tempo real.
  * Todos os channels incluem filtro de empresa para compatibilidade com RLS.
@@ -10,8 +15,8 @@ export function useFunilRealtime(funilId: number, empresaId: number | null, etap
   const [wonLeads, setWonLeads] = useState<any[]>([])
   const [lostLeads, setLostLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [etiquetaVersion, setEtiquetaVersion] = useState(0)
-  const [atividadeVersion, setAtividadeVersion] = useState(0)
+  const [lastEtiquetaChange, setLastEtiquetaChange] = useState<RealtimeChangeInfo>({ version: 0, leadId: null })
+  const [lastAtividadeChange, setLastAtividadeChange] = useState<RealtimeChangeInfo>({ version: 0, leadId: null })
 
   useEffect(() => {
     if (!funilId || !empresaId) {
@@ -142,8 +147,11 @@ export function useFunilRealtime(funilId: number, empresaId: number | null, etap
           table: 'lead_etiquetas',
           filter: `id_empresa=eq.${empresaId}`,
         },
-        () => {
-          setEtiquetaVersion((v) => v + 1)
+        (payload) => {
+          const leadId = (payload.eventType === 'DELETE')
+            ? (payload.old as any)?.id_lead ?? null
+            : (payload.new as any)?.id_lead ?? null
+          setLastEtiquetaChange((prev) => ({ version: prev.version + 1, leadId: leadId ? Number(leadId) : null }))
         }
       )
       .subscribe()
@@ -158,8 +166,11 @@ export function useFunilRealtime(funilId: number, empresaId: number | null, etap
           table: 'atividades',
           filter: `id_empresa=eq.${empresaId}`,
         },
-        () => {
-          setAtividadeVersion((v) => v + 1)
+        (payload) => {
+          const leadId = (payload.eventType === 'DELETE')
+            ? (payload.old as any)?.id_lead ?? null
+            : (payload.new as any)?.id_lead ?? null
+          setLastAtividadeChange((prev) => ({ version: prev.version + 1, leadId: leadId ? Number(leadId) : null }))
         }
       )
       .subscribe()
@@ -171,5 +182,5 @@ export function useFunilRealtime(funilId: number, empresaId: number | null, etap
     }
   }, [funilId, empresaId, etapaId])
 
-  return { leads, setLeads, wonLeads, lostLeads, loading, etiquetaVersion, atividadeVersion }
+  return { leads, setLeads, wonLeads, lostLeads, loading, lastEtiquetaChange, lastAtividadeChange }
 }

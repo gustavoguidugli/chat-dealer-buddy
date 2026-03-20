@@ -132,7 +132,10 @@ export default function CrmFunil() {
   }, [empresaId]);
 
   // Realtime leads
-  const { leads: realtimeLeads, setLeads, wonLeads: realtimeWonLeads, lostLeads: realtimeLostLeads, loading: loadingLeads, etiquetaVersion, atividadeVersion } = useFunilRealtime(funilAtual || 0, empresaId);
+  const { leads: realtimeLeads, setLeads, wonLeads: realtimeWonLeads, lostLeads: realtimeLostLeads, loading: loadingLeads, lastEtiquetaChange, lastAtividadeChange } = useFunilRealtime(funilAtual || 0, empresaId);
+
+  // Track previous realtime lead arrays to detect lead-level vs etiqueta/atividade changes
+  const prevRealtimeRef = useRef({ leads: realtimeLeads, won: realtimeWonLeads, lost: realtimeLostLeads });
 
   // Enrich leads with etiquetas
   const [leads, setEnrichedLeads] = useState<LeadCard[]>([]);
@@ -162,7 +165,57 @@ export default function CrmFunil() {
     }));
   };
 
-  useEffect(() => {
+  // Helper: enrich a single lead by ID
+  const enrichSingleLead = useCallback(async (leadId: number) => {
+    const [etiquetasRes, atividadesRes] = await Promise.all([
+      supabase
+        .from('lead_etiquetas')
+        .select('id_lead, etiquetas_card(nome, cor)')
+        .eq('id_lead', leadId),
+      supabase
+        .from('atividades')
+        .select('id, assunto, data_vencimento, concluida, atribuida_a, id_lead, descricao, hora_inicio, hora_fim')
+        .eq('id_lead', leadId)
+        .eq('concluida', false)
+        .order('data_vencimento', { ascending: true })
+        .limit(1),
+    ]);
+
+    const etiquetas: { nome: string; cor: string }[] = [];
+    if (etiquetasRes.data) {
+      for (const item of etiquetasRes.data) {
+        const ec = item.etiquetas_card as any;
+        if (ec) etiquetas.push({ nome: ec.nome, cor: ec.cor });
+      }
+    }
+
+    let proximaAtividade: LeadAtividade | null = null;
+    if (atividadesRes.data && atividadesRes.data.length > 0) {
+      const at = atividadesRes.data[0];
+      const ownerName = proprietarios.find(p => p.id === at.atribuida_a)?.nome || null;
+      proximaAtividade = {
+        id: at.id,
+        assunto: at.assunto,
+        data_vencimento: at.data_vencimento,
+        concluida: at.concluida ?? false,
+        atribuida_a: at.atribuida_a,
+        atribuida_a_nome: ownerName,
+        descricao: at.descricao,
+        hora_inicio: at.hora_inicio,
+        hora_fim: at.hora_fim,
+      };
+    }
+
+    const updater = (prev: LeadCard[]) =>
+      prev.map(l => l.id === leadId ? { ...l, etiquetas, proximaAtividade } : l);
+
+    setEnrichedLeads(updater);
+    setEnrichedWonLeads(updater);
+    setEnrichedLostLeads(updater);
+  }, [proprietarios]);
+
+  // Full enrichment for all leads (initial load or fallback)
+  const enrichAllLeads = useCallback(async () => {
     const allRaw = [...realtimeLeads, ...realtimeWonLeads, ...realtimeLostLeads];
     if (!allRaw.length) {
       setEnrichedLeads([]);
@@ -170,60 +223,83 @@ export default function CrmFunil() {
       setEnrichedLostLeads([]);
       return;
     }
-    const enrichLeads = async () => {
-      const leadIds = allRaw.map((l: any) => l.id);
-      let etiquetasMap: Record<number, { nome: string; cor: string }[]> = {};
-      let atividadesMap: Record<number, LeadAtividade | null> = {};
-      
-      if (leadIds.length > 0) {
-        const [etiquetasRes, atividadesRes] = await Promise.all([
-          supabase
-            .from('lead_etiquetas')
-            .select('id_lead, etiquetas_card(nome, cor)')
-            .in('id_lead', leadIds),
-          supabase
-            .from('atividades')
-            .select('id, assunto, data_vencimento, concluida, atribuida_a, id_lead, descricao, hora_inicio, hora_fim')
-            .in('id_lead', leadIds)
-            .eq('concluida', false)
-            .order('data_vencimento', { ascending: true }),
-        ]);
-        
-        if (etiquetasRes.data) {
-          for (const item of etiquetasRes.data) {
-            if (!etiquetasMap[item.id_lead]) etiquetasMap[item.id_lead] = [];
-            const ec = item.etiquetas_card as any;
-            if (ec) etiquetasMap[item.id_lead].push({ nome: ec.nome, cor: ec.cor });
-          }
-        }
+    const leadIds = allRaw.map((l: any) => l.id);
+    let etiquetasMap: Record<number, { nome: string; cor: string }[]> = {};
+    let atividadesMap: Record<number, LeadAtividade | null> = {};
 
-        if (atividadesRes.data) {
-          for (const at of atividadesRes.data) {
-            const lid = (at as any).id_lead;
-            if (lid && !atividadesMap[lid]) {
-              const ownerName = proprietarios.find(p => p.id === at.atribuida_a)?.nome || null;
-              atividadesMap[lid] = {
-                id: at.id,
-                assunto: at.assunto,
-                data_vencimento: at.data_vencimento,
-                concluida: at.concluida ?? false,
-                atribuida_a: at.atribuida_a,
-                atribuida_a_nome: ownerName,
-                descricao: at.descricao,
-                hora_inicio: at.hora_inicio,
-                hora_fim: at.hora_fim,
-              };
-            }
-          }
+    if (leadIds.length > 0) {
+      const [etiquetasRes, atividadesRes] = await Promise.all([
+        supabase
+          .from('lead_etiquetas')
+          .select('id_lead, etiquetas_card(nome, cor)')
+          .in('id_lead', leadIds),
+        supabase
+          .from('atividades')
+          .select('id, assunto, data_vencimento, concluida, atribuida_a, id_lead, descricao, hora_inicio, hora_fim')
+          .in('id_lead', leadIds)
+          .eq('concluida', false)
+          .order('data_vencimento', { ascending: true }),
+      ]);
+
+      if (etiquetasRes.data) {
+        for (const item of etiquetasRes.data) {
+          if (!etiquetasMap[item.id_lead]) etiquetasMap[item.id_lead] = [];
+          const ec = item.etiquetas_card as any;
+          if (ec) etiquetasMap[item.id_lead].push({ nome: ec.nome, cor: ec.cor });
         }
       }
 
-      setEnrichedLeads(mapLeads(realtimeLeads, etiquetasMap, atividadesMap));
-      setEnrichedWonLeads(mapLeads(realtimeWonLeads, etiquetasMap, atividadesMap));
-      setEnrichedLostLeads(mapLeads(realtimeLostLeads, etiquetasMap, atividadesMap));
-    };
-    enrichLeads();
-  }, [realtimeLeads, realtimeWonLeads, realtimeLostLeads, reloadKey, etiquetaVersion, atividadeVersion, proprietarios]);
+      if (atividadesRes.data) {
+        for (const at of atividadesRes.data) {
+          const lid = (at as any).id_lead;
+          if (lid && !atividadesMap[lid]) {
+            const ownerName = proprietarios.find(p => p.id === at.atribuida_a)?.nome || null;
+            atividadesMap[lid] = {
+              id: at.id,
+              assunto: at.assunto,
+              data_vencimento: at.data_vencimento,
+              concluida: at.concluida ?? false,
+              atribuida_a: at.atribuida_a,
+              atribuida_a_nome: ownerName,
+              descricao: at.descricao,
+              hora_inicio: at.hora_inicio,
+              hora_fim: at.hora_fim,
+            };
+          }
+        }
+      }
+    }
+
+    setEnrichedLeads(mapLeads(realtimeLeads, etiquetasMap, atividadesMap));
+    setEnrichedWonLeads(mapLeads(realtimeWonLeads, etiquetasMap, atividadesMap));
+    setEnrichedLostLeads(mapLeads(realtimeLostLeads, etiquetasMap, atividadesMap));
+  }, [realtimeLeads, realtimeWonLeads, realtimeLostLeads, proprietarios]);
+
+  // React to lead-level changes: full enrich
+  useEffect(() => {
+    enrichAllLeads();
+    prevRealtimeRef.current = { leads: realtimeLeads, won: realtimeWonLeads, lost: realtimeLostLeads };
+  }, [realtimeLeads, realtimeWonLeads, realtimeLostLeads, reloadKey, proprietarios]);
+
+  // React to etiqueta changes: single-lead when possible
+  useEffect(() => {
+    if (lastEtiquetaChange.version === 0) return;
+    if (lastEtiquetaChange.leadId) {
+      enrichSingleLead(lastEtiquetaChange.leadId);
+    } else {
+      enrichAllLeads();
+    }
+  }, [lastEtiquetaChange]);
+
+  // React to atividade changes: single-lead when possible
+  useEffect(() => {
+    if (lastAtividadeChange.version === 0) return;
+    if (lastAtividadeChange.leadId) {
+      enrichSingleLead(lastAtividadeChange.leadId);
+    } else {
+      enrichAllLeads();
+    }
+  }, [lastAtividadeChange]);
 
   const loading = loadingFunis || loadingLeads;
 
