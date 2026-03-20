@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserData = useCallback(async (currentUser: User) => {
     try {
       // Check super admin status via RPC (no hardcoded emails)
-      const { data: superAdminFlag } = await supabase.rpc('get_is_super_admin');
+      const { data: superAdminFlag } = await (supabase.rpc as any)('get_is_super_admin');
       const superAdmin = superAdminFlag === true;
       setIsSuperAdminState(superAdmin);
 

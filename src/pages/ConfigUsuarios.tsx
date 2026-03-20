@@ -92,10 +92,10 @@ export default function ConfigUsuarios() {
       // Fetch users and super admin IDs in parallel
       const [{ data, error }, { data: superAdminIds }] = await Promise.all([
         supabase.rpc('get_usuarios_empresa', { empresa_id_param: empresaId }),
-        supabase.rpc('get_super_admin_user_ids'),
+        (supabase.rpc as any)('get_super_admin_user_ids'),
       ]);
       if (error) throw error;
-      const superSet = new Set((superAdminIds || []) as string[]);
+      const superSet = new Set((superAdminIds || []) as unknown as string[]);
       setUsers(
         (data || []).map((u: any) => ({
           id: u.id,

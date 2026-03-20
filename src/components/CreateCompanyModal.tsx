@@ -76,10 +76,10 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
         const { data: templateCompany } = await supabase
           .from('empresas_geral')
           .select('id')
-          .eq('is_template', true)
+          .eq('is_template' as any, true)
           .maybeSingle();
 
-        const templateId = templateCompany?.id;
+        const templateId = (templateCompany as any)?.id;
 
         if (templateId) {
           const { data: copyResult, error: copyError } = await supabase.functions.invoke('copy-company-config', {
