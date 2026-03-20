@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
       config_copied: false,
       interests_copied: 0,
       campos_copied: 0,
+      motivos_copied: 0,
     };
 
     // 1. Copy Funis + Etapas (MUST come before interests for funil_id remapping)
