@@ -665,12 +665,14 @@ export default function CrmFunil() {
           onCreated={() => setReloadKey((k) => k + 1)}
         />
       )}
-      <LeadDrawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        leadId={selectedLeadId}
-        onLeadChanged={() => setReloadKey((k) => k + 1)}
-      />
+      <ErrorBoundary>
+        <LeadDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          leadId={selectedLeadId}
+          onLeadChanged={() => setReloadKey((k) => k + 1)}
+        />
+      </ErrorBoundary>
 
       {/* Drag-to-Won Dialog */}
       <AlertDialog open={dragGanhoLeadId !== null} onOpenChange={(v) => { if (!v) setDragGanhoLeadId(null); }}>

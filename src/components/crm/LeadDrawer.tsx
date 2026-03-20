@@ -799,6 +799,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-[75vw] p-0 flex flex-col overflow-hidden">
+          <ErrorBoundary>
           {loading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">Carregando...</div>
           ) : lead ? (
