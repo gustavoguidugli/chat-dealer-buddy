@@ -329,17 +329,17 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          const sameContatoGeralId = !!contatoGeralId && isSameNumericId(updated.id, contatoGeralId)
+          const sameContatoGeralId = !!contatoGeralIdRef.current && isSameNumericId(updated.id, contatoGeralIdRef.current)
           const sameWhatsapp =
-            !!contatoWhatsapp &&
+            !!contatoWhatsappRef.current &&
             normalizeWhatsapp(updated.whatsapp) !== '' &&
-            normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)
+            normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsappRef.current)
 
           if (sameContatoGeralId || sameWhatsapp) {
             const parsedContatoId = Number(updated.id)
-            contatoGeralId = Number.isNaN(parsedContatoId) ? contatoGeralId : parsedContatoId
-            contatoWhatsapp = updated.whatsapp ?? contatoWhatsapp
-            fetchContatoData(contatoGeralId, contatoWhatsapp, updated.interesse)
+            contatoGeralIdRef.current = Number.isNaN(parsedContatoId) ? contatoGeralIdRef.current : parsedContatoId
+            contatoWhatsappRef.current = updated.whatsapp ?? contatoWhatsappRef.current
+            fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current, updated.interesse)
           }
         }
       })
