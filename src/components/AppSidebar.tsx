@@ -2,10 +2,11 @@ import { useState, useRef, type ElementType, type ReactNode } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Home, BookOpen, LogOut, Menu, Snowflake, Building2,
+  Home, BookOpen, LogOut, Menu, Building2,
   ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen, Handshake,
   Settings, Users, UserCog, BarChart2,
 } from 'lucide-react';
+import logoEcoIce from '@/assets/logo-ecoice.png';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
