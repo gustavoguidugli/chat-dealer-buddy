@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Snowflake, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import logoEcoIce from '@/assets/logo-ecoice.png';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AceitarConvite() {
@@ -68,9 +69,7 @@ export default function AceitarConvite() {
       <div className="flex min-h-screen items-center justify-center bg-gradient-brand p-4">
         <Card className="w-full max-w-md shadow-xl border-0">
           <CardHeader className="items-center pb-2">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
-              <Snowflake className="h-9 w-9 text-primary-foreground" />
-            </div>
+            <img src={logoEcoIce} alt="Eco Ice" className="h-16 w-16 rounded-2xl object-contain mb-4" />
             <h1 className="text-2xl font-bold text-foreground">Aceitando convite...</h1>
           </CardHeader>
           <CardContent className="flex justify-center py-8">

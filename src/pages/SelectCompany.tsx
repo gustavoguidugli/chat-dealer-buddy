@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Building2, Loader2, Snowflake, Trash, MoreVertical } from 'lucide-react';
+import { Search, Building2, Loader2, Trash, MoreVertical } from 'lucide-react';
+import logoEcoIce from '@/assets/logo-ecoice.png';
 import { useToast } from '@/hooks/use-toast';
 import { DeleteEmpresaModal } from '@/components/DeleteEmpresaModal';
 import {
@@ -75,9 +76,7 @@ export default function SelectCompany() {
         <div className="mx-auto max-w-3xl">
           {/* Header */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Snowflake className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src={logoEcoIce} alt="Eco Ice" className="h-10 w-10 rounded-lg object-contain" />
             <div>
               <h1 className="text-2xl font-bold text-foreground">Selecione uma empresa</h1>
               <p className="text-sm text-muted-foreground">Escolha a empresa que deseja gerenciar</p>

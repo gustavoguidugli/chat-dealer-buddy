@@ -1113,6 +1113,7 @@ export type Database = {
           created_at: string
           endereço: string | null
           id: number
+          is_template: boolean
           message_sender: string | null
           message_sender_token: string | null
           message_sender_url: string | null
@@ -1131,6 +1132,7 @@ export type Database = {
           created_at?: string
           endereço?: string | null
           id?: number
+          is_template?: boolean
           message_sender?: string | null
           message_sender_token?: string | null
           message_sender_url?: string | null
@@ -1149,6 +1151,7 @@ export type Database = {
           created_at?: string
           endereço?: string | null
           id?: number
+          is_template?: boolean
           message_sender?: string | null
           message_sender_token?: string | null
           message_sender_url?: string | null
@@ -2601,6 +2604,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_admin: boolean | null
+          is_super_admin: boolean
           updated_at: string | null
           user_id: string | null
         }
@@ -2608,6 +2612,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_admin?: boolean | null
+          is_super_admin?: boolean
           updated_at?: string | null
           user_id?: string | null
         }
@@ -2615,6 +2620,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_admin?: boolean | null
+          is_super_admin?: boolean
           updated_at?: string | null
           user_id?: string | null
         }
@@ -2908,6 +2914,8 @@ export type Database = {
           nome_etiqueta: string
         }[]
       }
+      get_is_super_admin: { Args: never; Returns: boolean }
+      get_super_admin_user_ids: { Args: never; Returns: string[] }
       get_team_members: {
         Args: { p_empresa_id: number }
         Returns: {

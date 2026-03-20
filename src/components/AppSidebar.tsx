@@ -2,10 +2,11 @@ import { useState, useRef, type ElementType, type ReactNode } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Home, BookOpen, LogOut, Menu, Snowflake, Building2,
+  Home, BookOpen, LogOut, Menu, Building2,
   ChevronDown, Target, CheckSquare, PanelLeftClose, PanelLeftOpen, Handshake,
   Settings, Users, UserCog, BarChart2,
 } from 'lucide-react';
+import logoEcoIce from '@/assets/logo-ecoice.png';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -113,9 +114,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Snowflake className="h-6 w-6 text-sidebar-primary-foreground" />
-          </div>
+          <img src={logoEcoIce} alt="Eco Ice" className="h-10 w-10 rounded-lg object-contain" />
           <span className="text-xl font-bold">Eco Ice</span>
         </div>
         {onCollapse && (
@@ -204,9 +203,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Header */}
       <div className="flex flex-col items-center gap-2 py-5 border-b border-sidebar-border">
-        <div className={cn(COMPACT_SLOT, 'bg-sidebar-primary')}>
-          <Snowflake className="h-5 w-5 text-sidebar-primary-foreground" />
-        </div>
+        <img src={logoEcoIce} alt="Eco Ice" className="h-8 w-8 rounded-lg object-contain" />
         <Tooltip>
           <TooltipTrigger asChild>
             <button onClick={onExpand} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent')}>

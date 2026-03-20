@@ -1,7 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Snowflake, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import logoEcoIce from '@/assets/logo-ecoice.png';
 
 export default function SemEmpresa() {
   const { signOut } = useAuth();
@@ -10,9 +11,7 @@ export default function SemEmpresa() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-brand p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
         <CardHeader className="items-center pb-2">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
-            <Snowflake className="h-9 w-9 text-primary-foreground" />
-          </div>
+          <img src={logoEcoIce} alt="Eco Ice" className="h-16 w-16 rounded-2xl object-contain mb-4" />
           <h1 className="text-2xl font-bold text-foreground">Sem empresa vinculada</h1>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
