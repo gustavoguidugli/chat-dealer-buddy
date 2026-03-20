@@ -62,7 +62,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       }
 
       // 3. Create additional code-type invite
-      const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + '2024';
+      const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + Date.now().toString(36).slice(-4).toUpperCase();
       await supabase.from('convites').insert({
         empresa_id: empresa.id,
         tipo: 'codigo',
