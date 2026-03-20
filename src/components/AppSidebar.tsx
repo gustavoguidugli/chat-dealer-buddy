@@ -203,9 +203,7 @@ function CompactContent({ onExpand }: { onExpand: () => void }) {
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Header */}
       <div className="flex flex-col items-center gap-2 py-5 border-b border-sidebar-border">
-        <div className={cn(COMPACT_SLOT, 'bg-sidebar-primary')}>
-          <Snowflake className="h-5 w-5 text-sidebar-primary-foreground" />
-        </div>
+        <img src={logoEcoIce} alt="Eco Ice" className="h-8 w-8 rounded-lg object-contain" />
         <Tooltip>
           <TooltipTrigger asChild>
             <button onClick={onExpand} className={cn(COMPACT_SLOT, 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent')}>

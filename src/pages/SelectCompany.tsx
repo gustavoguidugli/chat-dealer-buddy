@@ -76,9 +76,7 @@ export default function SelectCompany() {
         <div className="mx-auto max-w-3xl">
           {/* Header */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Snowflake className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src={logoEcoIce} alt="Eco Ice" className="h-10 w-10 rounded-lg object-contain" />
             <div>
               <h1 className="text-2xl font-bold text-foreground">Selecione uma empresa</h1>
               <p className="text-sm text-muted-foreground">Escolha a empresa que deseja gerenciar</p>
