@@ -22,6 +22,13 @@ interface DiagRow {
   problemas: number;
 }
 
+interface SetupRow {
+  empresa_id: number;
+  empresa_nome: string;
+  ok: boolean;
+  problemas: string[];
+}
+
 export function AdminDiagnosticoTab() {
   const { toast } = useToast();
   const [rows, setRows] = useState<DiagRow[]>([]);
