@@ -1,11 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { isSuperAdmin, SUPER_ADMIN_EMAILS } from '@/lib/constants';
 import type { User, Session } from '@supabase/supabase-js';
-
-const SUPER_ADMIN_EMAILS = [
-  'guidugli.gustavo@gmail.com',
-  'matheussenacarneiro2322@gmail.com',
-];
 
 interface AuthContextType {
   user: User | null;
@@ -60,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (currentUser: User) => {
     try {
-      const superAdmin = SUPER_ADMIN_EMAILS.includes(currentUser.email ?? '');
+      const superAdmin = isSuperAdmin(currentUser.email);
 
       if (superAdmin) {
         setIsCompanyAdmin(true);
@@ -196,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, isCompanyAdmin, isSuperAdmin: SUPER_ADMIN_EMAILS.includes(user?.email ?? ''),
+      user, session, isCompanyAdmin, isSuperAdmin: isSuperAdmin(user?.email),
       empresaId, empresaNome, semEmpresa,
       moduloCrm, moduloIA,
       setEmpresa, loading, signOut: handleSignOut,

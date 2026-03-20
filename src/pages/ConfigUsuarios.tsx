@@ -16,8 +16,7 @@ import { Loader2, Plus, Pencil, Trash2, ShieldAlert, Shield, User, KeyRound, Set
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-const SUPER_ADMIN_EMAILS = ['guidugli.gustavo@gmail.com', 'matheussenacarneiro2322@gmail.com'];
+import { isSuperAdmin as checkSuperAdmin } from '@/lib/constants';
 
 interface UsuarioEmpresa {
   id: string;
@@ -100,7 +99,7 @@ export default function ConfigUsuarios() {
           email: u.email,
           nome: u.nome || u.email?.split('@')[0] || '',
           role: u.role || 'member',
-          isSuperAdmin: SUPER_ADMIN_EMAILS.includes(u.email ?? ''),
+          isSuperAdmin: checkSuperAdmin(u.email),
           ativo: !u.banned_until,
           ultimoAcesso: u.last_sign_in_at,
         }))

@@ -8,8 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-
-const SUPER_ADMIN_EMAILS = ['guidugli.gustavo@gmail.com', 'matheussenacarneiro2322@gmail.com'];
+import { isSuperAdmin as checkSuperAdmin } from '@/lib/constants';
 
 interface UsuarioEmpresa {
   id: string;
@@ -50,7 +49,7 @@ export function ManageUsersModal({ open, onOpenChange, empresa }: Props) {
           email: u.email,
           nome: u.nome || u.email?.split('@')[0] || '',
           role: u.role || 'member',
-          isSuperAdmin: SUPER_ADMIN_EMAILS.includes(u.email ?? ''),
+          isSuperAdmin: checkSuperAdmin(u.email),
         }))
       );
     } catch (err) {
