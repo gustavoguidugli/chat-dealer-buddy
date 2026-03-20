@@ -34,6 +34,17 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
   useEffect(() => {
     if (!leadId || !empresaId) return
 
+    let cancelled = false
+
+    // Reset state for new lead
+    setLoading(true)
+    setLead(null)
+    setAnotacoes([])
+    setAtividades([])
+    setHistorico([])
+    setAnexos([])
+    setDadosContato({ interesse: null, cidade: null, tipo_uso: null, consumo_mensal: null, gasto_mensal: null, dias_semana: null, telefone: null })
+
     contatoGeralIdRef.current = null
     contatoWhatsappRef.current = null
 
