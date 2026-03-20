@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Building2, Loader2, Snowflake, Trash, MoreVertical } from 'lucide-react';
+import { Search, Building2, Loader2, Trash, MoreVertical } from 'lucide-react';
+import logoEcoIce from '@/assets/logo-ecoice.png';
 import { useToast } from '@/hooks/use-toast';
 import { DeleteEmpresaModal } from '@/components/DeleteEmpresaModal';
 import {
