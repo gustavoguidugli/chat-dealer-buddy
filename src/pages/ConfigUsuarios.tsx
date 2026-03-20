@@ -16,8 +16,6 @@ import { Loader2, Plus, Pencil, Trash2, ShieldAlert, Shield, User, KeyRound, Set
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { isSuperAdmin as checkSuperAdmin } from '@/lib/constants';
-
 interface UsuarioEmpresa {
   id: string;
   email: string;
