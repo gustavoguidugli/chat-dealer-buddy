@@ -16,8 +16,6 @@ import { Loader2, Plus, Pencil, Trash2, ShieldAlert, Shield, User, KeyRound, Set
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { isSuperAdmin as checkSuperAdmin } from '@/lib/constants';
-
 interface UsuarioEmpresa {
   id: string;
   email: string;
@@ -91,15 +89,20 @@ export default function ConfigUsuarios() {
     if (!empresaId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_usuarios_empresa', { empresa_id_param: empresaId });
+      // Fetch users and super admin IDs in parallel
+      const [{ data, error }, { data: superAdminIds }] = await Promise.all([
+        supabase.rpc('get_usuarios_empresa', { empresa_id_param: empresaId }),
+        (supabase.rpc as any)('get_super_admin_user_ids'),
+      ]);
       if (error) throw error;
+      const superSet = new Set((superAdminIds || []) as unknown as string[]);
       setUsers(
         (data || []).map((u: any) => ({
           id: u.id,
           email: u.email,
           nome: u.nome || u.email?.split('@')[0] || '',
           role: u.role || 'member',
-          isSuperAdmin: checkSuperAdmin(u.email),
+          isSuperAdmin: superSet.has(u.id),
           ativo: !u.banned_until,
           ultimoAcesso: u.last_sign_in_at,
         }))

@@ -62,7 +62,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       }
 
       // 3. Create additional code-type invite
-      const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + '2024';
+      const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 16) + Date.now().toString(36).toUpperCase().slice(-4);
       await supabase.from('convites').insert({
         empresa_id: empresa.id,
         tipo: 'codigo',
@@ -73,14 +73,13 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       // 4. Copy config from template company
       try {
         // Get first company as template (excluding the one just created)
-        const { data: templateCompanies } = await supabase
+        const { data: templateCompany } = await (supabase
           .from('empresas_geral')
-          .select('id')
-          .neq('id', empresa.id)
-          .order('id', { ascending: true })
-          .limit(1);
+          .select('id') as any)
+          .eq('is_template', true)
+          .maybeSingle();
 
-        const templateId = templateCompanies?.[0]?.id;
+        const templateId = templateCompany?.id;
 
         if (templateId) {
           const { data: copyResult, error: copyError } = await supabase.functions.invoke('copy-company-config', {
@@ -101,7 +100,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
             const r = copyResult.results;
             toast({
               title: 'Empresa criada com sucesso!',
-              description: `Copiados: ${r.faqs_copied} FAQs, ${r.labels_copied} labels, ${r.faq_labels_copied || 0} etiquetas de FAQ, ${r.interests_copied} interesses${r.config_copied ? ', configurações' : ''}`,
+              description: `Copiados: ${r.faqs_copied} FAQs, ${r.labels_copied} labels, ${r.interests_copied} interesses, ${r.motivos_copied ?? 0} motivos de perda, ${r.campos_copied ?? 0} campos customizados${r.config_copied ? ', configurações' : ''}`,
             });
           }
         } else {
