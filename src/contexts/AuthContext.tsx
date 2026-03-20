@@ -65,11 +65,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const savedNome = localStorage.getItem('eco_empresa_nome');
         if (savedId) {
           const id = Number(savedId);
-          setEmpresaId(id);
-          setEmpresaNome(savedNome);
-          const mods = await fetchModulos(id);
-          setModuloCrm(mods.crm);
-          setModuloIA(mods.ia);
+          // Validate empresa exists in DB before trusting localStorage
+          const { data: empresaExists } = await supabase
+            .from('empresas_geral')
+            .select('id, nome')
+            .eq('id', id)
+            .maybeSingle();
+
+          if (empresaExists) {
+            setEmpresaId(id);
+            setEmpresaNome(empresaExists.nome ?? savedNome);
+            const mods = await fetchModulos(id);
+            setModuloCrm(mods.crm);
+            setModuloIA(mods.ia);
+          } else {
+            // Empresa no longer exists — clear localStorage
+            localStorage.removeItem('eco_empresa_id');
+            localStorage.removeItem('eco_empresa_nome');
+          }
         }
         setSemEmpresa(false);
       } else {

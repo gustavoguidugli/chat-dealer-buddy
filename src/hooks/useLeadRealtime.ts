@@ -426,6 +426,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
 
     // 10. Cleanup
     return () => {
+      cancelled = true
       supabase.removeChannel(leadChannel)
       supabase.removeChannel(anotacoesChannel)
       supabase.removeChannel(atividadesChannel)
