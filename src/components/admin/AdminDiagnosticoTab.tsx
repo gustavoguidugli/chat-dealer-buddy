@@ -34,6 +34,8 @@ export function AdminDiagnosticoTab() {
   const [rows, setRows] = useState<DiagRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [fixing, setFixing] = useState<number | null>(null);
+  const [setupRows, setSetupRows] = useState<SetupRow[]>([]);
+  const [loadingSetup, setLoadingSetup] = useState(true);
 
   const fetch = useCallback(async () => {
     setLoading(true);
