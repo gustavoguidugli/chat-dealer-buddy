@@ -137,7 +137,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         }
       }
 
-      setDadosContato(dados)
+      if (!cancelled) setDadosContato(dados)
     }
 
     // 1. Busca dados iniciais
