@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { isSuperAdmin, SUPER_ADMIN_EMAILS } from '@/lib/constants';
 import type { User, Session } from '@supabase/supabase-js';
 
