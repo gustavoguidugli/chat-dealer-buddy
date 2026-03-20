@@ -372,8 +372,8 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          if (contatoWhatsapp && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)) {
-            fetchContatoData(contatoGeralId, contatoWhatsapp)
+          if (contatoWhatsappRef.current && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsappRef.current)) {
+            fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current)
           }
         }
       })
