@@ -114,9 +114,7 @@ function ExpandedContent({ onNavigate, onCollapse }: { onNavigate?: () => void; 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Snowflake className="h-6 w-6 text-sidebar-primary-foreground" />
-          </div>
+          <img src={logoEcoIce} alt="Eco Ice" className="h-10 w-10 rounded-lg object-contain" />
           <span className="text-xl font-bold">Eco Ice</span>
         </div>
         {onCollapse && (
