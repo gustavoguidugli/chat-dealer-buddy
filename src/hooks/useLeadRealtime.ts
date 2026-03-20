@@ -163,6 +163,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         .select('*')
         .eq('id_lead', leadId)
         .order('created_at', { ascending: false })
+      if (cancelled) return
       setAnotacoes(anotacoesData || [])
 
       const anotacaoIds = (anotacoesData || []).map((a: any) => a.id)
