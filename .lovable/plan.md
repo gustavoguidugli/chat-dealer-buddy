@@ -1,77 +1,81 @@
 
 
-# Stage 4 — Cleanup (Items 4A, 4B, 4C, 4D)
+# Revised Plan: Etapas 1-6 with User Corrections
 
-## Item 4A — Add RPC diagnostics section to AdminDiagnosticoTab
+## ETAPA 1 — Remove hardcoded superadmin emails
 
-**File**: `src/components/admin/AdminDiagnosticoTab.tsx`
+**Files**: `src/lib/constants.ts`, `src/contexts/AuthContext.tsx`, `src/pages/ConfigUsuarios.tsx`, `src/components/ManageUsersModal.tsx`
 
-Add a new section below the existing health-check table that calls `supabase.rpc('diagnostico_setup_empresas')` and displays the results. The RPC already exists and returns typed data (empresa_id, empresa_nome, ok, funil booleans, numeric counts, problemas string array).
+### AuthContext changes (critical fix per user feedback):
+1. Add state: `const [isSuperAdminState, setIsSuperAdminState] = useState(false)`
+2. Add to `resetState`: `setIsSuperAdminState(false)`
+3. In `fetchUserData`: replace `isSuperAdmin(currentUser.email)` with:
+   ```ts
+   const { data: superAdminFlag } = await supabase.rpc('get_is_super_admin');
+   const superAdmin = superAdminFlag === true;
+   setIsSuperAdminState(superAdmin);
+   ```
+4. In superadmin branch: validate saved empresa against DB (`ativo = true`) before using; clear localStorage if invalid
+5. In Provider value: change `isSuperAdmin: isSuperAdmin(user?.email)` to `isSuperAdmin: isSuperAdminState`
+6. Remove import of `isSuperAdmin, SUPER_ADMIN_EMAILS` from constants
 
-Changes:
-- Add new state: `setupRows` for RPC results, `loadingSetup` boolean
-- Add `fetchSetup` callback that calls `supabase.rpc('diagnostico_setup_empresas')`
-- Call `fetchSetup` on mount alongside existing `fetch`
-- Render a second table section titled "Diagnóstico de Setup" with columns: Empresa, Status (green "OK" / red "Incompleto" badge), Problemas (comma-separated red text or "-")
-- Add its own "Atualizar" button
+### ConfigUsuarios.tsx and ManageUsersModal.tsx:
+Both import `checkSuperAdmin` from constants to mark users as super admin in listings. These need a different approach since they check OTHER users' emails, not the current user. Options:
+- Add an RPC `check_is_super_admin(p_user_id uuid)` that checks if a given user is super admin
+- Or have the `manage-users` edge function return a `is_super_admin` flag per user
 
----
+Simplest: create an RPC `get_super_admin_user_ids()` (security definer) that returns the list of super admin user IDs, call it once in the fetch, and mark users accordingly. This avoids N+1 calls.
 
-## Item 4B — Fix toast delay
-
-**File**: `src/hooks/use-toast.ts`, line 6
-
-Change `TOAST_REMOVE_DELAY = 1000000` to `TOAST_REMOVE_DELAY = 4000`.
-
-One line.
-
----
-
-## Item 4C — Delete unused Index.tsx
-
-**File**: `src/pages/Index.tsx`
-
-Confirmed no imports reference this file. Delete it.
+### Delete `src/lib/constants.ts`
 
 ---
 
-## Item 4D — Refactor LeadDrawer into 3 sub-components
+## ETAPA 2 — Onboarding ConviteData interface
 
-The 2071-line `LeadDrawer.tsx` will be split into:
+Comparing the interface vs RPC return type from `types.ts`:
 
-### Structure analysis (from reading the file):
-- **Lines 807-1006**: Header section (name, etiquetas, funil/etapa selector, proprietario, ganho/perdido buttons, progress bar)
-- **Lines 1008-1421**: Left sidebar with fields (telefone, valor, campos customizados collapsible)
-- **Lines 1423-1776**: Center area with tabs (anotacoes tab with notes input + history, atividade tab)
+| Interface field | RPC return field | Match? |
+|---|---|---|
+| `valido: boolean` | `valido: boolean` | Yes |
+| `empresa_id: number` | `empresa_id: number` | Yes |
+| `id: string` | `id: string` | Yes |
+| `erro: string \| null` | `erro: string` | **Minor** — RPC type says non-nullable but interface has `null` |
+| `email_destino: string` | `email_destino: string` | Yes |
+| `role: string` | `role: string` | Yes |
 
-### New files:
-
-1. **`src/components/crm/LeadDrawerHeader.tsx`**
-   - Receives: `lead`, `etapas`, `funilNome`, `allFunis`, `proprietarios`, `onLeadChanged`, and state setters for dialogs (ganho, perdido, reabrir, duplicar, excluir)
-   - Contains: `EditableLeadName` (moved here), name row, etiqueta selector, funil/etapa popover, owner popover, ganho/perdido/reabrir buttons, dropdown menu, progress bar
-   - All handler functions that belong to this section move here (handleOpenFunilEtapaPopover, handleTempFunilChange, handleSaveFunilEtapa, handleChangeProprietario)
-
-2. **`src/components/crm/LeadDrawerFields.tsx`**
-   - Receives: `lead`, `campos`, `dadosContato`, `listaInteresses`, `onLeadChanged`, `empresaId`
-   - Contains: telefone field, valor field, campos collapsible with custom fields, manage/add field popovers
-   - All handler functions for fields move here (handleAddField, handleUpdateField, handleDeleteField, handleSaveAllFields, field drag, SortableFieldItem)
-
-3. **`src/components/crm/LeadDrawerTimeline.tsx`**
-   - Receives: `lead`, `anotacoes`, `atividades`, `historico`, `realtimeAnexos`, `proprietarios`, `empresaId`, `onLeadChanged`
-   - Contains: Tabs component with anotacoes tab (input, file upload, pending activities, history with filter) and atividade tab
-   - All handler functions for notes/activities move here (handleSalvarAnotacao, handlePreviewFile, etc.)
-
-### LeadDrawer.tsx becomes:
-- Container with Sheet/SheetContent, ErrorBoundary, loading state
-- Imports and renders `<LeadDrawerHeader>`, `<LeadDrawerFields>`, `<LeadDrawerTimeline>`
-- Keeps the AlertDialog modals (ganho, perdido, reabrir, excluir, duplicar, etc.) since they depend on state shared across sections
-- Keeps the `useLeadRealtime` hook, `fetchMeta`, and shared state management
-
-No behavioral changes — purely structural reorganization.
+**Result**: All field names match correctly. The only difference is `erro` nullability, which is harmless since the `as unknown as ConviteData` cast handles it. No changes needed — will confirm to user.
 
 ---
 
-## Execution order
+## ETAPA 3 — CreateCompanyModal: template + suffix
 
-4A first. Wait for confirmation. Then 4B, 4C, 4D sequentially.
+Three targeted edits as previously planned. No changes to the plan.
+
+---
+
+## ETAPA 4 — DeleteEmpresaModal: update deletion list
+
+Update `<ul>` with complete cascade list. No changes to the plan.
+
+---
+
+## ETAPA 5 — useLeadRealtime: SDR isolation + fetch versioning
+
+Per user's clarification, three independent fixes:
+
+1. **`.eq('empresa_id', empresaId)` on fallback query** (line 64): Add filter when looking up `contatos_geral` by WhatsApp. This is separate from any WhatsApp validation in SDR channels.
+2. **Fetch version ref**: Add `fetchVersionRef` to prevent stale async results from overwriting newer state.
+3. SDR channel handlers already validate WhatsApp match — no additional changes needed there.
+
+---
+
+## ETAPA 6 — GerenciarFaqs: dynamic tabs
+
+Remove hardcoded mapping, build tabs from `lista_interesses`. No changes to the plan.
+
+---
+
+## Execution Order
+
+Etapa 1 first (requires DB migration for super admin user IDs RPC). Then 2 through 6 sequentially.
 
