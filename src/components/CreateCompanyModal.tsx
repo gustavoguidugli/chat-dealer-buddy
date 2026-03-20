@@ -76,8 +76,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
         const { data: templateCompanies } = await supabase
           .from('empresas_geral')
           .select('id')
-          .neq('id', empresa.id)
-          .order('id', { ascending: true })
+          .eq('is_template', true)
           .limit(1);
 
         const templateId = templateCompanies?.[0]?.id;
