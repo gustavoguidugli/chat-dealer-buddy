@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { isSuperAdmin, SUPER_ADMIN_EMAILS } from '@/lib/constants';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -89,6 +90,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const preferred = savedId
             ? mappings.find((m) => m.empresa_id === Number(savedId))
             : null;
+
+          // Saved empresa no longer accessible — clear and notify
+          if (savedId && !preferred) {
+            localStorage.removeItem('eco_empresa_id');
+            localStorage.removeItem('eco_empresa_nome');
+            toast({
+              title: 'Acesso alterado',
+              description: 'Seu acesso à empresa anterior foi removido. Selecione uma empresa para continuar.',
+            });
+          }
+
           const mapping = preferred ?? mappings[0];
 
           setEmpresaId(mapping.empresa_id);

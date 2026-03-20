@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { buildWhatsAppLink, formatPhoneDisplay } from '@/lib/lead-utils';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -798,6 +799,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-[75vw] p-0 flex flex-col overflow-hidden">
+          <ErrorBoundary>
           {loading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">Carregando...</div>
           ) : lead ? (
@@ -1776,6 +1778,7 @@ export function LeadDrawer({ open, onOpenChange, leadId, onLeadChanged }: LeadDr
               </div>
             </>
           ) : null}
+          </ErrorBoundary>
         </SheetContent>
       </Sheet>
 

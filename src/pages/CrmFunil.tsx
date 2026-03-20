@@ -22,6 +22,7 @@ import { LeadDrawer } from '@/components/crm/LeadDrawer';
 import { ManageMotivosModal } from '@/components/crm/ManageMotivosModal';
 import { useFunilRealtime } from '@/hooks/useFunilRealtime';
 import { useMotivosPerda } from '@/hooks/useMotivosPerda';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 interface Funil {
   id: number;
@@ -615,19 +616,21 @@ export default function CrmFunil() {
               Nenhuma etapa configurada. Edite o funil para adicionar etapas.
             </div>
           ) : (
-            <KanbanBoard
-              etapas={etapas}
-              leadsByEtapa={leadsByEtapa}
-              wonLeads={filteredWonLeads}
-              lostLeads={filteredLostLeads}
-              onMoveLead={handleMoveLead}
-              onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
-              onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
-              onDropWon={(leadId) => setDragGanhoLeadId(leadId)}
-              onDropLost={(leadId) => setDragPerdidoLeadId(leadId)}
-              listaInteresses={listaInteresses}
-              onLeadChanged={() => setReloadKey((k) => k + 1)}
-            />
+            <ErrorBoundary>
+              <KanbanBoard
+                etapas={etapas}
+                leadsByEtapa={leadsByEtapa}
+                wonLeads={filteredWonLeads}
+                lostLeads={filteredLostLeads}
+                onMoveLead={handleMoveLead}
+                onLeadClick={(id) => { setSelectedLeadId(id); setDrawerOpen(true); }}
+                onAddClick={(etapaId) => { setModalEtapaId(etapaId); setModalOpen(true); }}
+                onDropWon={(leadId) => setDragGanhoLeadId(leadId)}
+                onDropLost={(leadId) => setDragPerdidoLeadId(leadId)}
+                listaInteresses={listaInteresses}
+                onLeadChanged={() => setReloadKey((k) => k + 1)}
+              />
+            </ErrorBoundary>
           )}
         </div>
       </div>
@@ -662,12 +665,14 @@ export default function CrmFunil() {
           onCreated={() => setReloadKey((k) => k + 1)}
         />
       )}
-      <LeadDrawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        leadId={selectedLeadId}
-        onLeadChanged={() => setReloadKey((k) => k + 1)}
-      />
+      <ErrorBoundary>
+        <LeadDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          leadId={selectedLeadId}
+          onLeadChanged={() => setReloadKey((k) => k + 1)}
+        />
+      </ErrorBoundary>
 
       {/* Drag-to-Won Dialog */}
       <AlertDialog open={dragGanhoLeadId !== null} onOpenChange={(v) => { if (!v) setDragGanhoLeadId(null); }}>
