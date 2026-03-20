@@ -91,23 +91,23 @@ export default function GerenciarFaqs() {
       .eq('ativo', true)
       .order('ordem', { ascending: true });
 
-    if (data && data.length > 0) {
-      const dynamicTabs: TabDef[] = data.map((interest) => ({
+    // Always start with a "Geral" tab
+    const geralTab: TabDef = { value: 'geral', label: 'Geral', tipoFaqs: ['geral'] };
+    const dynamicTabs: TabDef[] = [
+      geralTab,
+      ...(data || []).map((interest) => ({
         value: interest.nome,
-        label: `FAQ ${interest.label}`,
+        label: interest.label || interest.nome,
         tipoFaqs: buildTipoFaqs(interest.nome),
-      }));
-      setTabs(dynamicTabs);
-      setActiveTab((prev) => {
-        if (!prev || !dynamicTabs.find((t) => t.value === prev)) {
-          return dynamicTabs[0].value;
-        }
-        return prev;
-      });
-    } else {
-      setTabs([]);
-      setActiveTab('');
-    }
+      })),
+    ];
+    setTabs(dynamicTabs);
+    setActiveTab((prev) => {
+      if (!prev || !dynamicTabs.find((t) => t.value === prev)) {
+        return dynamicTabs[0].value;
+      }
+      return prev;
+    });
   }, [empresaId]);
 
   const fetchCompanyUsers = useCallback(async () => {

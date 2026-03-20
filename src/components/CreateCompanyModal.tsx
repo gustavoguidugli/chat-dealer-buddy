@@ -100,7 +100,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
             const r = copyResult.results;
             toast({
               title: 'Empresa criada com sucesso!',
-              description: `Copiados: ${r.faqs_copied} FAQs, ${r.labels_copied} labels, ${r.faq_labels_copied || 0} etiquetas de FAQ, ${r.interests_copied} interesses${r.config_copied ? ', configurações' : ''}`,
+              description: `Copiados: ${r.faqs_copied} FAQs, ${r.labels_copied} labels, ${r.interests_copied} interesses, ${r.motivos_copied ?? 0} motivos de perda, ${r.campos_copied ?? 0} campos customizados${r.config_copied ? ', configurações' : ''}`,
             });
           }
         } else {

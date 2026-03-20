@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { isSuperAdmin, SUPER_ADMIN_EMAILS } from '@/lib/constants';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -39,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isCompanyAdmin, setIsCompanyAdmin] = useState(false);
+  const [isSuperAdminState, setIsSuperAdminState] = useState(false);
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [empresaNome, setEmpresaNome] = useState<string | null>(null);
   const [semEmpresa, setSemEmpresa] = useState(false);
@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetState = useCallback(() => {
     setIsCompanyAdmin(false);
+    setIsSuperAdminState(false);
     setEmpresaId(null);
     setEmpresaNome(null);
     setSemEmpresa(false);
@@ -57,19 +58,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (currentUser: User) => {
     try {
-      const superAdmin = isSuperAdmin(currentUser.email);
+      // Check super admin status via RPC (no hardcoded emails)
+      const { data: superAdminFlag } = await supabase.rpc('get_is_super_admin');
+      const superAdmin = superAdminFlag === true;
+      setIsSuperAdminState(superAdmin);
 
       if (superAdmin) {
         setIsCompanyAdmin(true);
         const savedId = localStorage.getItem('eco_empresa_id');
         const savedNome = localStorage.getItem('eco_empresa_nome');
         if (savedId) {
-          const id = Number(savedId);
-          setEmpresaId(id);
-          setEmpresaNome(savedNome);
-          const mods = await fetchModulos(id);
-          setModuloCrm(mods.crm);
-          setModuloIA(mods.ia);
+          // Validate saved empresa still exists and is active
+          const { data: empresaCheck } = await supabase
+            .from('empresas_geral')
+            .select('id, nome, ativo')
+            .eq('id', Number(savedId))
+            .eq('ativo', true)
+            .maybeSingle();
+
+          if (empresaCheck) {
+            setEmpresaId(empresaCheck.id);
+            setEmpresaNome(empresaCheck.nome);
+            const mods = await fetchModulos(empresaCheck.id);
+            setModuloCrm(mods.crm);
+            setModuloIA(mods.ia);
+          } else {
+            // Empresa no longer exists or is inactive
+            localStorage.removeItem('eco_empresa_id');
+            localStorage.removeItem('eco_empresa_nome');
+          }
         }
         setSemEmpresa(false);
       } else {
@@ -85,7 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (mappings && mappings.length > 0) {
-          // If user has a saved preference and it's still valid, use it
           const savedId = localStorage.getItem('eco_empresa_id');
           const preferred = savedId
             ? mappings.find((m) => m.empresa_id === Number(savedId))
@@ -136,7 +152,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // 1. Get the initial session (awaits the token to be ready)
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       if (!mounted) return;
       setSession(initialSession);
@@ -150,7 +165,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // 2. Listen for subsequent auth changes (sign-in, sign-out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
         if (!mounted) return;
@@ -162,8 +176,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           resetState();
           setLoading(false);
         } else {
-          // Defer fetchUserData to next tick so the Supabase client
-          // has the new JWT set internally before we make queries
           setLoading(true);
           setTimeout(() => {
             if (mounted) fetchUserData(newUser);
@@ -204,7 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, isCompanyAdmin, isSuperAdmin: isSuperAdmin(user?.email),
+      user, session, isCompanyAdmin, isSuperAdmin: isSuperAdminState,
       empresaId, empresaNome, semEmpresa,
       moduloCrm, moduloIA,
       setEmpresa, loading, signOut: handleSignOut,

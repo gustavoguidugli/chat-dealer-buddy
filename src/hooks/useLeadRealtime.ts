@@ -130,7 +130,10 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         }
       }
 
-      setDadosContato(dados)
+      // Only apply if this is still the latest fetch
+      if (version === fetchVersionRef.current) {
+        setDadosContato(dados)
+      }
     }
 
     // 1. Busca dados iniciais
