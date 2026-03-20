@@ -214,9 +214,9 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
             normalizeWhatsapp(newData.whatsapp) !== normalizeWhatsapp(oldData?.whatsapp)
 
           if (contatoChanged) {
-            contatoGeralId = newData.id_contato_geral ?? null
-            contatoWhatsapp = newData.whatsapp ?? null
-            fetchContatoData(contatoGeralId, contatoWhatsapp)
+            contatoGeralIdRef.current = newData.id_contato_geral ?? null
+            contatoWhatsappRef.current = newData.whatsapp ?? null
+            fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current)
           }
         }
       )
