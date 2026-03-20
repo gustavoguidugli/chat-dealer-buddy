@@ -47,14 +47,9 @@ export function DeleteEmpresaModal({ empresa, open, onOpenChange, onDeleted }: P
     setIsDeleting(true);
 
     try {
-      // Delete dependencies that don't cascade
-      await supabase.from('contatos_geral').delete().eq('empresa_id', empresa.id);
-      await supabase.from('config_empresas_geral').delete().eq('id_empresa', empresa.id);
-      await supabase.from('documents').delete().eq('id_empresa', empresa.id);
-      await supabase.from('buffer_supabase').delete().eq('id_empresa', empresa.id);
-
-      // Delete the empresa (cascades: convites, lista_interesses, user_empresa, user_empresa_geral)
-      const { error } = await supabase.from('empresas_geral').delete().eq('id', empresa.id);
+      const { error } = await supabase.rpc('delete_empresa_completa', {
+        p_empresa_id: empresa.id,
+      });
       if (error) throw error;
 
       toast({ title: 'Empresa excluída com sucesso!' });
