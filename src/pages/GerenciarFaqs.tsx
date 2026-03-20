@@ -44,18 +44,21 @@ interface TabDef {
 }
 
 // Legacy mapping: for interests whose nome matches legacy products,
-// map them to the old tipo_faq values so existing FAQs still appear correctly
+// include old tipo_faq values so existing FAQs still appear correctly
 const LEGACY_TIPO_FAQ_MAP: Record<string, string[]> = {
   maquina_gelo: ['geral_maquina', 'qualificacao_maquina', 'pos_qualificacao_maquina'],
   purificador: ['purificador'],
 };
 
 function buildTipoFaqs(interestNome: string): string[] {
-  return LEGACY_TIPO_FAQ_MAP[interestNome] ?? [interestNome];
+  // Always include the interest nome itself + any legacy values
+  const legacy = LEGACY_TIPO_FAQ_MAP[interestNome] ?? [];
+  return [interestNome, ...legacy];
 }
 
 function resolveTipoFaqForInsert(tab: TabDef): string {
-  return tab.tipoFaqs[0] ?? tab.value;
+  // Always save with the interest nome (first element), not legacy values
+  return tab.value;
 }
 
 export default function GerenciarFaqs() {
