@@ -30,6 +30,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
 
   const contatoGeralIdRef = useRef<number | null>(null)
   const contatoWhatsappRef = useRef<string | null>(null)
+  const fetchVersionRef = useRef(0)
 
   useEffect(() => {
     if (!leadId || !empresaId) return
