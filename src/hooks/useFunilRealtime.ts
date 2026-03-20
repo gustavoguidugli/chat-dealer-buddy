@@ -147,8 +147,11 @@ export function useFunilRealtime(funilId: number, empresaId: number | null, etap
           table: 'lead_etiquetas',
           filter: `id_empresa=eq.${empresaId}`,
         },
-        () => {
-          setEtiquetaVersion((v) => v + 1)
+        (payload) => {
+          const leadId = (payload.eventType === 'DELETE')
+            ? (payload.old as any)?.id_lead ?? null
+            : (payload.new as any)?.id_lead ?? null
+          setLastEtiquetaChange((prev) => ({ version: prev.version + 1, leadId: leadId ? Number(leadId) : null }))
         }
       )
       .subscribe()
