@@ -118,7 +118,23 @@ export function AdminDiagnosticoTab() {
     }
   }, []);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  const fetchSetup = useCallback(async () => {
+    setLoadingSetup(true);
+    try {
+      const { data, error } = await supabase.rpc('diagnostico_setup_empresas');
+      if (error) {
+        toast({ title: 'Erro ao carregar diagnóstico de setup', description: error.message, variant: 'destructive' });
+      } else {
+        setSetupRows((data as unknown as SetupRow[]) || []);
+      }
+    } catch (err) {
+      console.error('Setup diagnostico error:', err);
+    } finally {
+      setLoadingSetup(false);
+    }
+  }, []);
+
+  useEffect(() => { fetch(); fetchSetup(); }, [fetch, fetchSetup]);
 
   const toggleCrm = async (empresaId: number, currentValue: boolean) => {
     setFixing(empresaId);
