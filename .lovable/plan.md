@@ -1,76 +1,81 @@
-# Etapas 1-6 — Status
 
-## Código concluído ✅
-Todas as 6 etapas tiveram suas alterações de código implementadas.
 
-## Migration pendente ⏳ (DB com timeout)
+# Revised Plan: Etapas 1-6 with User Corrections
 
-A seguinte SQL migration precisa ser executada quando o Supabase voltar:
+## ETAPA 1 — Remove hardcoded superadmin emails
 
-```sql
-CREATE TABLE IF NOT EXISTS public.super_admins (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  email text NOT NULL UNIQUE,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+**Files**: `src/lib/constants.ts`, `src/contexts/AuthContext.tsx`, `src/pages/ConfigUsuarios.tsx`, `src/components/ManageUsersModal.tsx`
 
-ALTER TABLE public.super_admins ENABLE ROW LEVEL SECURITY;
+### AuthContext changes (critical fix per user feedback):
+1. Add state: `const [isSuperAdminState, setIsSuperAdminState] = useState(false)`
+2. Add to `resetState`: `setIsSuperAdminState(false)`
+3. In `fetchUserData`: replace `isSuperAdmin(currentUser.email)` with:
+   ```ts
+   const { data: superAdminFlag } = await supabase.rpc('get_is_super_admin');
+   const superAdmin = superAdminFlag === true;
+   setIsSuperAdminState(superAdmin);
+   ```
+4. In superadmin branch: validate saved empresa against DB (`ativo = true`) before using; clear localStorage if invalid
+5. In Provider value: change `isSuperAdmin: isSuperAdmin(user?.email)` to `isSuperAdmin: isSuperAdminState`
+6. Remove import of `isSuperAdmin, SUPER_ADMIN_EMAILS` from constants
 
-CREATE POLICY "super_admins_select" ON public.super_admins
-  FOR SELECT TO authenticated
-  USING (auth.jwt() ->> 'email' IN (SELECT email FROM public.super_admins));
+### ConfigUsuarios.tsx and ManageUsersModal.tsx:
+Both import `checkSuperAdmin` from constants to mark users as super admin in listings. These need a different approach since they check OTHER users' emails, not the current user. Options:
+- Add an RPC `check_is_super_admin(p_user_id uuid)` that checks if a given user is super admin
+- Or have the `manage-users` edge function return a `is_super_admin` flag per user
 
-INSERT INTO public.super_admins (email) VALUES
-  ('guidugli.gustavo@gmail.com'),
-  ('matheussenacarneiro2322@gmail.com')
-ON CONFLICT (email) DO NOTHING;
+Simplest: create an RPC `get_super_admin_user_ids()` (security definer) that returns the list of super admin user IDs, call it once in the fetch, and mark users accordingly. This avoids N+1 calls.
 
-CREATE OR REPLACE FUNCTION public.get_is_super_admin()
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.super_admins
-    WHERE email = (SELECT auth.jwt() ->> 'email')
-  );
-$$;
+### Delete `src/lib/constants.ts`
 
-CREATE OR REPLACE FUNCTION public.get_super_admin_user_ids()
-RETURNS SETOF uuid
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT au.id
-  FROM auth.users au
-  INNER JOIN public.super_admins sa ON au.email = sa.email;
-$$;
-```
+---
 
-## Resumo das alterações
+## ETAPA 2 — Onboarding ConviteData interface
 
-### Etapa 1 — Segurança superadmin
-- `src/lib/constants.ts`: Removido emails hardcoded
-- `src/contexts/AuthContext.tsx`: Usa RPC `get_is_super_admin()` + estado `isSuperAdminState` + validação de empresa ativa
-- `src/pages/ConfigUsuarios.tsx`: Usa RPC `get_super_admin_user_ids()` em vez de `checkSuperAdmin(email)`
-- `src/components/ManageUsersModal.tsx`: Idem
+Comparing the interface vs RPC return type from `types.ts`:
 
-### Etapa 2 — Onboarding
-- Interface ConviteData já está correta. Nenhuma alteração necessária.
+| Interface field | RPC return field | Match? |
+|---|---|---|
+| `valido: boolean` | `valido: boolean` | Yes |
+| `empresa_id: number` | `empresa_id: number` | Yes |
+| `id: string` | `id: string` | Yes |
+| `erro: string \| null` | `erro: string` | **Minor** — RPC type says non-nullable but interface has `null` |
+| `email_destino: string` | `email_destino: string` | Yes |
+| `role: string` | `role: string` | Yes |
 
-### Etapa 3 — CreateCompanyModal
-- Template via `is_template = true` em vez de ORDER BY id
-- Sufixo de código usa `Date.now().toString(36)` em vez de `'2024'`
-- Toast inclui `motivos_copied` e `campos_copied`
+**Result**: All field names match correctly. The only difference is `erro` nullability, which is harmless since the `as unknown as ConviteData` cast handles it. No changes needed — will confirm to user.
 
-### Etapa 4 — DeleteEmpresaModal
-- Lista de itens deletados atualizada com 10 categorias
+---
 
-### Etapa 5 — useLeadRealtime
-- `.eq('empresa_id', empresaId)` no fallback de contatos_geral
-- `fetchVersionRef` para evitar race conditions
+## ETAPA 3 — CreateCompanyModal: template + suffix
 
-### Etapa 6 — GerenciarFaqs
-- Aba "Geral" sempre presente
-- `buildTipoFaqs` inclui nome do interesse + valores legados
-- `resolveTipoFaqForInsert` sempre usa `tab.value` (nome do interesse)
+Three targeted edits as previously planned. No changes to the plan.
+
+---
+
+## ETAPA 4 — DeleteEmpresaModal: update deletion list
+
+Update `<ul>` with complete cascade list. No changes to the plan.
+
+---
+
+## ETAPA 5 — useLeadRealtime: SDR isolation + fetch versioning
+
+Per user's clarification, three independent fixes:
+
+1. **`.eq('empresa_id', empresaId)` on fallback query** (line 64): Add filter when looking up `contatos_geral` by WhatsApp. This is separate from any WhatsApp validation in SDR channels.
+2. **Fetch version ref**: Add `fetchVersionRef` to prevent stale async results from overwriting newer state.
+3. SDR channel handlers already validate WhatsApp match — no additional changes needed there.
+
+---
+
+## ETAPA 6 — GerenciarFaqs: dynamic tabs
+
+Remove hardcoded mapping, build tabs from `lista_interesses`. No changes to the plan.
+
+---
+
+## Execution Order
+
+Etapa 1 first (requires DB migration for super admin user IDs RPC). Then 2 through 6 sequentially.
+
