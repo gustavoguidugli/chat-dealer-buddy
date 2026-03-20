@@ -1,59 +1,39 @@
 
 
-# Plan: Items 2B and 2C — Realtime Stability
+# Stage 3 — Error Recovery (Items 3A and 3B)
 
-## Item 2B — Convert mutable `let` to `useRef` in `useLeadRealtime.ts`
+## Item 3A — ErrorBoundary for Critical CRM Components
 
-**File**: `src/hooks/useLeadRealtime.ts`
+**Create** `src/components/ui/ErrorBoundary.tsx`:
+- Class component with `componentDidCatch` and `getDerivedStateFromError`
+- Default fallback: card with "Algo deu errado nesta seção" message and "Recarregar página" button (`window.location.reload()`)
+- Accept optional `fallback?: ReactNode` prop to override default UI
 
-Changes:
-1. Add `useRef` to the import (line 1)
-2. Move `contatoGeralId` and `contatoWhatsapp` out of the `useEffect` and declare as `useRef` at hook level (before the useEffect)
-3. Replace every read/write of these variables with `.current` (~12 occurrences across lines 34, 68-69, 73, 140-141, 214-216, 329, 331, 333, 337-339, 355-356, 372-373)
+**Wrap in 3 places:**
 
-No logic changes — purely mechanical substitution.
+1. **`src/pages/CrmFunil.tsx`** (~line 618): wrap `<KanbanBoard ... />` with `<ErrorBoundary>`
+2. **`src/components/crm/LeadDrawer.tsx`** (~line 800): wrap the `<SheetContent>` children (inside the Sheet) with `<ErrorBoundary>`
+3. **`src/pages/CrmFunil.tsx`** (~line 635 area): wrap the `<LeadDrawer>` usage with `<ErrorBoundary>` (or if LeadDrawer is rendered inside CrmFunil, wrap it there)
+
+No logic changes — wrapper only.
 
 ---
 
-## Item 2C — Optimize `enrichLeads` in `CrmFunil.tsx`
+## Item 3B — Validate localStorage empresa in AuthContext
 
-**Current problem**: `useFunilRealtime` exposes `etiquetaVersion` and `atividadeVersion` (simple counters). Every bump triggers the `useEffect` at line 165 in `CrmFunil.tsx`, which re-fetches etiquetas and atividades for ALL leads.
+**File**: `src/contexts/AuthContext.tsx`, lines 86-96
 
-**Solution** (two-part):
+Current behavior: reads `eco_empresa_id`, finds it in mappings via `find()`, falls back to `mappings[0]` silently.
 
-### Part 1: Modify `useFunilRealtime.ts` to expose changed lead ID
+**Change**: When `savedId` exists but `preferred` is null (not found in mappings), add:
+- `localStorage.removeItem('eco_empresa_id')` and `localStorage.removeItem('eco_empresa_nome')`
+- After setting state, show a toast: "Seu acesso à empresa anterior foi removido"
+- Still fall back to `mappings[0]` (current behavior preserved)
 
-Instead of just incrementing a version counter, capture the `id_lead` from the realtime payload and expose it:
-
-- Change `etiquetaVersion` to `lastEtiquetaChange: { version: number, leadId: number | null }`
-- Change `atividadeVersion` to `lastAtividadeChange: { version: number, leadId: number | null }`
-- In the etiqueta channel callback, read `(payload.new as any)?.id_lead` and store it
-- In the atividade channel callback, read `(payload.new as any)?.id_lead` and store it
-- For DELETE events where `payload.new` is empty, set `leadId: null` (triggers full refresh as fallback)
-
-### Part 2: Modify `CrmFunil.tsx` enrichment logic
-
-- Add an `enrichSingleLead(leadId)` function that fetches etiquetas and atividades for just one lead
-- In the `useEffect` (line 165), check if the change came from a single known lead ID:
-  - If yes: enrich only that lead and merge into existing state
-  - If no (null leadId or initial load): run the current full `enrichLeads`
-- Keep `mapLeads` unchanged
-
-### Technical detail — `CrmFunil.tsx` useEffect dependency update
-
-```typescript
-// Before
-}, [realtimeLeads, realtimeWonLeads, realtimeLostLeads, reloadKey, etiquetaVersion, atividadeVersion, proprietarios]);
-
-// After
-}, [realtimeLeads, realtimeWonLeads, realtimeLostLeads, reloadKey, lastEtiquetaChange, lastAtividadeChange, proprietarios]);
-```
-
-The single-lead path will update only the matching lead across `setEnrichedLeads`, `setEnrichedWonLeads`, and `setEnrichedLostLeads` using `.map()`.
+This requires importing `toast` from `@/hooks/use-toast` (the standalone function, not the hook — since this runs outside a component render).
 
 ---
 
 ## Execution
-
-Item 2B first. Wait for confirmation. Then item 2C.
+Item 3A first, then 3B after confirmation.
 
