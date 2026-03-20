@@ -22,6 +22,7 @@ import { LeadDrawer } from '@/components/crm/LeadDrawer';
 import { ManageMotivosModal } from '@/components/crm/ManageMotivosModal';
 import { useFunilRealtime } from '@/hooks/useFunilRealtime';
 import { useMotivosPerda } from '@/hooks/useMotivosPerda';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 interface Funil {
   id: number;
