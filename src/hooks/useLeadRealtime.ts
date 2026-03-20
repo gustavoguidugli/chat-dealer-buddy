@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 
 /**
@@ -28,11 +28,14 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
   const [anexos, setAnexos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  const contatoGeralIdRef = useRef<number | null>(null)
+  const contatoWhatsappRef = useRef<string | null>(null)
+
   useEffect(() => {
     if (!leadId || !empresaId) return
 
-    let contatoGeralId: number | null = null
-    let contatoWhatsapp: string | null = null
+    contatoGeralIdRef.current = null
+    contatoWhatsappRef.current = null
 
     // Busca dados do contato_geral e SDR, usando campos_extras do lead como fonte primária
     async function fetchContatoData(idContatoGeral: number | null, whatsapp: string | null, interesse?: string | null, leadData?: any) {
@@ -65,12 +68,12 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }
 
       if (contatoGeral) {
-        contatoGeralId = contatoGeral.id
-        contatoWhatsapp = contatoWhatsapp ?? contatoGeral.whatsapp ?? null
+        contatoGeralIdRef.current = contatoGeral.id
+        contatoWhatsappRef.current = contatoWhatsappRef.current ?? contatoGeral.whatsapp ?? null
         currentInteresse = currentInteresse ?? contatoGeral.interesse ?? null
       }
 
-      const whatsappLookup = contatoWhatsapp ?? whatsapp ?? contatoGeral?.whatsapp ?? null
+      const whatsappLookup = contatoWhatsappRef.current ?? whatsapp ?? contatoGeral?.whatsapp ?? null
 
       // Start with campos_extras from the lead as primary source
       const camposExtras = leadData?.campos_extras ?? lead?.campos_extras ?? {}
@@ -137,9 +140,9 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       setLead(leadData)
 
       if (leadData) {
-        contatoGeralId = leadData.id_contato_geral
-        contatoWhatsapp = leadData.whatsapp
-        await fetchContatoData(contatoGeralId, contatoWhatsapp, undefined, leadData)
+        contatoGeralIdRef.current = leadData.id_contato_geral
+        contatoWhatsappRef.current = leadData.whatsapp
+        await fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current, undefined, leadData)
       }
 
       const { data: anotacoesData } = await supabase
@@ -211,9 +214,9 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
             normalizeWhatsapp(newData.whatsapp) !== normalizeWhatsapp(oldData?.whatsapp)
 
           if (contatoChanged) {
-            contatoGeralId = newData.id_contato_geral ?? null
-            contatoWhatsapp = newData.whatsapp ?? null
-            fetchContatoData(contatoGeralId, contatoWhatsapp)
+            contatoGeralIdRef.current = newData.id_contato_geral ?? null
+            contatoWhatsappRef.current = newData.whatsapp ?? null
+            fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current)
           }
         }
       )
@@ -326,17 +329,17 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          const sameContatoGeralId = !!contatoGeralId && isSameNumericId(updated.id, contatoGeralId)
+          const sameContatoGeralId = !!contatoGeralIdRef.current && isSameNumericId(updated.id, contatoGeralIdRef.current)
           const sameWhatsapp =
-            !!contatoWhatsapp &&
+            !!contatoWhatsappRef.current &&
             normalizeWhatsapp(updated.whatsapp) !== '' &&
-            normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)
+            normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsappRef.current)
 
           if (sameContatoGeralId || sameWhatsapp) {
             const parsedContatoId = Number(updated.id)
-            contatoGeralId = Number.isNaN(parsedContatoId) ? contatoGeralId : parsedContatoId
-            contatoWhatsapp = updated.whatsapp ?? contatoWhatsapp
-            fetchContatoData(contatoGeralId, contatoWhatsapp, updated.interesse)
+            contatoGeralIdRef.current = Number.isNaN(parsedContatoId) ? contatoGeralIdRef.current : parsedContatoId
+            contatoWhatsappRef.current = updated.whatsapp ?? contatoWhatsappRef.current
+            fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current, updated.interesse)
           }
         }
       })
@@ -352,8 +355,8 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          if (contatoWhatsapp && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)) {
-            fetchContatoData(contatoGeralId, contatoWhatsapp)
+          if (contatoWhatsappRef.current && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsappRef.current)) {
+            fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current)
           }
         }
       })
@@ -369,8 +372,8 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }, (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           const updated = payload.new as any
-          if (contatoWhatsapp && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsapp)) {
-            fetchContatoData(contatoGeralId, contatoWhatsapp)
+          if (contatoWhatsappRef.current && normalizeWhatsapp(updated.whatsapp) === normalizeWhatsapp(contatoWhatsappRef.current)) {
+            fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current)
           }
         }
       })
