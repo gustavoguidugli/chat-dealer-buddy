@@ -1,79 +1,59 @@
 
 
-# Plan: Systematic Codebase Fixes (4 Stages)
+# Plan: Items 2B and 2C — Realtime Stability
 
-After validating every claim against the actual code, here is the corrected and confirmed plan. One item from the original was **invalid** (1B) and is removed.
+## Item 2B — Convert mutable `let` to `useRef` in `useLeadRealtime.ts`
 
----
+**File**: `src/hooks/useLeadRealtime.ts`
 
-## Stage 1 — Security and Critical Data
+Changes:
+1. Add `useRef` to the import (line 1)
+2. Move `contatoGeralId` and `contatoWhatsapp` out of the `useEffect` and declare as `useRef` at hook level (before the useEffect)
+3. Replace every read/write of these variables with `.current` (~12 occurrences across lines 34, 68-69, 73, 140-141, 214-216, 329, 331, 333, 337-339, 355-356, 372-373)
 
-### 1A — Centralize superadmin emails (4 files, not 5)
-
-Validated: hardcoded in `AuthContext.tsx`, `ManageUsersModal.tsx`, `ConfigUsuarios.tsx`, and `manage-users/index.ts`. `AdminEmpresasTab.tsx` does NOT contain them.
-
-- Create `src/lib/constants.ts` with `SUPER_ADMIN_EMAILS` array and `isSuperAdmin()` helper
-- Replace in the 3 frontend files. The edge function keeps its own copy (runs in Deno, cannot import from src)
-
-### ~~1B — ConviteData interface~~ REMOVED
-
-Investigation confirmed the RPC `validar_convite` returns columns named exactly `valido, empresa_id, id, erro, email_destino, role` — matching the TypeScript interface perfectly. No bug here.
-
-### 1C — Delete empresa cascade incomplete
-
-Validated: `DeleteEmpresaModal.tsx` only deletes 4 tables before the empresa. Must add deletes for: `lead_etiquetas`, `anotacoes_lead`, `historico_lead`, `atividades`, `leads_crm`, `etiquetas_card`, `motivos_perda`, `icones_atividades`, `campos_customizados`, `etapas_funil`, `funis`, `lista_interesses`, `faqs`, `convites`, `user_empresa` — in FK-safe order before the final `empresas_geral` delete.
+No logic changes — purely mechanical substitution.
 
 ---
 
-## Stage 2 — Realtime Stability
+## Item 2C — Optimize `enrichLeads` in `CrmFunil.tsx`
 
-### 2A — SDR realtime channels missing empresa filter
+**Current problem**: `useFunilRealtime` exposes `etiquetaVersion` and `atividadeVersion` (simple counters). Every bump triggers the `useEffect` at line 165 in `CrmFunil.tsx`, which re-fetches etiquetas and atividades for ALL leads.
 
-Validated: channels 7 and 8 in `useLeadRealtime.ts` (lines 345-377) subscribe to `contatos_sdr_maquinagelo` and `contatos_sdr_purificador` without any filter. However, since SDR `id_empresa` references a different ID system, we cannot filter by `empresaId`. The current whatsapp-matching guard is actually correct. **Downgraded to optional** — adding a filter would require mapping empresa IDs.
+**Solution** (two-part):
 
-### 2B — Mutable `let` variables in realtime closures
+### Part 1: Modify `useFunilRealtime.ts` to expose changed lead ID
 
-Validated: `contatoGeralId` and `contatoWhatsapp` (line 34-35) are `let` inside the useEffect. Convert to `useRef` for safety across async callbacks.
+Instead of just incrementing a version counter, capture the `id_lead` from the realtime payload and expose it:
 
-### 2C — `enrichLeads` re-fetches all leads on every event
+- Change `etiquetaVersion` to `lastEtiquetaChange: { version: number, leadId: number | null }`
+- Change `atividadeVersion` to `lastAtividadeChange: { version: number, leadId: number | null }`
+- In the etiqueta channel callback, read `(payload.new as any)?.id_lead` and store it
+- In the atividade channel callback, read `(payload.new as any)?.id_lead` and store it
+- For DELETE events where `payload.new` is empty, set `leadId: null` (triggers full refresh as fallback)
 
-Validated: `CrmFunil.tsx` lines 165-226 — every realtime event triggers enrichment of ALL leads. Refactor to enrich only the changed lead when the trigger is a single-lead realtime event.
+### Part 2: Modify `CrmFunil.tsx` enrichment logic
 
----
+- Add an `enrichSingleLead(leadId)` function that fetches etiquetas and atividades for just one lead
+- In the `useEffect` (line 165), check if the change came from a single known lead ID:
+  - If yes: enrich only that lead and merge into existing state
+  - If no (null leadId or initial load): run the current full `enrichLeads`
+- Keep `mapLeads` unchanged
 
-## Stage 3 — Error Recovery
+### Technical detail — `CrmFunil.tsx` useEffect dependency update
 
-### 3A — ErrorBoundary for critical CRM components
+```typescript
+// Before
+}, [realtimeLeads, realtimeWonLeads, realtimeLostLeads, reloadKey, etiquetaVersion, atividadeVersion, proprietarios]);
 
-Create `src/components/ui/ErrorBoundary.tsx` and wrap `CrmFunil`, `LeadDrawer`, `KanbanBoard`.
+// After
+}, [realtimeLeads, realtimeWonLeads, realtimeLostLeads, reloadKey, lastEtiquetaChange, lastAtividadeChange, proprietarios]);
+```
 
-### 3B — localStorage empresa validation
-
-In `AuthContext.tsx`, after reading `eco_empresa_id` from localStorage, validate it exists in the user's `user_empresa` mappings. If not, clear it and show a toast.
-
----
-
-## Stage 4 — Cleanup
-
-### 4A — Enhance AdminDiagnosticoTab
-
-Add checks for: funnel stages missing, interests without `funil_id`, and missing global fields. Use the existing `diagnostico_setup_empresas` RPC if available.
-
-### 4B — Fix toast delay
-
-Change `TOAST_REMOVE_DELAY` from `1000000` to `4000` in `src/hooks/use-toast.ts`.
-
-### 4C — Delete unused Index.tsx
-
-Remove `src/pages/Index.tsx`. Confirmed no imports reference it.
-
-### 4D — Refactor LeadDrawer (2068 lines)
-
-Split into `LeadDrawerHeader`, `LeadDrawerFields`, `LeadDrawerTimeline` sub-components.
+The single-lead path will update only the matching lead across `setEnrichedLeads`, `setEnrichedWonLeads`, and `setEnrichedLostLeads` using `.map()`.
 
 ---
 
-## Execution Order
+## Execution
 
-Each stage is independent. Within a stage, items are done sequentially. We start with **Stage 1, item 1A**.
+Item 2B first. Wait for confirmation. Then item 2C.
 
