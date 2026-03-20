@@ -87,11 +87,13 @@ export function DeleteEmpresaModal({ empresa, open, onOpenChange, onDeleted }: P
               Esta ação é <strong>IRREVERSÍVEL</strong> e vai deletar:
             </p>
             <ul className="text-sm text-muted-foreground space-y-0.5 ml-4 list-disc">
-              <li>Todos os convites desta empresa</li>
-              <li>Todos os interesses configurados</li>
-              <li>Todos os vínculos com usuários</li>
-              <li>Todos os contatos/leads</li>
-              <li>Todos os documentos associados</li>
+              <li>Todos os leads e contatos</li>
+              <li>Todos os funis, etapas e histórico</li>
+              <li>Todas as atividades e anotações</li>
+              <li>Todas as configurações, FAQs e campos customizados</li>
+              <li>Todos os convites e vínculos com usuários</li>
+              <li>Todos os interesses e motivos de perda</li>
+              <li>Todos os documentos e anexos</li>
             </ul>
             <p className="text-sm font-medium text-destructive mt-2">
               Total de usuários vinculados: {userCount}

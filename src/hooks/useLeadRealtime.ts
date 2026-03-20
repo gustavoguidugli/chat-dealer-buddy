@@ -34,6 +34,17 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
   useEffect(() => {
     if (!leadId || !empresaId) return
 
+    let cancelled = false
+
+    // Reset state for new lead
+    setLoading(true)
+    setLead(null)
+    setAnotacoes([])
+    setAtividades([])
+    setHistorico([])
+    setAnexos([])
+    setDadosContato({ interesse: null, cidade: null, tipo_uso: null, consumo_mensal: null, gasto_mensal: null, dias_semana: null, telefone: null })
+
     contatoGeralIdRef.current = null
     contatoWhatsappRef.current = null
 
@@ -126,7 +137,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         }
       }
 
-      setDadosContato(dados)
+      if (!cancelled) setDadosContato(dados)
     }
 
     // 1. Busca dados iniciais
@@ -136,6 +147,8 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         .select(`*, funis(nome, tipo), etapas_funil(nome, ordem, cor)`)
         .eq('id', leadId)
         .single()
+
+      if (cancelled) return
 
       setLead(leadData)
 
@@ -150,6 +163,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         .select('*')
         .eq('id_lead', leadId)
         .order('created_at', { ascending: false })
+      if (cancelled) return
       setAnotacoes(anotacoesData || [])
 
       const anotacaoIds = (anotacoesData || []).map((a: any) => a.id)
@@ -159,9 +173,9 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
           .select('*')
           .in('id_anotacao', anotacaoIds)
           .order('created_at', { ascending: true })
-        setAnexos(anexosData || [])
+        if (!cancelled) setAnexos(anexosData || [])
       } else {
-        setAnexos([])
+        if (!cancelled) setAnexos([])
       }
 
       const { data: atividadesData } = await supabase
@@ -169,6 +183,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         .select('*')
         .eq('id_lead', leadId)
         .order('data_vencimento')
+      if (cancelled) return
       setAtividades(atividadesData || [])
 
       const { data: historicoData } = await supabase
@@ -176,6 +191,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
         .select('*')
         .eq('id_lead', leadId)
         .order('created_at', { ascending: false })
+      if (cancelled) return
       setHistorico(historicoData || [])
       setLoading(false)
     }
@@ -410,6 +426,7 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
 
     // 10. Cleanup
     return () => {
+      cancelled = true
       supabase.removeChannel(leadChannel)
       supabase.removeChannel(anotacoesChannel)
       supabase.removeChannel(atividadesChannel)

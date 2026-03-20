@@ -62,7 +62,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       }
 
       // 3. Create additional code-type invite
-      const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + '2024';
+      const codigo = nome.trim().toUpperCase().replace(/\s+/g, '').slice(0, 20) + Date.now().toString(36).slice(-4).toUpperCase();
       await supabase.from('convites').insert({
         empresa_id: empresa.id,
         tipo: 'codigo',
@@ -76,8 +76,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
         const { data: templateCompanies } = await supabase
           .from('empresas_geral')
           .select('id')
-          .neq('id', empresa.id)
-          .order('id', { ascending: true })
+          .eq('is_template', true)
           .limit(1);
 
         const templateId = templateCompanies?.[0]?.id;
@@ -101,7 +100,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
             const r = copyResult.results;
             toast({
               title: 'Empresa criada com sucesso!',
-              description: `Copiados: ${r.faqs_copied} FAQs, ${r.labels_copied} labels, ${r.faq_labels_copied || 0} etiquetas de FAQ, ${r.interests_copied} interesses${r.config_copied ? ', configurações' : ''}`,
+              description: `Copiados: ${r.faqs_copied} FAQs, ${r.labels_copied} labels, ${r.faq_labels_copied || 0} etiquetas de FAQ, ${r.interests_copied} interesses, ${r.motivos_copied || 0} motivos${r.config_copied ? ', configurações' : ''}`,
             });
           }
         } else {

@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
       config_copied: false,
       interests_copied: 0,
       campos_copied: 0,
+      motivos_copied: 0,
     };
 
     // 1. Copy Funis + Etapas (MUST come before interests for funil_id remapping)
@@ -357,6 +358,41 @@ Deno.serve(async (req) => {
         console.error("Error copying interests:", intErr);
       } else {
         results.interests_copied = insertedInterests?.length ?? 0;
+      }
+    }
+
+    // 8. Copy motivos_perda (dedup by nome)
+    const { data: sourceMotivos } = await supabaseAdmin
+      .from("motivos_perda")
+      .select("nome, ordem, ativo")
+      .eq("empresa_id", source_company_id);
+
+    if (sourceMotivos && sourceMotivos.length > 0) {
+      const { data: existingMotivos } = await supabaseAdmin
+        .from("motivos_perda")
+        .select("nome")
+        .eq("empresa_id", target_company_id);
+
+      const existingNames = new Set((existingMotivos || []).map((m: any) => m.nome));
+
+      const newMotivos = sourceMotivos
+        .filter((m) => !existingNames.has(m.nome))
+        .map((m) => ({
+          ...m,
+          empresa_id: target_company_id,
+        }));
+
+      if (newMotivos.length > 0) {
+        const { data: insertedMotivos, error: motivosErr } = await supabaseAdmin
+          .from("motivos_perda")
+          .insert(newMotivos)
+          .select("id");
+
+        if (motivosErr) {
+          console.error("Error copying motivos_perda:", motivosErr);
+        } else {
+          results.motivos_copied = insertedMotivos?.length ?? 0;
+        }
       }
     }
 
