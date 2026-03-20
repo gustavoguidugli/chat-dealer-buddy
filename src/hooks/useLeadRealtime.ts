@@ -173,9 +173,9 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
           .select('*')
           .in('id_anotacao', anotacaoIds)
           .order('created_at', { ascending: true })
-        setAnexos(anexosData || [])
+        if (!cancelled) setAnexos(anexosData || [])
       } else {
-        setAnexos([])
+        if (!cancelled) setAnexos([])
       }
 
       const { data: atividadesData } = await supabase
