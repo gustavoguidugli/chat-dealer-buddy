@@ -90,6 +90,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const preferred = savedId
             ? mappings.find((m) => m.empresa_id === Number(savedId))
             : null;
+
+          // Saved empresa no longer accessible — clear and notify
+          if (savedId && !preferred) {
+            localStorage.removeItem('eco_empresa_id');
+            localStorage.removeItem('eco_empresa_nome');
+            toast({
+              title: 'Acesso alterado',
+              description: 'Seu acesso à empresa anterior foi removido. Selecione uma empresa para continuar.',
+            });
+          }
+
           const mapping = preferred ?? mappings[0];
 
           setEmpresaId(mapping.empresa_id);
