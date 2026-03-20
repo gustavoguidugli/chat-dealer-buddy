@@ -218,6 +218,51 @@ export function AdminDiagnosticoTab() {
           </Table>
         </div>
       )}
+
+      {/* Diagnóstico de Setup (RPC) */}
+      <div className="flex items-center justify-between mt-8">
+        <p className="text-sm font-medium text-foreground">Diagnóstico de Setup</p>
+        <Button variant="outline" size="sm" onClick={fetchSetup} disabled={loadingSetup}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loadingSetup ? 'animate-spin' : ''}`} /> Atualizar
+        </Button>
+      </div>
+
+      {loadingSetup ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-card overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Empresa</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead>Problemas</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {setupRows.map(row => (
+                <TableRow key={row.empresa_id}>
+                  <TableCell className="font-medium text-sm">{row.empresa_nome || 'Sem nome'}</TableCell>
+                  <TableCell className="text-center">
+                    {row.ok ? (
+                      <Badge variant="default" className="text-xs">OK</Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-xs">Incompleto</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {row.problemas && row.problemas.length > 0 ? (
+                      <span className="text-destructive">{row.problemas.join(', ')}</span>
+                    ) : '-'}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }
