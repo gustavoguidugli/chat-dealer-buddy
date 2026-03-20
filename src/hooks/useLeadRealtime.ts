@@ -68,12 +68,12 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       }
 
       if (contatoGeral) {
-        contatoGeralId = contatoGeral.id
-        contatoWhatsapp = contatoWhatsapp ?? contatoGeral.whatsapp ?? null
+        contatoGeralIdRef.current = contatoGeral.id
+        contatoWhatsappRef.current = contatoWhatsappRef.current ?? contatoGeral.whatsapp ?? null
         currentInteresse = currentInteresse ?? contatoGeral.interesse ?? null
       }
 
-      const whatsappLookup = contatoWhatsapp ?? whatsapp ?? contatoGeral?.whatsapp ?? null
+      const whatsappLookup = contatoWhatsappRef.current ?? whatsapp ?? contatoGeral?.whatsapp ?? null
 
       // Start with campos_extras from the lead as primary source
       const camposExtras = leadData?.campos_extras ?? lead?.campos_extras ?? {}
