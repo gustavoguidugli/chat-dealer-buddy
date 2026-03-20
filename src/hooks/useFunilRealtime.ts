@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 
+export interface RealtimeChangeInfo {
+  version: number
+  leadId: number | null
+}
+
 /**
  * Hook para sincronizar o funil em tempo real.
  * Todos os channels incluem filtro de empresa para compatibilidade com RLS.
@@ -10,8 +15,8 @@ export function useFunilRealtime(funilId: number, empresaId: number | null, etap
   const [wonLeads, setWonLeads] = useState<any[]>([])
   const [lostLeads, setLostLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [etiquetaVersion, setEtiquetaVersion] = useState(0)
-  const [atividadeVersion, setAtividadeVersion] = useState(0)
+  const [lastEtiquetaChange, setLastEtiquetaChange] = useState<RealtimeChangeInfo>({ version: 0, leadId: null })
+  const [lastAtividadeChange, setLastAtividadeChange] = useState<RealtimeChangeInfo>({ version: 0, leadId: null })
 
   useEffect(() => {
     if (!funilId || !empresaId) {
