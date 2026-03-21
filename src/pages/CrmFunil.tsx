@@ -79,7 +79,14 @@ export default function CrmFunil() {
   const { toast } = useToast();
 
   const [funis, setFunis] = useState<Funil[]>([]);
-  const [funilAtual, setFunilAtual] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const funilAtual = searchParams.get('funil') ? Number(searchParams.get('funil')) : null;
+  const setFunilAtual = useCallback((id: number) => {
+    setSearchParams(prev => {
+      prev.set('funil', String(id));
+      return prev;
+    }, { replace: true });
+  }, [setSearchParams]);
   const [etapas, setEtapas] = useState<EtapaFunil[]>([]);
   const [loadingFunis, setLoadingFunis] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
