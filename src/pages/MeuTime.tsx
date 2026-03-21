@@ -138,44 +138,93 @@ export default function MeuTime() {
     return 0;
   };
 
+  // Helper to call manage-users edge function
+  const callManageUsers = async (body: Record<string, unknown>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Sessão expirada');
+    const { data, error } = await supabase.functions.invoke('manage-users', {
+      body,
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  };
+
   // Member actions
   const handleChangeRole = async () => {
     if (!selectedMember || !empresaId) return;
-    const { error: rpcError } = await supabase.rpc('update_user_role', {
-      p_user_id: selectedMember.id_usuario,
-      p_empresa_id: empresaId,
-      p_new_role: newRole,
-    });
-    if (rpcError) {
-      toast({ title: 'Erro ao alterar permissão', description: rpcError.message, variant: 'destructive' });
+    if (selectedMember.id_usuario === user?.id) {
+      toast({ title: 'Você não pode alterar sua própria permissão', variant: 'destructive' });
+      setRoleModalOpen(false);
       return;
     }
-    await supabase.from('usuario_time').update({ role: newRole }).eq('id', selectedMember.id);
-    await logAudit('role_changed', 'usuario_time', String(selectedMember.id), { new_role: newRole });
-    toast({ title: 'Permissão alterada com sucesso' });
-    setRoleModalOpen(false);
-    fetchMembers();
+    try {
+      await callManageUsers({
+        action: 'edit_user',
+        user_id: selectedMember.id_usuario,
+        empresa_id: empresaId,
+        full_name: getMemberName(selectedMember),
+        role: newRole,
+      });
+      await logAudit('role_changed', 'usuario_time', String(selectedMember.id), { new_role: newRole });
+      toast({ title: 'Permissão alterada com sucesso' });
+      setRoleModalOpen(false);
+      fetchMembers();
+    } catch (err: any) {
+      toast({ title: 'Erro ao alterar permissão', description: err.message, variant: 'destructive' });
+    }
   };
 
   const handleSuspend = async (m: TeamMember) => {
-    await supabase.from('usuario_time').update({ status_membro: 'suspended' }).eq('id', m.id);
-    await logAudit('member_suspended', 'usuario_time', String(m.id));
-    toast({ title: 'Usuário suspenso' });
-    fetchMembers();
+    if (m.id_usuario === user?.id) return;
+    try {
+      await callManageUsers({
+        action: 'edit_user',
+        user_id: m.id_usuario,
+        empresa_id: empresaId,
+        full_name: getMemberName(m),
+        ativo: false,
+      });
+      await logAudit('member_suspended', 'usuario_time', String(m.id));
+      toast({ title: 'Usuário suspenso' });
+      fetchMembers();
+    } catch (err: any) {
+      toast({ title: 'Erro ao suspender', description: err.message, variant: 'destructive' });
+    }
   };
 
   const handleReactivate = async (m: TeamMember) => {
-    await supabase.from('usuario_time').update({ status_membro: 'active' }).eq('id', m.id);
-    await logAudit('member_reactivated', 'usuario_time', String(m.id));
-    toast({ title: 'Usuário reativado' });
-    fetchMembers();
+    try {
+      await callManageUsers({
+        action: 'edit_user',
+        user_id: m.id_usuario,
+        empresa_id: empresaId,
+        full_name: getMemberName(m),
+        ativo: true,
+      });
+      await logAudit('member_reactivated', 'usuario_time', String(m.id));
+      toast({ title: 'Usuário reativado' });
+      fetchMembers();
+    } catch (err: any) {
+      toast({ title: 'Erro ao reativar', description: err.message, variant: 'destructive' });
+    }
   };
 
   const handleRemove = async (m: TeamMember) => {
-    await supabase.from('usuario_time').update({ status_membro: 'deactivated' }).eq('id', m.id);
-    await logAudit('member_removed', 'usuario_time', String(m.id));
-    toast({ title: 'Usuário removido do time' });
-    fetchMembers();
+    if (m.id_usuario === user?.id) return;
+    try {
+      await callManageUsers({
+        action: 'delete_user',
+        user_id: m.id_usuario,
+        empresa_id: empresaId,
+      });
+      await logAudit('member_removed', 'usuario_time', String(m.id));
+      toast({ title: 'Usuário removido do time' });
+      setMembers(prev => prev.filter(x => x.id_usuario !== m.id_usuario));
+    } catch (err: any) {
+      toast({ title: 'Erro ao remover', description: err.message, variant: 'destructive' });
+    }
   };
 
   // Convite actions with confirmation
@@ -324,18 +373,22 @@ export default function MeuTime() {
                               <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setSelectedMember(m); setNewRole(m.role); setRoleModalOpen(true); }}>
-                                Alterar permissão
-                              </DropdownMenuItem>
-                              {m.status_membro === 'active' && (
+                              {m.id_usuario !== user?.id && (
+                                <DropdownMenuItem onClick={() => { setSelectedMember(m); setNewRole(m.role); setRoleModalOpen(true); }}>
+                                  Alterar permissão
+                                </DropdownMenuItem>
+                              )}
+                              {m.id_usuario !== user?.id && m.status_membro === 'active' && (
                                 <DropdownMenuItem onClick={() => handleSuspend(m)}>Suspender</DropdownMenuItem>
                               )}
                               {m.status_membro === 'suspended' && (
                                 <DropdownMenuItem onClick={() => handleReactivate(m)}>Reativar</DropdownMenuItem>
                               )}
-                              <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(m)}>
-                                Remover do time
-                              </DropdownMenuItem>
+                              {m.id_usuario !== user?.id && (
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(m)}>
+                                  Remover do time
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
