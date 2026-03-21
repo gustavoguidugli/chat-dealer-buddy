@@ -82,5 +82,5 @@ export function buildWhatsAppLink(phone: string | null): string | null {
   if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
     digits = '55' + digits;
   }
-  return `https://wa.me/${digits}`;
+  return `https://api.whatsapp.com/send?phone=${digits}`;
 }
