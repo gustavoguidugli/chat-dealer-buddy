@@ -89,6 +89,21 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       // Start with campos_extras from the lead as primary source
       const camposExtras = leadData?.campos_extras ?? lead?.campos_extras ?? {}
 
+      // Early return: if campos_extras has all needed fields and no contato_geral/whatsapp to look up
+      const jaTemTudo = camposExtras.cidade && camposExtras.tipo_uso
+      if (jaTemTudo && !idContatoGeral && !whatsapp) {
+        if (!cancelled) setDadosContato({
+          interesse: interesse ?? camposExtras.interesse ?? null,
+          cidade: camposExtras.cidade,
+          tipo_uso: camposExtras.tipo_uso,
+          consumo_mensal: camposExtras.consumo_mensal ?? null,
+          gasto_mensal: camposExtras.gasto_mensal ?? null,
+          dias_semana: camposExtras.dias_semana ?? null,
+          telefone: null,
+        })
+        return
+      }
+
       const dados: DadosContato = {
         interesse: currentInteresse,
         cidade: camposExtras.cidade ?? null,
