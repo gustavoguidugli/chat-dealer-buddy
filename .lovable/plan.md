@@ -1,33 +1,36 @@
 
 
-# Persistir funil selecionado na URL
+# Fix 3 bugs in "Meu Time" (MeuTime.tsx)
 
-## Problema
-O estado `funilAtual` é um `useState` local (linha 81) que reseta ao valor do primeiro funil sempre que ocorre re-render causado por fechar o LeadDrawer, ações em modais, ou `reloadKey` mudar — pois o `useEffect` na linha 320 re-executa e pode sobrescrever a seleção.
+## File: `src/pages/MeuTime.tsx`
 
-## Solução
-Substituir `useState` por `useSearchParams` do React Router, persistindo o funil na URL como `?funil=ID`.
+### Bug 1 — Suspend/Reactivate not working
+Currently `handleSuspend` and `handleReactivate` (lines 160-172) update `usuario_time` directly, which doesn't actually ban/unban the user. Replace with edge function calls:
+- `handleSuspend`: call `manage-users` with `action: 'edit_user', ativo: false`
+- `handleReactivate`: call `manage-users` with `action: 'edit_user', ativo: true`
 
-## Alterações — arquivo único: `src/pages/CrmFunil.tsx`
+### Bug 2 — Remove not working
+Currently `handleRemove` (lines 174-179) updates `usuario_time` to `deactivated`. Replace with edge function call:
+- Call `manage-users` with `action: 'delete_user'`
+- After success, remove user from local state immediately (`setMembers(prev => prev.filter(...))`)
 
-1. **Importar `useSearchParams`** de `react-router-dom`.
+### Bug 3 — Permission and self-action protection
 
-2. **Substituir o estado local** (linha 81):
-   - Remover `const [funilAtual, setFunilAtual] = useState<number | null>(null)`
-   - Adicionar lógica baseada em `searchParams`:
-   ```ts
-   const [searchParams, setSearchParams] = useSearchParams();
-   const funilAtual = searchParams.get('funil') ? Number(searchParams.get('funil')) : null;
-   const setFunilAtual = (id: number) => {
-     setSearchParams(prev => { prev.set('funil', String(id)); return prev; }, { replace: true });
-   };
-   ```
+**3a. Menu visibility:**
+- The `...` dropdown (line 321) already checks `isCompanyAdmin || isSuperAdmin` — good.
+- Inside the menu, hide "Alterar permissão" if the member is the logged-in user (`m.id_usuario === user?.id`).
 
-3. **Ajustar o `useEffect` de fetch de funis** (linhas 320-340):
-   - Quando os funis carregam e não há `?funil=` na URL (ou o valor não existe mais na lista), setar o primeiro funil na URL com `replace: true`.
-   - Quando o funil da URL existe na lista, manter — sem sobrescrever.
+**3b. Self-action block on role change:**
+- In `handleChangeRole`, add guard: if `selectedMember.id_usuario === user?.id`, show error toast and return.
 
-4. **Ajustar `FunilSortableSelect`** — garantir que a mudança de funil chame `setFunilAtual(id)` que já atualiza a URL.
+**3c. Self-action block on suspend/remove:**
+- Hide "Suspender", "Reativar", and "Remover do time" menu items when `m.id_usuario === user?.id`.
 
-Nenhum outro arquivo precisa ser alterado. O LeadDrawer, modais e ações do kanban não tocam em `funilAtual`.
+### Implementation detail
+Add a helper similar to `callManageUsers` from ConfigUsuarios.tsx to make authenticated edge function calls. Reuse the same pattern (get session, pass Authorization header).
+
+### Summary of changes
+- Single file edit: `src/pages/MeuTime.tsx`
+- Replace 3 handler functions to use edge function
+- Add self-action guards in menu rendering and handlers
 
