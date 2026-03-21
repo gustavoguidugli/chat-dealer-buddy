@@ -1,20 +1,40 @@
 
+Objetivo: eliminar qualquer uso de `api.whatsapp.com`/`whatsapp.com/send` e padronizar abertura de WhatsApp em `wa.me` com nova aba segura.
 
-# Fix WhatsApp Link Blocked in Preview
+1) Auditoria global e bloqueio de regressão
+- Rodar busca global por:
+  - `api.whatsapp.com`
+  - `whatsapp.com/send`
+  - `https://wa.me/`
+- Garantir que não exista nenhuma ocorrência dos dois primeiros após os ajustes.
+- Manter somente padrão `wa.me`.
 
-## Problem
+2) Padronizar a regra única no utilitário
+- Arquivo: `src/lib/lead-utils.ts`
+- Ajustar `buildWhatsAppLink(phone)` para seguir exatamente:
+  - `limpo = phone.replace(/\D/g, '')`
+  - `com55 = limpo.startsWith('55') ? limpo : '55' + limpo`
+  - retorno: ``https://wa.me/${com55}``
+- Remover qualquer lógica condicional de tamanho (10/11) para evitar exceções e garantir consistência.
 
-The `wa.me` links redirect to `api.whatsapp.com` which returns `ERR_BLOCKED_BY_RESPONSE` when opened inside the Lovable preview iframe. The `target="_blank"` on `<a>` tags doesn't reliably escape the iframe context.
+3) Corrigir abertura no LeadDrawer
+- Arquivo: `src/components/crm/LeadDrawerFields.tsx`
+- No botão de WhatsApp, manter abertura via `window.open` (não usar `<a href>`).
+- Atualizar chamada para:
+  - `window.open(url, '_blank', 'noopener,noreferrer')`
+- Usar URL vinda de `buildWhatsAppLink` (fonte única de verdade), com `stopPropagation()` para não disparar eventos do card/drawer.
 
-## Solution
+4) Validar cards de lead (Kanban)
+- Arquivo: `src/components/crm/LeadCardComponent.tsx`
+- Auditar se existe ação de WhatsApp no card.
+  - Se existir: aplicar o mesmo padrão (`buildWhatsAppLink` + `window.open(..., 'noopener,noreferrer')`).
+  - Se não existir: não criar UI nova (sem aumento de escopo), apenas confirmar que não há link legado incorreto.
 
-Replace the `<a href>` approach with an explicit `window.open()` call via `onClick`. This forces a true new browser window/tab that escapes the preview iframe sandbox.
-
-### File: `src/lib/lead-utils.ts`
-- Change `buildWhatsAppLink` to use `https://api.whatsapp.com/send?phone=` format (more reliable across contexts than the `wa.me` shortener redirect)
-
-### File: `src/components/crm/LeadDrawerFields.tsx`
-- Change the WhatsApp `<a>` tag to a `<button>` with `onClick={() => window.open(waLink, '_blank', 'noopener')}` instead of relying on `href` + `target="_blank"` which gets intercepted by the iframe
-
-Both changes are small — one line each in two files.
-
+5) QA final (obrigatório)
+- Testar no `/crm`:
+  - Clique no WhatsApp no LeadDrawer abre nova aba com formato `https://wa.me/5511...`.
+  - Confirmar que o link aberto já sai no formato correto (sem `+`, sem máscara).
+- Rodar busca global final para confirmar:
+  - zero ocorrências de `api.whatsapp.com`
+  - zero ocorrências de `whatsapp.com/send`
+  - somente `wa.me`.
