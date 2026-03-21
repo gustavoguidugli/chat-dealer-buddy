@@ -76,8 +76,8 @@ export function getLeadInitials(nome: string | null, whatsapp: string | null): s
 /** Builds a WhatsApp link from a phone number */
 export function buildWhatsAppLink(phone: string | null): string | null {
   if (!phone) return null;
-  const digits = digitsOnly(phone);
-  if (!digits) return null;
-  const com55 = digits.startsWith('55') ? digits : '55' + digits;
+  const limpo = phone.replace(/\D/g, '');
+  if (!limpo) return null;
+  const com55 = limpo.startsWith('55') ? limpo : `55${limpo}`;
   return `https://wa.me/${com55}`;
 }
