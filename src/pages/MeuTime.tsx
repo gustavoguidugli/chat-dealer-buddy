@@ -373,18 +373,22 @@ export default function MeuTime() {
                               <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setSelectedMember(m); setNewRole(m.role); setRoleModalOpen(true); }}>
-                                Alterar permissão
-                              </DropdownMenuItem>
-                              {m.status_membro === 'active' && (
+                              {m.id_usuario !== user?.id && (
+                                <DropdownMenuItem onClick={() => { setSelectedMember(m); setNewRole(m.role); setRoleModalOpen(true); }}>
+                                  Alterar permissão
+                                </DropdownMenuItem>
+                              )}
+                              {m.id_usuario !== user?.id && m.status_membro === 'active' && (
                                 <DropdownMenuItem onClick={() => handleSuspend(m)}>Suspender</DropdownMenuItem>
                               )}
                               {m.status_membro === 'suspended' && (
                                 <DropdownMenuItem onClick={() => handleReactivate(m)}>Reativar</DropdownMenuItem>
                               )}
-                              <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(m)}>
-                                Remover do time
-                              </DropdownMenuItem>
+                              {m.id_usuario !== user?.id && (
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(m)}>
+                                  Remover do time
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
