@@ -155,33 +155,20 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       if (!cancelled) setDadosContato(dados)
     }
 
-    // 1. Busca dados iniciais
-    async function fetchData() {
-      const { data: leadData } = await supabase
-        .from('leads_crm')
-        .select(`*, funis(nome, tipo), etapas_funil(nome, ordem, cor)`)
-        .eq('id', leadId)
-        .single()
-
+    // Secondary data fetch (runs in background, doesn't block UI)
+    async function fetchSecondaryData(id: number) {
+      const [anotacoesRes, atividadesRes, historicoRes] = await Promise.all([
+        supabase.from('anotacoes_lead').select('*').eq('id_lead', id).order('created_at', { ascending: false }),
+        supabase.from('atividades').select('*').eq('id_lead', id).order('data_vencimento'),
+        supabase.from('historico_lead').select('*').eq('id_lead', id).order('created_at', { ascending: false }),
+      ])
       if (cancelled) return
 
-      setLead(leadData)
+      setAnotacoes(anotacoesRes.data || [])
+      setAtividades(atividadesRes.data || [])
+      setHistorico(historicoRes.data || [])
 
-      if (leadData) {
-        contatoGeralIdRef.current = leadData.id_contato_geral
-        contatoWhatsappRef.current = leadData.whatsapp
-        await fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current, undefined, leadData)
-      }
-
-      const { data: anotacoesData } = await supabase
-        .from('anotacoes_lead')
-        .select('*')
-        .eq('id_lead', leadId)
-        .order('created_at', { ascending: false })
-      if (cancelled) return
-      setAnotacoes(anotacoesData || [])
-
-      const anotacaoIds = (anotacoesData || []).map((a: any) => a.id)
+      const anotacaoIds = (anotacoesRes.data || []).map((a: any) => a.id)
       if (anotacaoIds.length > 0) {
         const { data: anexosData } = await supabase
           .from('anexos_anotacao')
@@ -192,23 +179,29 @@ export function useLeadRealtime(leadId: number | null, empresaId: number | null)
       } else {
         if (!cancelled) setAnexos([])
       }
+    }
 
-      const { data: atividadesData } = await supabase
-        .from('atividades')
-        .select('*')
-        .eq('id_lead', leadId)
-        .order('data_vencimento')
-      if (cancelled) return
-      setAtividades(atividadesData || [])
+    // 1. Busca dados iniciais
+    async function fetchData() {
+      // Phase 1: show lead immediately
+      const { data: leadData } = await supabase
+        .from('leads_crm')
+        .select(`*, funis(nome, tipo), etapas_funil(nome, ordem, cor)`)
+        .eq('id', leadId)
+        .single()
 
-      const { data: historicoData } = await supabase
-        .from('historico_lead')
-        .select('*')
-        .eq('id_lead', leadId)
-        .order('created_at', { ascending: false })
       if (cancelled) return
-      setHistorico(historicoData || [])
-      setLoading(false)
+      setLead(leadData)
+      setLoading(false) // UI unblocked here
+
+      // Phase 2: enrich in background
+      if (leadData) {
+        contatoGeralIdRef.current = leadData.id_contato_geral
+        contatoWhatsappRef.current = leadData.whatsapp
+        fetchContatoData(contatoGeralIdRef.current, contatoWhatsappRef.current, undefined, leadData)
+      }
+
+      fetchSecondaryData(leadId!)
     }
 
     fetchData()
