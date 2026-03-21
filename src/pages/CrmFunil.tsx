@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getLeadDisplayName } from '@/lib/lead-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
@@ -78,7 +79,14 @@ export default function CrmFunil() {
   const { toast } = useToast();
 
   const [funis, setFunis] = useState<Funil[]>([]);
-  const [funilAtual, setFunilAtual] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const funilAtual = searchParams.get('funil') ? Number(searchParams.get('funil')) : null;
+  const setFunilAtual = useCallback((id: number) => {
+    setSearchParams(prev => {
+      prev.set('funil', String(id));
+      return prev;
+    }, { replace: true });
+  }, [setSearchParams]);
   const [etapas, setEtapas] = useState<EtapaFunil[]>([]);
   const [loadingFunis, setLoadingFunis] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -328,11 +336,11 @@ export default function CrmFunil() {
         .order('ordem');
       if (data && data.length > 0) {
         setFunis(data);
-        setFunilAtual((prev) => {
-          // Keep the user's selection if it still exists in the list
-          if (prev && data.some(f => f.id === prev)) return prev;
-          return data[0].id;
-        });
+        const currentFunilParam = searchParams.get('funil');
+        const currentId = currentFunilParam ? Number(currentFunilParam) : null;
+        if (!currentId || !data.some(f => f.id === currentId)) {
+          setFunilAtual(data[0].id);
+        }
       }
       setLoadingFunis(false);
     };
