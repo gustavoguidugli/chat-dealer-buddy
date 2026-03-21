@@ -76,11 +76,8 @@ export function getLeadInitials(nome: string | null, whatsapp: string | null): s
 /** Builds a WhatsApp link from a phone number */
 export function buildWhatsAppLink(phone: string | null): string | null {
   if (!phone) return null;
-  let digits = digitsOnly(phone);
+  const digits = digitsOnly(phone);
   if (!digits) return null;
-  // Ensure Brazilian country code
-  if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
-    digits = '55' + digits;
-  }
-  return `https://wa.me/${digits}`;
+  const com55 = digits.startsWith('55') ? digits : '55' + digits;
+  return `https://wa.me/${com55}`;
 }
