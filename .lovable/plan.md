@@ -1,35 +1,33 @@
 
 
-# Fix: WhatsApp link blocked in preview iframe
+# Persistir funil selecionado na URL
 
-## Problem
+## Problema
+O estado `funilAtual` é um `useState` local (linha 81) que reseta ao valor do primeiro funil sempre que ocorre re-render causado por fechar o LeadDrawer, ações em modais, ou `reloadKey` mudar — pois o `useEffect` na linha 320 re-executa e pode sobrescrever a seleção.
 
-The code is correctly generating `https://wa.me/556198289755` links (confirmed via session replay and code audit). Zero occurrences of `api.whatsapp.com` exist. The issue is that `<a href target="_blank">` gets intercepted by the preview iframe's security headers, causing `ERR_BLOCKED_BY_RESPONSE`.
+## Solução
+Substituir `useState` por `useSearchParams` do React Router, persistindo o funil na URL como `?funil=ID`.
 
-## Solution
+## Alterações — arquivo único: `src/pages/CrmFunil.tsx`
 
-Replace the `<a href>` tag with a `<button>` that uses `window.open()` -- this escapes the iframe sandbox reliably.
+1. **Importar `useSearchParams`** de `react-router-dom`.
 
-### File: `src/components/crm/LeadDrawerFields.tsx` (lines 329-339)
+2. **Substituir o estado local** (linha 81):
+   - Remover `const [funilAtual, setFunilAtual] = useState<number | null>(null)`
+   - Adicionar lógica baseada em `searchParams`:
+   ```ts
+   const [searchParams, setSearchParams] = useSearchParams();
+   const funilAtual = searchParams.get('funil') ? Number(searchParams.get('funil')) : null;
+   const setFunilAtual = (id: number) => {
+     setSearchParams(prev => { prev.set('funil', String(id)); return prev; }, { replace: true });
+   };
+   ```
 
-Replace the current `<a>` tag:
-```tsx
-<a href={waLink} target="_blank" rel="noopener noreferrer" ...>
-```
+3. **Ajustar o `useEffect` de fetch de funis** (linhas 320-340):
+   - Quando os funis carregam e não há `?funil=` na URL (ou o valor não existe mais na lista), setar o primeiro funil na URL com `replace: true`.
+   - Quando o funil da URL existe na lista, manter — sem sobrescrever.
 
-With a button using `window.open`:
-```tsx
-<button
-  onClick={(e) => {
-    e.stopPropagation();
-    window.open(waLink, '_blank', 'noopener,noreferrer');
-  }}
-  className="text-sm font-semibold text-primary hover:underline inline-flex items-center gap-1.5"
->
-  {displayPhone}
-  <svg .../>
-</button>
-```
+4. **Ajustar `FunilSortableSelect`** — garantir que a mudança de funil chame `setFunilAtual(id)` que já atualiza a URL.
 
-No other files need changes. The utility function `buildWhatsAppLink` is already correct (`https://wa.me/${com55}`).
+Nenhum outro arquivo precisa ser alterado. O LeadDrawer, modais e ações do kanban não tocam em `funilAtual`.
 
